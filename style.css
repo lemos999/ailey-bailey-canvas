@@ -1,8 +1,11 @@
-/* --- [Ailey & Bailey Canvas v3.0] style.css --- */
+/* --- Ailey & Bailey Canvas: style.css --- */
+/* This file should be hosted on your GitHub Pages. */
+
 :root {
     --bg-color-light: #FDF8F0; --text-color-light: #4B4237; --container-bg-light: #F7F3E9; --border-color-light: #EAE0D3; --header-color-light: #6D5D4B; --h2-color-light: #8C6D46; --h2-border-light: #B99C7A; --sub-text-color-light: #8C7B6A; --quote-bg-light: #F2EEE5; --strong-bg-light: #EADCB5; --highlight-color: #ffe875; --chat-ai-bg-light: #E9E4DB; --pin-color: #e58a8a;
     --bg-color-dark: #121212; --text-color-dark: #E0E0E0; --container-bg-dark: #1E1E1E; --border-color-dark: #333333; --header-color-dark: #D4B28C; --h2-color-dark: #B99C7A; --h2-border-dark: #8C6D46; --sub-text-color-dark: #9E9E9E; --quote-bg-dark: #2A2A2A; --strong-bg-dark: #5a4a3a; --chat-ai-bg-dark: #2C2C2C;
 }
+
 html { scroll-behavior: smooth; }
 body { font-family: 'Gowun Batang', serif; line-height: 1.8; margin: 0; padding: 20px; box-sizing: border-box; transition: background-color 0.3s, color 0.3s; }
 body.dark-mode { background-color: var(--bg-color-dark); color: var(--text-color-dark); }
@@ -25,11 +28,11 @@ body:not(.dark-mode) .header .subtitle { color: var(--sub-text-color-light); }
 body.dark-mode .content-section h2 { color: var(--h2-color-dark); border-left: 4px solid var(--h2-border-dark); }
 body:not(.dark-mode) .content-section h2 { color: var(--h2-color-light); border-left: 4px solid var(--h2-border-light); }
 .content-section p { font-size: 1.1em; text-align: justify; margin-bottom: 15px; }
-.content-section ul { list-style-position: inside; padding-left: 5px; }
+.content-section ul, .content-section dl { list-style-position: inside; padding-left: 5px; }
 .content-section li { margin-bottom: 8px; }
-.content-section p strong { padding: 0px 6px; border-radius: 4px; font-weight: 700; transition: background-color 0.3s, color 0.3s; }
-body.dark-mode .content-section p strong { background-color: var(--strong-bg-dark); color: var(--text-color-dark); }
-body:not(.dark-mode) .content-section p strong { background-color: var(--strong-bg-light); color: var(--header-color-light); }
+.content-section p strong, .content-section ul strong, .content-section dl strong { padding: 0px 6px; border-radius: 4px; font-weight: 700; transition: background-color 0.3s, color 0.3s; }
+body.dark-mode .content-section p strong, body.dark-mode .content-section ul strong, body.dark-mode .content-section dl strong { background-color: var(--strong-bg-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) .content-section p strong, body:not(.dark-mode) .content-section ul strong, body:not(.dark-mode) .content-section dl strong { background-color: var(--strong-bg-light); color: var(--header-color-light); }
 blockquote { margin: 25px 0; padding: 15px 25px; font-style: italic; transition: background-color 0.3s, border-color 0.3s; }
 body.dark-mode blockquote { background-color: var(--quote-bg-dark); border-left: 3px solid var(--border-color-dark); color: var(--sub-text-color-dark); }
 body:not(.dark-mode) blockquote { background-color: var(--quote-bg-light); border-left: 3px solid var(--border-color-light); color: var(--sub-text-color-light); }
@@ -67,6 +70,7 @@ body:not(.dark-mode) .scroll-nav li a:hover { background-color: var(--quote-bg-l
 .scroll-nav li a.active { font-weight: 700; }
 body.dark-mode .scroll-nav li a.active { color: var(--header-color-dark); background-color: var(--strong-bg-dark); border-left-color: var(--h2-border-dark); }
 body:not(.dark-mode) .scroll-nav li a.active { color: var(--h2-color-light); background-color: var(--strong-bg-light); border-left-color: var(--h2-border-light); }
+
 .fixed-tool-container { position: fixed; bottom: 30px; left: 30px; z-index: 1000; display: flex; flex-direction: column-reverse; gap: 10px; align-items: flex-start; }
 .tool-button { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer; user-select: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: all 0.3s; }
 #edit-toolbar { display: flex; gap: 10px; padding: 5px; border-radius: 30px; transition: opacity 0.3s, transform 0.3s; opacity: 0; pointer-events: none; transform: translateY(20px); }
@@ -76,13 +80,17 @@ body.dark-mode .tool-button { background-color: #333; color: #fff; }
 body:not(.dark-mode) .tool-button { background-color: #fff; color: #4B4237; }
 body.eraser-mode .custom-highlight { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="rgba(255, 0, 0, 0.8)" d="M16.24 3.56l4.2 4.2c.43.43.43 1.12 0 1.55l-9.9 9.9c-.43.43-1.12.43-1.55 0l-4.2-4.2c-.43-.43-.43-1.12 0-1.55l9.9-9.9c.43-.43 1.13-.43 1.55 0zm-2.12 9.19l-5.66-5.66-8.49 8.49 5.66 5.66 8.49-8.49z"/></svg>'), auto !important; }
 #eraser-btn.active { box-shadow: 0 0 15px 3px #ff4d4d; }
+
 .draggable-panel { position: fixed; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: none; flex-direction: column; resize: both; overflow: auto; transition: background-color 0.3s; }
 body.dark-mode .draggable-panel { background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) .draggable-panel { background-color: var(--container-bg-light); border: 1px solid var(--border-color-light); }
+
 .panel-header { padding: 10px; cursor: move; font-family: 'Noto Serif KR', serif; font-weight: bold; user-select: none; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.3s, border-color 0.3s; position: sticky; top: 0; z-index: 1; }
 body.dark-mode .panel-header { background-color: #2a2a2a; border-bottom: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1px solid var(--border-color-light); }
 .panel-header .close-btn { cursor: pointer; font-size: 20px; }
+
+/* Chatbot Panel Styles */
 #chat-panel { bottom: 100px; right: 100px; height: 500px; width: 350px; }
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 .chat-message { max-width: 85%; padding: 10px 15px; border-radius: 18px; line-height: 1.6; word-wrap: break-word; }
@@ -100,6 +108,8 @@ body.dark-mode #chat-send-btn { color: var(--header-color-dark); }
 body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
 #chat-input:disabled, #chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .loading-indicator { font-style: italic; opacity: 0.7; }
+
+/* Notes App Panel Styles */
 #notes-app-panel { bottom: 100px; left: 100px; width: 400px; height: 600px; padding: 0; }
 .notes-view { display: none; flex-direction: column; height: 100%; }
 .notes-view.active { display: flex; }
@@ -123,6 +133,7 @@ body.dark-mode .note-item.pinned { background-color: #2e281d; }
 .item-action-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 5px; border-radius: 50%; }
 .item-action-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
 .pin-btn.pinned-active { color: var(--pin-color); }
+
 #note-editor-view .editor-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) #note-editor-view .editor-header { border-bottom-color: var(--border-color-light); }
 #note-title-input { font-size: 1.2em; font-weight: bold; width: 100%; border: none; background: transparent; padding: 10px 15px; color: var(--text-color-dark); }
@@ -133,6 +144,7 @@ body:not(.dark-mode) .format-toolbar { border-bottom-color: var(--border-color-l
 #note-content-textarea { flex-grow: 1; width: 100%; border: none; background: transparent; padding: 15px; resize: none; font-family: 'Gowun Batang', serif; font-size: 1em; color: var(--text-color-dark); box-sizing: border-box; }
 body:not(.dark-mode) #note-content-textarea { color: var(--text-color-light); }
 #auto-save-status { font-size: 0.8em; padding: 5px 15px; text-align: right; opacity: 0.7; }
+
 .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; }
 .custom-modal { padding: 30px; border-radius: 10px; width: 350px; text-align: center; }
 body:not(.dark-mode) .custom-modal { background-color: var(--bg-color-light); }
@@ -141,6 +153,3 @@ body.dark-mode .custom-modal { background-color: var(--container-bg-dark); }
 .modal-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; }
 #modal-confirm-btn { background-color: #d9534f; color: white; }
 #modal-cancel-btn { background-color: #888; color: white; }
-/* --- v5.3 additions --- */
-#fixed-timestamp { position: fixed; top: 10px; left: 15px; z-index: 2000; font-size: 0.9em; color: var(--sub-text-color-dark); background-color: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 10px; }
-body:not(.dark-mode) #fixed-timestamp { color: var(--sub-text-color-light); background-color: rgba(255,255,255,0.3); }
