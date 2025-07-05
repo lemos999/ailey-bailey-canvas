@@ -1,185 +1,120 @@
-이렇게 넣으면돼? 내용은 이거넣었어 "// --- [Ailey & Bailey Canvas v3.0] script.js ---
+// --- [Ailey & Bailey Canvas v5.1] script.js ---
+// This version is a data-driven UI renderer. It takes JSON data and builds the page.
 document.addEventListener('DOMContentLoaded', function () {
     // --- Global State & Element References ---
     const learningContent = document.getElementById('learning-content');
+    const scrollNavContainer = document.getElementById('scroll-nav');
+    // ... (other element references from v5.0 remain the same)
     const themeToggle = document.getElementById('theme-toggle');
     const body = document.body;
     const chatPanel = document.getElementById('chat-panel');
-    const chatForm = document.getElementById('chat-form');
-    const chatInput = document.getElementById('chat-input');
-    const chatMessages = document.getElementById('chat-messages');
     const notesAppPanel = document.getElementById('notes-app-panel');
-    const noteListView = document.getElementById('note-list-view');
-    const noteEditorView = document.getElementById('note-editor-view');
-    const notesList = document.getElementById('notes-list');
-    const searchInput = document.getElementById('search-input');
-    const addNewNoteBtn = document.getElementById('add-new-note-btn');
-    const backToListBtn = document.getElementById('back-to-list-btn');
-    const noteTitleInput = document.getElementById('note-title-input');
-    const noteContentTextarea = document.getElementById('note-content-textarea');
-    const autoSaveStatus = document.getElementById('auto-save-status');
-    const formatToolbar = document.querySelector('.format-toolbar');
-    const linkTopicBtn = document.getElementById('link-topic-btn');
-    const exportNotesBtn = document.getElementById('export-notes-btn');
-    const customModal = document.getElementById('custom-modal');
-    const modalMessage = document.getElementById('modal-message');
-    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-    const modalCancelBtn = document.getElementById('modal-cancel-btn');
-    
-    let db, notesCollection, currentUser = null, localNotesCache = [], currentNoteId = null, unsubscribeFromNotes = null, debounceTimer = null;
-    let storageKey = 'learningNote-';
 
-    // --- Firebase Initialization & Authentication ---
-    async function initializeFirebase() {
-        try {
-            // These global variables are expected to be defined in the HTML <script> tag by the AI
-            if (typeof __firebase_config === 'undefined' || typeof __initial_auth_token === 'undefined') {
-                console.error("Firebase config or auth token is not defined.");
-                notesList.innerHTML = '<div>클라우드 설정 오류.</div>';
-                return;
-            }
-            const firebaseConfig = JSON.parse(__firebase_config);
-            const initialAuthToken = __initial_auth_token;
-            
-            firebase.initializeApp(firebaseConfig);
-            const auth = firebase.auth();
-            db = firebase.firestore();
-
-            if (initialAuthToken) {
-                await auth.signInWithCustomToken(initialAuthToken);
-            } else {
-                await auth.signInAnonymously();
-            }
-
-            currentUser = auth.currentUser;
-            if (currentUser) {
-                notesCollection = db.collection(`artifacts/AileyBailey_Global_Space/users/${currentUser.uid}/notes`);
-                listenToNotes();
-            }
-        } catch (error) {
-            console.error("Firebase Initialization Failed:", error);
-            notesList.innerHTML = '<div>클라우드 메모장을 불러오는 데 실패했습니다.</div>';
+    // --- Core Data-Driven Rendering Engine ---
+    function renderPageFromData(data) {
+        if (!data || !data.title) {
+            learningContent.innerHTML = "<h2>오류: 학습 데이터를 불러올 수 없습니다.</h2>";
+            return;
         }
-    }
 
-    // --- Notes App Core Logic (CRUD, etc.) ---
-    function listenToNotes() {
-        if (unsubscribeFromNotes) unsubscribeFromNotes();
-        unsubscribeFromNotes = notesCollection.onSnapshot(snapshot => {
-            localNotesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderNoteList();
-        }, error => console.error("Note listening error:", error));
-    }
+        // 1. Set Page Title
+        document.title = data.title;
 
-    function renderNoteList() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const filteredNotes = localNotesCache.filter(note => 
-            (note.title && note.title.toLowerCase().includes(searchTerm)) || 
-            (note.content && note.content.toLowerCase().includes(searchTerm))
-        );
-        filteredNotes.sort((a, b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-        notesList.innerHTML = filteredNotes.length === 0 ? '<div>표시할 메모가 없습니다.</div>' : filteredNotes.map(note => {
-            const date = note.updatedAt ? new Date(note.updatedAt.toMillis()).toLocaleString() : '날짜 없음';
-            return `
-                <div class="note-item ${note.isPinned ? 'pinned' : ''}" data-id="${note.id}">
-                    <div class="note-item-content">
-                        <div class="note-item-title">${note.title || '무제'}</div>
-                        <div class="note-item-date">${date}</div>
-                    </div>
-                    <div class="note-item-actions">
-                        <button class="item-action-btn pin-btn ${note.isPinned ? 'pinned-active' : ''}" title="고정">${note.isPinned ? '📌' : '📍'}</button>
-                        <button class="item-action-btn delete-btn" title="삭제">🗑️</button>
-                    </div>
-                </div>`;
-        }).join('');
-    }
-    
-    async function addNote() {
-        try {
-            const newNoteRef = await notesCollection.add({
-                title: '새 메모', content: '', isPinned: false,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            openNoteEditor(newNoteRef.id);
-        } catch (error) { console.error("Failed to add new note:", error); }
-    }
+        // 2. Render Main Content
+        let html = '';
+        html += `<div class="header"><h1>${data.title}</h1>`;
+        if (data.subtitle) html += `<p class="subtitle">${data.subtitle}</p>`;
+        html += `</div>`;
 
-    function saveNote() {
-        clearTimeout(debounceTimer);
-        if (!currentNoteId) return;
-        const noteData = {
-            title: noteTitleInput.value,
-            content: noteContentTextarea.value,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        notesCollection.doc(currentNoteId).update(noteData)
-            .then(() => updateStatus('저장됨 ✓', true))
-            .catch(error => {
-                console.error("Failed to save note:", error);
-                updateStatus('저장 실패 ❌', false);
-            });
-    }
+        if(data.learningGoal) {
+             html += `<div class="info-box"><p><strong>🎯 오늘의 학습 목표:</strong> ${data.learningGoal}</p></div>`;
+        }
 
-    function handleDeleteRequest(noteId) {
-        showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => {
-            notesCollection.doc(noteId).delete().catch(error => console.error("Failed to delete note:", error));
+        if(data.keywords && data.keywords.length > 0) {
+            html += `<div class="keyword-list"><strong>🔑 핵심 키워드:</strong> ${data.keywords.map(k => `<span class="keyword-chip">${k}</span>`).join('')}</div>`;
+        }
+
+        data.sections.forEach(section => {
+            html += `
+                <div class="content-section">
+                    <h2 id="${section.id}">${section.title}</h2>
+                    ${section.content}
+                </div>
+            `;
         });
-    }
-
-    async function togglePin(noteId) {
-        const note = localNotesCache.find(n => n.id === noteId);
-        if (note) await notesCollection.doc(noteId).update({ isPinned: !note.isPinned });
-    }
-    
-    function exportNotes() {
-        const dataStr = JSON.stringify(localNotesCache, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'ailey-notes.json'; a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    // --- Notes App UI/UX Logic ---
-    function switchView(viewName) {
-        noteListView.classList.toggle('active', viewName === 'list');
-        noteEditorView.classList.toggle('active', viewName === 'editor');
-        if (viewName === 'list') currentNoteId = null;
-    }
-
-    function openNoteEditor(noteId) {
-        const note = localNotesCache.find(n => n.id === noteId);
-        if (note) {
-            currentNoteId = noteId;
-            noteTitleInput.value = note.title || '';
-            noteContentTextarea.value = note.content || '';
-            switchView('editor');
+        
+        if (data.summary) {
+            html += `<div class="content-section"><h2>최종 핵심 요약 🤓</h2>${data.summary}</div>`;
         }
-    }
-    
-    function updateStatus(message, success) {
-        autoSaveStatus.textContent = message;
-        autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral';
-        setTimeout(() => { autoSaveStatus.textContent = ''; }, 2000);
+
+        if (data.explorationGateway) {
+            html += `<div class="exploration-gateway">
+                        <h3>🚀 지식 확장 탐험!</h3>
+                        <p>${data.explorationGateway.prompt}</p>
+                        <ul>
+                            ${data.explorationGateway.options.map(opt => `<li><a href="#" onclick="alert('준비 중입니다!')"><strong>${opt.title}:</strong> ${opt.description}</a></li>`).join('')}
+                        </ul>
+                    </div>`;
+        }
+        
+        learningContent.innerHTML = html;
+
+        // 3. Render Scroll Navigator
+        let navHtml = '<h3>학습 네비게이션</h3><ul>';
+        data.sections.forEach(section => {
+            navHtml += `<li><a href="#${section.id}">${section.title}</a></li>`;
+        });
+        navHtml += '</ul>';
+        scrollNavContainer.innerHTML = navHtml;
+        setupNavigatorScrollSpy();
     }
 
-    function applyFormat(format) {
-        const start = noteContentTextarea.selectionStart;
-        const end = noteContentTextarea.selectionEnd;
-        const marker = format === 'bold' ? '**' : (format === 'italic' ? '*' : '`');
-        noteContentTextarea.value = `${noteContentTextarea.value.substring(0, start)}${marker}${noteContentTextarea.value.substring(start, end)}${marker}${noteContentTextarea.value.substring(end)}`;
-        noteContentTextarea.focus();
-    }
-    
-    function showModal(message, onConfirm) {
-        modalMessage.textContent = message;
-        customModal.style.display = 'flex';
-        modalConfirmBtn.onclick = () => { onConfirm(); customModal.style.display = 'none'; };
-        modalCancelBtn.onclick = () => { customModal.style.display = 'none'; };
+    // --- Navigator Scroll Spy ---
+    function setupNavigatorScrollSpy() {
+        const sections = document.querySelectorAll('.content-section h2');
+        const navLinks = document.querySelectorAll('.scroll-nav a');
+
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                    });
+                }
+            });
+        }, { rootMargin: "-30% 0px -70% 0px" });
+
+        sections.forEach(section => observer.observe(section));
     }
 
-    // --- Other Features (Chat, Panels, Theme, etc.) ---
+
+    // --- Main Initialization Function ---
+    function init() {
+        // This global variable is expected to be defined in the HTML <script> tag by the AI.
+        if (typeof __lecture_data__ !== 'undefined') {
+            renderPageFromData(__lecture_data__);
+        } else {
+            learningContent.innerHTML = "<h2>학습 내용을 기다리고 있어요...</h2>";
+        }
+        
+        // The rest of the initialization logic for theme, panels, firebase remains the same...
+        // Assuming the rest of your v5.0 script.js (theme toggle, panel dragging, firebase) is here.
+        // For brevity, I'm only showing the new/modified parts. The original script should be merged.
+        
+        // Placeholder for other init functions from previous script
+        const savedTheme = localStorage.getItem('ailey-bailey-theme') || 'dark';
+        applyTheme(savedTheme);
+        setupEventListeners(); // This would set up listeners for toggles, chat, notes app etc.
+        // initializeFirebase(); // This would init firebase
+    }
+    
+    // --- Utility functions (placeholders, assuming they exist from your previous script) ---
+    function applyTheme(theme) { 
+        body.className = theme === 'dark' ? 'dark-mode' : '';
+        themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        localStorage.setItem('ailey-bailey-theme', theme);
+    }
+    
     function makePanelDraggable(panel) {
         const header = panel.querySelector('.panel-header');
         if (!header) return;
@@ -193,111 +128,24 @@ document.addEventListener('DOMContentLoaded', function () {
         function onMouseMove(e) { if (isDragging) { panel.style.left = `${e.clientX + offset.x}px`; panel.style.top = `${e.clientY + offset.y}px`; } }
         function onMouseUp() { isDragging = false; document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }
     }
-
+    
     function togglePanel(panel) { panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex'; }
     
-    function applyTheme(theme) {
-        body.className = theme === 'dark' ? 'dark-mode' : '';
-        themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
-        localStorage.setItem(storageKey + '-theme', theme);
-    }
-    
-    async function handleChatSend() {
-        const userQuery = chatInput.value.trim();
-        if (!userQuery) return;
-        // The AI should set this data attribute in the HTML
-        const personaPrompt = chatPanel.dataset.personaPrompt || "You are a helpful AI.";
-        const finalPrompt = `${personaPrompt}\n\nUser Question: "${userQuery}"`;
-
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'chat-message user';
-        userMessageDiv.textContent = userQuery;
-        chatMessages.appendChild(userMessageDiv);
-        
-        const aiMessageDiv = document.createElement('div');
-        aiMessageDiv.className = 'chat-message ai';
-        aiMessageDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>';
-        chatMessages.appendChild(aiMessageDiv);
-
-        chatInput.value = '';
-        chatInput.disabled = true;
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-        
-        try {
-            // This global function is expected to be defined by the environment (e.g., Google Colab, etc.)
-            const response = await call_gemini_api(finalPrompt);
-            aiMessageDiv.innerHTML = response.replace(/\n/g, '<br>');
-        } catch (error) {
-            console.error('Gemini API call failed:', error);
-            aiMessageDiv.textContent = `API 호출 오류: ${error.message}`;
-        } finally {
-            chatInput.disabled = false;
-            chatInput.focus();
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-    }
-    
-    // --- Event Listener Setup ---
     function setupEventListeners() {
-        // Panels
+        themeToggle.addEventListener('click', () => applyTheme(body.classList.contains('dark-mode') ? 'light' : 'dark'));
         ['chat-panel', 'notes-app-panel'].forEach(id => {
             const panel = document.getElementById(id);
-            makePanelDraggable(panel);
-            document.getElementById(id.replace('-panel', '-toggle-btn'))?.addEventListener('click', () => togglePanel(panel));
-            panel.querySelector('.close-btn')?.addEventListener('click', () => panel.style.display = 'none');
+            if (panel) {
+                makePanelDraggable(panel);
+                const toggleBtn = document.getElementById(id.replace('-panel', '-toggle-btn'));
+                if (toggleBtn) toggleBtn.addEventListener('click', () => togglePanel(panel));
+                const closeBtn = panel.querySelector('.close-btn');
+                if (closeBtn) closeBtn.addEventListener('click', () => panel.style.display = 'none');
+            }
         });
-
-        // Theme
-        themeToggle.addEventListener('click', () => applyTheme(body.classList.contains('dark-mode') ? 'light' : 'dark'));
-
-        // Chat
-        chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
-        chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
-
-        // Notes App
-        addNewNoteBtn.addEventListener('click', addNote);
-        backToListBtn.addEventListener('click', () => switchView('list'));
-        searchInput.addEventListener('input', renderNoteList);
-        exportNotesBtn.addEventListener('click', exportNotes);
-        [noteTitleInput, noteContentTextarea].forEach(el => el.addEventListener('input', () => {
-            updateStatus('입력 중...', true);
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(saveNote, 1000);
-        }));
-        notesList.addEventListener('click', e => {
-            const noteItem = e.target.closest('.note-item');
-            if (!noteItem) return;
-            const noteId = noteItem.dataset.id;
-            if (e.target.closest('.delete-btn')) handleDeleteRequest(noteId);
-            else if (e.target.closest('.pin-btn')) togglePin(noteId);
-            else openNoteEditor(noteId);
-Use code with caution.
-JavaScript
-});
-formatToolbar.addEventListener('click', e => {
-const button = e.target.closest('.format-btn');
-if (button) applyFormat(button.dataset.format);
-});
-linkTopicBtn.addEventListener('click', () => {
-noteContentTextarea.value += \n\n🔗 연관 학습: [${document.title || '현재 학습'}];
-saveNote();
-});
-}
-Generated code
-// --- Main Initialization Function ---
-    function init() {
-        storageKey = `ailey-bailey-${document.title.replace(/\s/g, '_')}`;
-        const savedTheme = localStorage.getItem(storageKey + '-theme') || 'dark';
-        applyTheme(savedTheme);
-        
-        setupEventListeners();
-        
-        // This is the entry point for cloud features
-        initializeFirebase();
+        // Add other event listeners for chat, notes etc. here
     }
-    
+
     // Run Initialization
     init();
 });
-```"
-
