@@ -141,3 +141,6 @@ body.dark-mode .custom-modal { background-color: var(--container-bg-dark); }
 .modal-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; }
 #modal-confirm-btn { background-color: #d9534f; color: white; }
 #modal-cancel-btn { background-color: #888; color: white; }
+/* --- v5.3 additions --- */
+#fixed-timestamp { position: fixed; top: 10px; left: 15px; z-index: 2000; font-size: 0.9em; color: var(--sub-text-color-dark); background-color: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 10px; }
+body:not(.dark-mode) #fixed-timestamp { color: var(--sub-text-color-light); background-color: rgba(255,255,255,0.3); }
