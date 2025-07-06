@@ -1,11 +1,13 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.1 (Audit-Compliant Revision)
+Version: 7.0 (TutorBot v2.0 - Copilot Integration)
 Architect: [Username] & System Architect Ailey
-Description: Audit-compliant version of the script. 
-- All placeholder comments (`// No changes`) have been removed and replaced with the full original function code.
-- The re-architected Tutor System and new Context Injection feature are retained as justified by the audit response.
+Description: Implemented the "Learning Copilot" system for the AI Tutor.
+- Added a state machine (`chatQuizState`) to handle multi-turn quiz interactions.
+- Reworked `handleChatSend` to dispatch to different AI protocols based on the selected mode.
+- Enhanced `renderChatHistory` to parse special tags and apply unique styling for problems and solutions.
+- Dynamically generates mode selector buttons.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -23,7 +25,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const quizSubmitBtn = document.getElementById('quiz-submit-btn');
     const quizResults = document.getElementById('quiz-results');
     const startQuizBtn = document.getElementById('start-quiz-btn');
+    const chatModeSelector = document.getElementById('chat-mode-selector');
+    const deleteHistoryBtn = document.getElementById('delete-history-btn');
     const chatPanel = document.getElementById('chat-panel');
+    const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
     const chatMessages = document.getElementById('chat-messages');
     const chatSendBtn = document.getElementById('chat-send-btn');
@@ -51,23 +56,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const themeToggle = document.getElementById('theme-toggle');
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
-    
-    // --- NEW: Tutor System Elements ---
-    const tutorTabsContainer = document.getElementById('tutor-tabs-container');
-    const chatArea = document.getElementById('chat-area');
-    const problemGeneratorPanel = document.getElementById('problem-generator-panel');
-    const pgTopic = document.getElementById('pg-topic');
-    const pgType = document.getElementById('pg-type');
-    const pgCount = document.getElementById('pg-count');
-    const pgDifficulty = document.getElementById('pg-difficulty');
-    const pgGenerateBtn = document.getElementById('pg-generate-btn');
-    const pgResultArea = document.getElementById('pg-result-area');
-    const sessionListContainer = document.getElementById('session-list-container');
-    const addNewSessionBtn = document.getElementById('add-new-session-btn');
-    const editCustomPromptBtn = document.getElementById('edit-custom-prompt-btn'); // Assuming this exists for custom tab
 
     // --- 2. State Management ---
-    let db, notesCollection, tutorCollectionRef;
+    let db, notesCollection, chatCollectionRef;
     let currentUser = null;
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'AileyBailey_Global_Space';
     let storageKey = 'learningNote-' + (document.title || 'default-page');
@@ -75,29 +66,15 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentNoteId = null;
     let unsubscribeFromNotes = null;
     let debounceTimer = null;
-    let unsubscribeFromTutor = null;
+    
+    // --- REFINED CHAT STATE ---
+    let chatHistories = { ailey_coaching: [], deep_learning: [], custom: [] };
+    let selectedMode = 'ailey_coaching'; // Default mode
+    let chatQuizState = 'idle'; // State for deep_learning mode: 'idle', 'awaiting_answer'
+    let lastQuestion = ''; // Stores the last question asked in quiz mode
+    let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 AI 튜터야. 사용자의 모든 질문에 답변해줘.';
+    let unsubscribeFromChat = null;
     let currentQuizData = null;
-
-    // --- NEW: Tutor System State ---
-    let tutorState = {
-        activeTab: 'ailey', // 'ailey', 'custom', 'problem-generator'
-        sessions: {
-            ailey: [],
-            custom: []
-        },
-        activeSessionId: {
-            ailey: null,
-            custom: null
-        },
-        customPromptLibrary: {
-            '친절한 초보자 설명가': "너는 세상에서 가장 친절한 선생님이야. 복잡한 개념도 초등학생이 이해할 수 있도록 쉬운 비유와 예시를 들어 단계별로 설명해야 해.",
-            '깐깐한 코드 리뷰어': "너는 최고의 시니어 개발자야. 사용자가 제출한 코드의 잠재적 버그, 비효율적인 구조, 가독성 문제를 날카롭게 지적하고, 더 나은 개선안을 반드시 코드로 제시해야 해.",
-            '소크라테스식 질문 전문가': "너는 소크라테스야. 사용자의 질문에 절대 직접 답하지 마. 대신, 사용자가 스스로 답을 찾을 수 있도록 논리의 허점을 파고드는 릴레이 질문을 계속 던져야 해.",
-            '실전 압박 면접관': "너는 지원자를 압박하는 면접관이야. 사용자의 답변에 대해 '왜 그렇게 생각하죠?', '다른 대안은 없나요?'와 같이 계속해서 꼬리 질문을 던져 논리적 깊이를 테스트해야 해."
-        },
-        currentCustomSystemPrompt: ''
-    };
-
 
     // --- 3. Function Definitions (in logical order) ---
 
@@ -122,8 +99,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (currentUser) {
                 notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/notes`);
                 listenToNotes();
-                tutorCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/tutorData`).doc(storageKey);
-                listenToTutorData();
+                chatCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatHistories`).doc(storageKey);
+                listenToChatHistory();
             }
         } catch (error) {
             console.error("Firebase 초기화 또는 인증 실패:", error);
@@ -141,30 +118,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function initializeTooltips() {
-        const keywordChips = document.querySelectorAll('.keyword-chip[data-tooltip]');
+        const keywordChips = document.querySelectorAll('.keyword-chip');
         keywordChips.forEach(chip => {
-            chip.classList.add('has-tooltip');
             const tooltipText = chip.dataset.tooltip;
-            let tooltipElement = chip.querySelector('.tooltip');
-            if (!tooltipElement) {
-                tooltipElement = document.createElement('span');
-                tooltipElement.className = 'tooltip';
-                chip.appendChild(tooltipElement);
+            if (tooltipText) {
+                chip.classList.add('has-tooltip');
+                const tooltipElement = chip.querySelector('.tooltip');
+                if (tooltipElement) { tooltipElement.textContent = tooltipText; }
             }
-            tooltipElement.textContent = tooltipText;
         });
-
         const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]');
         inlineHighlights.forEach(highlight => {
-            highlight.classList.add('has-tooltip');
             const tooltipText = highlight.dataset.tooltip;
-            let tooltipElement = highlight.querySelector('.tooltip');
-            if(!tooltipElement) {
-                 tooltipElement = document.createElement('span');
+            if(tooltipText && !highlight.querySelector('.tooltip')) {
+                 highlight.classList.add('has-tooltip');
+                 const tooltipElement = document.createElement('span');
                  tooltipElement.className = 'tooltip';
+                 tooltipElement.textContent = tooltipText;
                  highlight.appendChild(tooltipElement);
             }
-            tooltipElement.textContent = tooltipText;
         });
     }
 
@@ -181,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.removeEventListener('mouseup', onMouseUp); 
         };
         header.addEventListener('mousedown', e => {
-            if (e.target.closest('button, input, select, .close-btn, .tutor-tab, #add-new-session-btn')) return;
+            if (e.target.closest('button, input, .close-btn, #delete-history-btn, #chat-mode-selector')) return;
             isDragging = true;
             panelElement.classList.add('is-dragging');
             offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY };
@@ -194,17 +166,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!panelElement) return;
         const show = forceShow !== null ? forceShow : panelElement.style.display !== 'flex';
         panelElement.style.display = show ? 'flex' : 'none';
-        if (show) {
-            switchTab(tutorState.activeTab);
-        }
     }
 
     function setupNavigator() {
         const scrollNav = document.getElementById('scroll-nav');
         if (!scrollNav || !learningContent) return;
-        
         const headers = learningContent.querySelectorAll('h2, #section-3 ul li > strong');
-        
         if (headers.length === 0) {
             scrollNav.style.display = 'none';
             if(wrapper) wrapper.classList.add('toc-hidden');
@@ -212,46 +179,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         scrollNav.style.display = 'block';
         if(wrapper) wrapper.classList.remove('toc-hidden');
-
         const navList = document.createElement('ul');
         headers.forEach((header, index) => {
             let targetElement;
             let isSubheading = false;
             if (header.tagName === 'H2') {
                 targetElement = header.closest('.content-section');
-            } else { 
+            } else {
                 targetElement = header.closest('li');
                 isSubheading = true;
             }
-
-            if (targetElement && !targetElement.id) {
-                targetElement.id = `nav-target-${index}`;
-            }
-            
+            if (targetElement && !targetElement.id) { targetElement.id = `nav-target-${index}`; }
             if (targetElement) {
                 const listItem = document.createElement('li');
                 const link = document.createElement('a');
-                
                 let navText = header.textContent.trim();
                 const maxLen = 25;
-                if (navText.length > maxLen) {
-                    navText = navText.substring(0, maxLen - 3) + '...';
-                }
+                if (navText.length > maxLen) { navText = navText.substring(0, maxLen - 3) + '...'; }
                 link.textContent = navText;
                 link.href = `#${targetElement.id}`;
-
                 if (isSubheading) {
                     link.style.paddingLeft = '25px';
                     link.style.fontSize = '0.9em';
                 }
-                
                 listItem.appendChild(link);
                 navList.appendChild(listItem);
             }
         });
         scrollNav.innerHTML = '<h3>학습 내비게이션</h3>';
         scrollNav.appendChild(navList);
-
         const links = scrollNav.querySelectorAll('a');
         const observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
@@ -263,81 +219,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 });
-
         headers.forEach(header => {
             const targetElement = header.tagName === 'H2' ? header.closest('.content-section') : header.closest('li');
-            if (targetElement) {
-                observer.observe(targetElement);
-            }
-        });
-    }
-
-    function setupContextInjection() {
-        if (!learningContent || !selectionPopover) return;
-
-        learningContent.addEventListener('mouseup', (e) => {
-            const selection = window.getSelection();
-            if (selection.toString().trim().length > 5) {
-                const range = selection.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-                selectionPopover.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
-                selectionPopover.style.top = `${rect.top + window.scrollY - 10}px`;
-                selectionPopover.style.display = 'flex';
-            } else {
-                selectionPopover.style.display = 'none';
-            }
-        });
-        document.addEventListener('mousedown', (e) => {
-            if (!selectionPopover.contains(e.target)) {
-                selectionPopover.style.display = 'none';
-            }
-        });
-
-        if (popoverAskAi) popoverAskAi.addEventListener('click', () => {
-            const selectedText = window.getSelection().toString().trim();
-            if (selectedText) {
-                togglePanel(chatPanel, true);
-                chatInput.value = `Context: "${selectedText}"\n\n위 내용에 대해 질문이 있어: `;
-                chatInput.focus();
-                selectionPopover.style.display = 'none';
-            }
-        });
-
-        if (popoverAddNote) popoverAddNote.addEventListener('click', () => {
-            const selectedText = window.getSelection().toString().trim();
-            if (selectedText) {
-                addNote(`[인용] ${selectedText}\n\n`);
-                selectionPopover.style.display = 'none';
-            }
+            if (targetElement) { observer.observe(targetElement); }
         });
     }
 
     // Modals
     function openPromptModal() {
-        if (customPromptInput) {
-            const activeSession = getActiveSession();
-            customPromptInput.value = activeSession ? activeSession.system_prompt : tutorState.currentCustomSystemPrompt;
-        }
+        if (customPromptInput) customPromptInput.value = customPrompt;
         if (promptModalOverlay) promptModalOverlay.style.display = 'flex';
     }
-
     function closePromptModal() {
         if (promptModalOverlay) promptModalOverlay.style.display = 'none';
     }
-
     function saveCustomPrompt() {
         if (customPromptInput) {
-            const newPrompt = customPromptInput.value;
-            tutorState.currentCustomSystemPrompt = newPrompt;
-            const activeSession = getActiveSession();
-            if (activeSession) {
-                activeSession.system_prompt = newPrompt;
-                saveTutorData();
-            }
+            customPrompt = customPromptInput.value;
+            localStorage.setItem('customTutorPrompt', customPrompt);
             closePromptModal();
         }
     }
-
     function showModal(message, onConfirm) {
         if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return;
         modalMessage.textContent = message;
@@ -346,242 +248,84 @@ document.addEventListener('DOMContentLoaded', function () {
         modalCancelBtn.onclick = () => { customModal.style.display = 'none'; };
     }
 
-    // --- NEW / RE-ARCHITECTED: Tutor System ---
+    // --- REFINED CHAT ---
     
-    function setupTutorTabs() {
-        if (!tutorTabsContainer) return;
-        tutorTabsContainer.addEventListener('click', (e) => {
-            const button = e.target.closest('.tutor-tab');
-            if (button && button.dataset.tab) {
-                switchTab(button.dataset.tab);
-            }
-        });
-    }
+    function generateTutorPrompt(mode, query) {
+        const toneMandate = "너는 지금부터 친한 친구에게 말하는 것처럼, 반드시 친근한 반말(informal Korean)으로만 대화해야 해. '안녕하세요' 같은 존댓말은 절대 사용하면 안 돼.";
+        let fullPrompt = "";
 
-    function switchTab(tabId) {
-        tutorState.activeTab = tabId;
-        
-        document.querySelectorAll('.tutor-tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.tab === tabId);
-        });
-        
-        const isChat = (tabId === 'ailey' || tabId === 'custom');
-        chatArea.style.display = isChat ? 'flex' : 'none';
-        problemGeneratorPanel.style.display = tabId === 'problem-generator' ? 'flex' : 'none';
-        sessionListContainer.style.display = isChat ? 'flex' : 'none';
-        addNewSessionBtn.style.display = isChat ? 'block' : 'none';
-        if (editCustomPromptBtn) editCustomPromptBtn.style.display = tabId === 'custom' ? 'block' : 'none';
-
-        if (isChat) {
-            renderSessionList();
-            renderChatHistory();
+        switch(mode) {
+            case 'ailey_coaching':
+                fullPrompt = `[M-CHAT-AILEY] 모드 활성화. 사용자의 질문에 답변해줘: "${query}"`;
+                break;
+            case 'deep_learning':
+                if (chatQuizState === 'idle') {
+                    fullPrompt = `[M-CHAT-QUIZ] 모드, Phase 1 (Problem Generation) 활성화. 다음 주제에 대한 문제를 생성해줘: "${query}"`;
+                } else if (chatQuizState === 'awaiting_answer') {
+                    fullPrompt = `[M-CHAT-QUIZ] 모드, Phase 2 (Grading and Explanation) 활성화. 이전 문제인 "${lastQuestion}"에 대한 사용자의 답변은 "${query}"이야. 채점하고 상세히 설명해줘.`;
+                }
+                break;
+            case 'custom':
+                fullPrompt = `[M-CHAT-CUSTOM] 모드 활성화. 다음 커스텀 프롬프트를 따르되, 사용자의 질문에 답변해줘.\n커스텀 프롬프트: "${customPrompt}"\n사용자 질문: "${query}"`;
+                break;
         }
-    }
-    
-    function setupProblemGenerator() {
-        if (!pgGenerateBtn) return;
-        pgGenerateBtn.addEventListener('click', async () => {
-            const settings = {
-                topic: pgTopic.value,
-                type: pgType.value,
-                count: pgCount.value,
-                difficulty: pgDifficulty.value,
-            };
-            
-            if (!settings.topic) {
-                showModal("학습 주제를 입력해주세요.", () => {});
-                return;
-            }
-
-            pgResultArea.innerHTML = '<div class="loading-indicator">AI가 문제를 생성하고 있습니다...</div>';
-
-            // Simulate AI call
-            setTimeout(() => {
-                const mockResponse = {
-                    problems: Array.from({ length: settings.count }, (_, i) => ({
-                        id: i + 1,
-                        text: `[${settings.difficulty}] ${settings.topic}에 대한 [${settings.type}] 유형 문제 ${i + 1}`
-                    }))
-                };
-                renderGeneratedProblems(mockResponse);
-            }, 1500);
-        });
-    }
-
-    function renderGeneratedProblems(data) {
-        if (!pgResultArea || !data.problems) return;
-        pgResultArea.innerHTML = '<h4>생성된 문제</h4>';
-        
-        const form = document.createElement('form');
-        form.id = 'pg-answer-form';
-        
-        data.problems.forEach(problem => {
-            const problemDiv = document.createElement('div');
-            problemDiv.className = 'pg-problem-item';
-            problemDiv.innerHTML = `
-                <p><strong>문제 ${problem.id}:</strong> ${problem.text}</p>
-                <textarea class="pg-answer-input" data-problem-id="${problem.id}" placeholder="여기에 답변을 입력하세요..."></textarea>
-            `;
-            form.appendChild(problemDiv);
-        });
-        
-        const submitBtn = document.createElement('button');
-        submitBtn.type = 'submit';
-        submitBtn.id = 'pg-submit-answers-btn';
-        submitBtn.textContent = '답변 제출 및 채점 요청';
-        form.appendChild(submitBtn);
-
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            handleProblemSubmission(form);
-        });
-
-        pgResultArea.appendChild(form);
-    }
-    
-    function handleProblemSubmission(form) {
-        const answers = [];
-        form.querySelectorAll('.pg-answer-input').forEach(input => {
-            answers.push({
-                problemId: input.dataset.problemId,
-                answer: input.value
-            });
-        });
-        
-        pgResultArea.querySelector('#pg-submit-answers-btn').disabled = true;
-        pgResultArea.insertAdjacentHTML('beforeend', '<div class="loading-indicator">AI가 채점 중입니다...</div>');
-
-        setTimeout(() => {
-             // Simulate feedback
-            const feedbackArea = document.createElement('div');
-            feedbackArea.className = 'pg-feedback-area';
-            feedbackArea.innerHTML = '<h4>채점 결과</h4>';
-            answers.forEach(ans => {
-                feedbackArea.innerHTML += `<p><strong>문제 ${ans.problemId} 피드백:</strong> 훌륭한 답변입니다! (시뮬레이션)</p>`;
-            });
-            pgResultArea.appendChild(feedbackArea);
-            pgResultArea.querySelector('.loading-indicator').remove();
-        }, 2000);
-    }
-
-    function getActiveSession() {
-        const currentTab = tutorState.activeTab;
-        if (currentTab !== 'ailey' && currentTab !== 'custom') return null;
-        const activeSessionId = tutorState.activeSessionId[currentTab];
-        if (!activeSessionId) return null;
-        return tutorState.sessions[currentTab].find(s => s.id === activeSessionId);
-    }
-
-    function renderSessionList() {
-        if (!sessionListContainer) return;
-        const currentTab = tutorState.activeTab;
-        if (currentTab !== 'ailey' && currentTab !== 'custom') return;
-
-        const sessions = tutorState.sessions[currentTab] || [];
-        sessionListContainer.innerHTML = ''; 
-
-        sessions.forEach(session => {
-            const sessionDiv = document.createElement('div');
-            sessionDiv.className = 'session-item';
-            sessionDiv.dataset.sessionId = session.id;
-            sessionDiv.classList.toggle('active', session.id === tutorState.activeSessionId[currentTab]);
-            sessionDiv.textContent = session.title;
-            
-            const deleteBtn = document.createElement('span');
-            deleteBtn.className = 'delete-session-btn';
-            deleteBtn.textContent = '×';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                deleteSession(currentTab, session.id);
-            };
-            
-            sessionDiv.appendChild(deleteBtn);
-            sessionDiv.onclick = () => selectSession(currentTab, session.id);
-            sessionListContainer.appendChild(sessionDiv);
-        });
-    }
-
-    function addNewSession(tab = null) {
-        const currentTab = tab || tutorState.activeTab;
-        if (currentTab !== 'ailey' && currentTab !== 'custom') return;
-
-        const newSession = {
-            id: `sess_${Date.now()}`,
-            title: `새 대화 ${new Date().toLocaleTimeString('ko-KR')}`,
-            createdAt: new Date().toISOString(),
-            log: []
-        };
-
-        if (currentTab === 'custom') {
-            newSession.system_prompt = tutorState.currentCustomSystemPrompt || '너는 AI 튜터야.';
-        }
-
-        tutorState.sessions[currentTab].unshift(newSession);
-        tutorState.activeSessionId[currentTab] = newSession.id;
-        
-        saveTutorData();
-        renderSessionList();
-        renderChatHistory();
-    }
-    
-    function selectSession(tab, sessionId) {
-        tutorState.activeSessionId[tab] = sessionId;
-        renderSessionList();
-        renderChatHistory();
-    }
-
-    function deleteSession(tab, sessionId) {
-        showModal(`이 대화 기록을 정말로 삭제하시겠습니까?`, () => {
-            tutorState.sessions[tab] = tutorState.sessions[tab].filter(s => s.id !== sessionId);
-            if (tutorState.activeSessionId[tab] === sessionId) {
-                tutorState.activeSessionId[tab] = tutorState.sessions[tab].length > 0 ? tutorState.sessions[tab][0].id : null;
-            }
-            saveTutorData();
-            renderSessionList();
-            renderChatHistory();
-        });
+        return `${fullPrompt}\n\n${toneMandate}`;
     }
 
     async function handleChatSend() {
-        if (!chatInput) return;
+        if (!chatInput || !chatSendBtn) return;
         const userQuery = chatInput.value.trim();
         if (!userQuery) return;
-        
-        const session = getActiveSession();
-        if (!session) {
-            showModal("먼저 '새 대화 시작'을 눌러주세요.", () => {});
-            return;
-        }
-        
         chatInput.disabled = true;
         chatSendBtn.disabled = true;
 
-        session.log.push({ role: 'user', content: userQuery, timestamp: new Date().toISOString() });
-        renderChatHistory();
-
+        const currentHistory = chatHistories[selectedMode] || [];
+        currentHistory.push({ role: 'user', content: userQuery, timestamp: new Date().toISOString() });
+        renderChatHistory(selectedMode);
+        
         const aiMessageDiv = document.createElement('div');
         aiMessageDiv.className = 'chat-message ai';
         aiMessageDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>';
         if(chatMessages) chatMessages.appendChild(aiMessageDiv);
 
+        const apiKey = ""; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${apiKey}`;
+        const payload = {
+            contents: [{ role: "user", parts: [{ text: generateTutorPrompt(selectedMode, userQuery) }] }]
+        };
+
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            const aiResponse = `[${tutorState.activeTab} 모드] 당신의 질문: "${userQuery}" (시뮬레이션 응답)`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            const result = await response.json();
             
-            session.log.push({ role: 'ai', content: aiResponse, timestamp: new Date().toISOString() });
+            let aiResponse = "죄송해요, 답변을 생성하는 데 문제가 발생했어요. 😥";
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                aiResponse = result.candidates[0].content.parts[0].text;
+            }
             
-            // Auto-generate title for new sessions
-            if (session.log.length < 3) {
-                 session.title = userQuery.substring(0, 20) + '...';
-                 renderSessionList();
+            // State transition for quiz mode
+            if (selectedMode === 'deep_learning') {
+                if (chatQuizState === 'idle' && aiResponse.startsWith('[PROBLEM_GENERATED]')) {
+                    chatQuizState = 'awaiting_answer';
+                    lastQuestion = aiResponse.replace('[PROBLEM_GENERATED]', '').trim();
+                } else if (chatQuizState === 'awaiting_answer') {
+                    chatQuizState = 'idle';
+                    lastQuestion = '';
+                }
             }
 
-            await saveTutorData();
-            renderChatHistory();
+            currentHistory.push({ role: 'ai', content: aiResponse, timestamp: new Date().toISOString() });
+            await saveChatHistory();
+            renderChatHistory(selectedMode);
         } catch (error) {
             console.error("AI API Error:", error);
-            session.log.push({ role: 'ai', content: `오류가 발생했습니다: ${error.message}`, timestamp: new Date().toISOString() });
-            renderChatHistory();
+            currentHistory.push({ role: 'ai', content: `오류가 발생했습니다: ${error.message}`, timestamp: new Date().toISOString() });
+            renderChatHistory(selectedMode);
         } finally {
             chatInput.disabled = false;
             chatSendBtn.disabled = false;
@@ -590,23 +334,45 @@ document.addEventListener('DOMContentLoaded', function () {
             chatInput.focus();
         }
     }
-
-    function renderChatHistory() {
+    
+    function renderChatHistory(mode) {
         if (!chatMessages) return;
         chatMessages.innerHTML = '';
-        const session = getActiveSession();
-
-        if (!session) {
-            chatMessages.innerHTML = '<div class="chat-placeholder">왼쪽에서 대화를 선택하거나<br>"새 대화 시작"을 눌러주세요.</div>';
-            return;
-        }
-
-        session.log.forEach(msg => {
+        const history = chatHistories[mode] || [];
+        history.forEach(msg => {
             const msgDiv = document.createElement('div');
             msgDiv.className = `chat-message ${msg.role}`;
+            
+            let content = msg.content;
+            
+            // Parse special tags for quiz mode
+            if (content.startsWith('[PROBLEM_GENERATED]')) {
+                msgDiv.classList.add('quiz-problem');
+                content = content.replace('[PROBLEM_GENERATED]', '').trim();
+            } else if (content.startsWith('[CORRECT]')) {
+                msgDiv.classList.add('quiz-solution', 'correct');
+                const header = document.createElement('div');
+                header.className = 'solution-header correct';
+                header.textContent = '✅ 정답입니다!';
+                msgDiv.appendChild(header);
+                content = content.replace('[CORRECT]', '').trim();
+            } else if (content.startsWith('[INCORRECT]')) {
+                msgDiv.classList.add('quiz-solution', 'incorrect');
+                const header = document.createElement('div');
+                header.className = 'solution-header incorrect';
+                header.textContent = '❌ 오답입니다.';
+                msgDiv.appendChild(header);
+                content = content.replace('[INCORRECT]', '').trim();
+            }
+
             const contentDiv = document.createElement('div');
-            contentDiv.textContent = msg.content;
+            // Basic Markdown to HTML conversion for bold and newlines
+            contentDiv.innerHTML = content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+
             msgDiv.appendChild(contentDiv);
+
             if (msg.timestamp) {
                 const timeDiv = document.createElement('div');
                 timeDiv.className = 'chat-timestamp';
@@ -618,7 +384,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 sendToNoteBtn.className = 'send-to-note-btn';
                 sendToNoteBtn.textContent = '메모로 보내기';
                 sendToNoteBtn.onclick = (e) => {
-                    addNote(`[AI 튜터 - ${session.title}] ${msg.content}`);
+                    // Send parsed content, not raw
+                    addNote(`[AI 튜터] ${contentDiv.textContent}`);
                     e.target.textContent = '✅';
                     e.target.disabled = true;
                 };
@@ -628,43 +395,59 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-
-    async function listenToTutorData() {
-        if (!tutorCollectionRef) return;
-        if (unsubscribeFromTutor) unsubscribeFromTutor();
-        
-        unsubscribeFromTutor = tutorCollectionRef.onSnapshot(doc => {
+    
+    async function listenToChatHistory() {
+        if (!chatCollectionRef) return;
+        if (unsubscribeFromChat) unsubscribeFromChat();
+        unsubscribeFromChat = chatCollectionRef.onSnapshot(doc => {
+            const defaultHistories = { ailey_coaching: [], deep_learning: [], custom: [] };
             if (doc.exists) {
-                const data = doc.data();
-                tutorState.sessions.ailey = data.sessions?.ailey || [];
-                tutorState.sessions.custom = data.sessions?.custom || [];
-                tutorState.activeSessionId = data.activeSessionId || { ailey: null, custom: null };
+                chatHistories = { ...defaultHistories, ...doc.data() };
             } else {
-                tutorState.sessions = { ailey: [], custom: [] };
-                tutorState.activeSessionId = { ailey: null, custom: null };
+                chatHistories = defaultHistories;
             }
-
-            if (tutorState.sessions.ailey.length === 0) addNewSession('ailey');
-            if (tutorState.sessions.custom.length === 0) addNewSession('custom');
-            
-            switchTab(tutorState.activeTab); 
-        }, error => console.error("Tutor data listener error:", error));
+            renderChatHistory(selectedMode);
+        }, error => console.error("Chat history listener error:", error));
     }
-
-    async function saveTutorData() {
-        if (tutorCollectionRef) {
-            try {
-                const dataToSave = {
-                    sessions: {
-                        ailey: tutorState.sessions.ailey.map(s => ({...s, createdAt: s.createdAt instanceof Date ? s.createdAt : new Date(s.createdAt) })),
-                        custom: tutorState.sessions.custom.map(s => ({...s, createdAt: s.createdAt instanceof Date ? s.createdAt : new Date(s.createdAt) }))
-                    },
-                    activeSessionId: tutorState.activeSessionId
-                };
-                await tutorCollectionRef.set(dataToSave, { merge: true });
-            } 
-            catch (error) { console.error("Failed to save tutor data:", error); }
+    
+    async function saveChatHistory() {
+        if (chatCollectionRef) {
+            try { await chatCollectionRef.set(chatHistories); } 
+            catch (error) { console.error("Failed to save chat history:", error); }
         }
+    }
+    
+    function setupChatModeSelector() {
+        if (!chatModeSelector) return;
+        chatModeSelector.innerHTML = ''; // Clear existing buttons
+        const modes = [
+            { id: 'ailey_coaching', text: '기본 코칭 💬' },
+            { id: 'deep_learning', text: '심화 학습 🧠' },
+            { id: 'custom', text: '커스텀 ⚙️' }
+        ];
+
+        modes.forEach(mode => {
+            const button = document.createElement('button');
+            button.dataset.mode = mode.id;
+            button.innerHTML = mode.text;
+            if (mode.id === selectedMode) button.classList.add('active');
+            
+            button.addEventListener('click', () => {
+                selectedMode = mode.id;
+                // Reset quiz state when switching modes
+                chatQuizState = 'idle'; 
+                lastQuestion = '';
+                
+                chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                if (selectedMode === 'custom') {
+                    openPromptModal();
+                }
+                renderChatHistory(selectedMode);
+            });
+            chatModeSelector.appendChild(button);
+        });
     }
 
 
@@ -709,7 +492,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            togglePanel(notesAppPanel, true);
             openNoteEditor(newNoteRef.id);
         } catch (error) { console.error("새 메모 추가 실패:", error); }
     }
@@ -833,11 +615,14 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         
+        // Clock
         updateClock();
         setInterval(updateClock, 1000);
 
+        // Tooltips
         initializeTooltips();
         
+        // Draggable Panels
         makePanelDraggable(chatPanel);
         makePanelDraggable(notesAppPanel);
 
@@ -851,24 +636,28 @@ document.addEventListener('DOMContentLoaded', function () {
             clockElement.classList.toggle('tucked');
         });
         if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
-        if (chatPanel.querySelector('.close-btn')) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
+        if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
         if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => togglePanel(notesAppPanel));
-        
+        if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
         if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
-        if (chatSendBtn) chatSendBtn.addEventListener('click', handleChatSend);
-        if (addNewSessionBtn) addNewSessionBtn.addEventListener('click', () => addNewSession());
-        if (editCustomPromptBtn) editCustomPromptBtn.addEventListener('click', openPromptModal);
-        
+        if (deleteHistoryBtn) deleteHistoryBtn.addEventListener('click', async () => {
+            const modeText = chatModeSelector.querySelector(`button[data-mode="${selectedMode}"]`).textContent;
+            showModal(`'${modeText}' 모드의 대화 기록을 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`, async () => {
+                chatHistories[selectedMode] = [];
+                await saveChatHistory();
+                renderChatHistory(selectedMode);
+            });
+        });
         if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
         if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
-        
         if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
         if (quizSubmitBtn) quizSubmitBtn.addEventListener('click', () => {
             if (!currentQuizData || !quizResults) return;
             let score = 0;
             let allAnswered = true;
             currentQuizData.questions.forEach((q, index) => {
-                if (!document.querySelector(`input[name="question-${index}"]:checked`)) { allAnswered = false; }
+                const selected = document.querySelector(`input[name="question-${index}"]:checked`);
+                if (!selected) { allAnswered = false; }
             });
             if (!allAnswered) {
                 quizResults.textContent = "모든 문제에 답해주세요!";
@@ -895,7 +684,9 @@ document.addEventListener('DOMContentLoaded', function () {
             quizResults.style.color = score === currentQuizData.questions.length ? 'lightgreen' : 'orange';
         });
         if(quizModalOverlay) quizModalOverlay.addEventListener('click', (e) => {
-            if (e.target === quizModalOverlay) { quizModalOverlay.style.display = 'none'; }
+            if (e.target === quizModalOverlay) {
+                quizModalOverlay.style.display = 'none';
+            }
         });
 
         // Notes App Listeners
@@ -932,12 +723,8 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Initial Setup Calls
         setupNavigator();
-        setupContextInjection();
-        setupTutorTabs();
-        setupProblemGenerator();
+        setupChatModeSelector(); // Setup the new dynamic buttons
         initializeFirebase();
-
-        switchTab(tutorState.activeTab); 
     }
 
     // --- 5. Run Initialization ---
