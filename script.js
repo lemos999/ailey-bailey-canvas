@@ -1,10 +1,10 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 6.2 (Navigation Title Truncation)
+Version: 6.2 (Navigation Text Truncation)
 Architect: [Username] & System Architect Ailey
-Description: This is a complete and unabridged script. This version introduces
-logic to truncate long header titles in the navigation panel for better readability.
+Description: This script powers all dynamic content rendering, Firebase integration,
+and interactive features. Includes fix for long navigation titles.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -167,10 +167,10 @@ document.addEventListener('DOMContentLoaded', function () {
         panelElement.style.display = show ? 'flex' : 'none';
     }
 
-    /* --- MODIFIED/ADDED FOR NAVIGATION TITLE TRUNCATION --- */
+    /* --- MODIFIED FOR NAVIGATION TITLE TRUNCATION --- */
     function setupNavigator() {
         const scrollNav = document.getElementById('scroll-nav');
-        if (!scrollNav || !learningContent) return;
+        if (!scrollNav || !learningContent) return; // Added check for learningContent
         const headers = learningContent.querySelectorAll('h2, h3');
         if (headers.length === 0) {
             scrollNav.style.display = 'none';
@@ -186,18 +186,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const listItem = document.createElement('li');
             const link = document.createElement('a');
             
-            const fullHeaderText = header.textContent.trim();
-            const delimiter = ':';
-            const delimiterIndex = fullHeaderText.indexOf(delimiter);
-            
-            // Use the part before the colon for nav, or the full text if no colon
-            const navText = delimiterIndex !== -1 
-                ? fullHeaderText.substring(0, delimiterIndex).trim() 
-                : fullHeaderText;
-
+            // --- Truncation Logic Start ---
+            let navText = header.textContent.trim();
+            const maxLen = 25;
+            if (navText.length > maxLen) {
+                navText = navText.substring(0, maxLen - 3) + '...';
+            }
             link.textContent = navText;
-            link.href = `#${header.id}`;
+            // --- Truncation Logic End ---
 
+            link.href = `#${header.id}`;
             if (header.tagName === 'H3') {
                 link.style.paddingLeft = '25px';
                 link.style.fontSize = '0.9em';
@@ -222,6 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
         headers.forEach(header => observer.observe(header));
     }
     /* --- END OF MODIFICATION --- */
+
 
     // Modals
     function openPromptModal() {
