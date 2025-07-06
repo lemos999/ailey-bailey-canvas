@@ -1,10 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 6.3 (Upgraded Navigation Scanner)
+Version: 6.4 (Universal Navigation & Tooltip Scanner)
 Architect: [Username] & System Architect Ailey
-Description: Upgraded the navigation scanner to include list-based subheadings
-from the main content for a richer ToC.
+Description: Upgraded the navigation scanner to include all h3 subheadings from all content sections for a universal ToC. Tooltip initialization is now globally applied.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -167,13 +166,13 @@ document.addEventListener('DOMContentLoaded', function () {
         panelElement.style.display = show ? 'flex' : 'none';
     }
 
-    /* --- MODIFIED: UPGRADED NAVIGATION SCANNER --- */
+    /* --- MODIFIED: UPGRADED UNIVERSAL NAVIGATION SCANNER --- */
     function setupNavigator() {
         const scrollNav = document.getElementById('scroll-nav');
         if (!scrollNav || !learningContent) return;
         
-        // Upgraded selector to include h2 and specific li > strong elements as headers
-        const headers = learningContent.querySelectorAll('h2, #section-3 ul li > strong');
+        // Upgraded selector to include h2 and ALL h3 > strong elements as headers
+        const headers = learningContent.querySelectorAll('h2, .content-section h3 > strong');
         
         if (headers.length === 0) {
             scrollNav.style.display = 'none';
@@ -185,13 +184,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const navList = document.createElement('ul');
         headers.forEach((header, index) => {
-            // Determine the actual element to set the ID on (the h2's parent div, or the li)
             let targetElement;
             let isSubheading = false;
             if (header.tagName === 'H2') {
                 targetElement = header.closest('.content-section');
-            } else { // It's a STRONG tag inside an LI
-                targetElement = header.closest('li');
+            } else { // It's a STRONG tag inside an H3
+                targetElement = header.closest('.content-section');
                 isSubheading = true;
             }
 
@@ -203,7 +201,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 const listItem = document.createElement('li');
                 const link = document.createElement('a');
                 
-                let navText = header.textContent.trim();
+                // For h3>strong, remove brackets and emojis for a cleaner nav text
+                let navText = header.textContent.trim().replace(/\[|\]|🤓|⏳|📖/g, '').trim();
                 const maxLen = 25;
                 if (navText.length > maxLen) {
                     navText = navText.substring(0, maxLen - 3) + '...';
@@ -235,11 +234,9 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 });
 
-        headers.forEach(header => {
-            const targetElement = header.tagName === 'H2' ? header.closest('.content-section') : header.closest('li');
-            if (targetElement) {
-                observer.observe(targetElement);
-            }
+        const observedElements = learningContent.querySelectorAll('.content-section');
+        observedElements.forEach(el => {
+            observer.observe(el);
         });
     }
     /* --- END OF MODIFICATION --- */
