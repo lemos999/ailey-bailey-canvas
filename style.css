@@ -1,11 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 6.1 (Tooltip Enhancement)
+Version: 6.3 (H3 Highlight & UI Polish)
 Architect: [Username] & System Architect Ailey
-Description: This is a complete and unabridged stylesheet extracted directly 
-from the user-provided final HTML. It contains all visual elements required 
-for the target interactive learning notebook.
+Description: This stylesheet now includes highlighting for H3 sub-topics for better visual consistency.
 */
 
 :root {
@@ -34,6 +32,21 @@ body:not(.dark-mode) .header .subtitle { color: var(--sub-text-color-light); }
 .content-section h2 { font-family: 'Noto Serif KR', serif; font-size: 1.8em; padding-left: 15px; margin-bottom: 20px; transition: color 0.3s, border-color 0.3s; }
 body.dark-mode .content-section h2 { color: var(--h2-color-dark); border-left: 4px solid var(--h2-border-dark); }
 body:not(.dark-mode) .content-section h2 { color: var(--h2-color-light); border-left: 4px solid var(--h2-border-light); }
+
+/* --- NEW STYLE FOR H3 HIGHLIGHT --- */
+.content-section h3 {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 6px;
+    margin-top: 20px;
+    margin-bottom: 15px;
+    font-size: 1.25em;
+    font-family: 'Gowun Batang', serif;
+}
+body:not(.dark-mode) .content-section h3 { background-color: var(--strong-bg-light); color: var(--header-color-light); }
+body.dark-mode .content-section h3 { background-color: var(--strong-bg-dark); color: var(--text-color-dark); }
+/* --- END OF NEW STYLE --- */
+
 .content-section p { font-size: 1.1em; text-align: justify; margin-bottom: 15px; }
 .content-section ul { list-style-position: inside; padding-left: 5px; }
 .content-section li { margin-bottom: 8px; }
@@ -48,50 +61,14 @@ body.dark-mode .keyword-list { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .keyword-list { background-color: var(--quote-bg-light); }
 .keyword-chip { background-color: #B97F74; color: #FAF7F2; padding: 5px 13px; border-radius: 15px; font-weight: 700; font-size: 1.0em; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-/* --- MODIFIED/ADDED FOR UNIVERSAL TOOLTIP --- */
-.has-tooltip {
-    position: relative;
-    cursor: help;
-}
-.tooltip {
-    visibility: hidden;
-    width: 250px;
-    text-align: left;
-    border-radius: 6px;
-    padding: 10px 12px;
-    position: absolute;
-    z-index: 10;
-    bottom: 130%;
-    left: 50%;
-    margin-left: -125px;
-    opacity: 0;
-    transition: opacity 0.3s;
-    font-family: 'Gowun Batang', serif;
-    font-size: 0.95em;
-    line-height: 1.6;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    border: 1px solid;
-}
+.has-tooltip { position: relative; cursor: help; }
+.tooltip { visibility: hidden; width: 250px; text-align: left; border-radius: 6px; padding: 10px 12px; position: absolute; z-index: 10; bottom: 130%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; font-family: 'Gowun Batang', serif; font-size: 0.95em; line-height: 1.6; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid; }
 body.dark-mode .tooltip { background-color: #2c2c2c; color: var(--text-color-dark); border-color: #444; }
 body:not(.dark-mode) .tooltip { background-color: #FFFFF0; color: var(--text-color-light); border-color: var(--border-color-light); }
-.tooltip::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    transition: border-color 0.3s;
-}
+.tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; transition: border-color 0.3s; }
 body.dark-mode .tooltip::after { border-color: #2c2c2c transparent transparent transparent; }
 body:not(.dark-mode) .tooltip::after { border-color: #FFFFF0 transparent transparent transparent; }
-.has-tooltip:hover .tooltip {
-    visibility: visible;
-    opacity: 1;
-}
-/* --- END OF MODIFICATION --- */
-
+.has-tooltip:hover .tooltip { visibility: visible; opacity: 1; }
 
 #real-time-clock { position: fixed; top: 15px; left: 20px; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 18px; border-radius: 10px; font-size: 1em; z-index: 2000; font-family: 'Gowun Batang', serif; backdrop-filter: blur(5px); box-shadow: 0 2px 10px rgba(0,0,0,0.3); transition: all 0.4s ease; }
 #real-time-clock.tucked { left: -250px; opacity: 0; }
