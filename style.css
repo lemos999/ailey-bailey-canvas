@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 6.3 (UI Enhancement: h3 Style & Tooltip)
+Version: 6.3 (UI Enhancement Patch)
 Architect: [Username] & System Architect Ailey
-Description: This is a complete and unabridged stylesheet.
+Description: Added h3 subheading highlight styles.
 */
 
 :root {
@@ -32,18 +32,25 @@ body:not(.dark-mode) .header .subtitle { color: var(--sub-text-color-light); }
 .content-section h2 { font-family: 'Noto Serif KR', serif; font-size: 1.8em; padding-left: 15px; margin-bottom: 20px; transition: color 0.3s, border-color 0.3s; }
 body.dark-mode .content-section h2 { color: var(--h2-color-dark); border-left: 4px solid var(--h2-border-dark); }
 body:not(.dark-mode) .content-section h2 { color: var(--h2-color-light); border-left: 4px solid var(--h2-border-light); }
-/* --- NEW STYLE FOR H3 SUBHEADINGS --- */
-.content-section h3 {
-    display: inline-block;
+
+/* --- ADDED FOR H3 SUBHEADING HIGHLIGHT --- */
+.content-section h3 strong {
     padding: 5px 12px;
     border-radius: 6px;
-    font-size: 1.2em;
-    margin: 20px 0 15px;
+    display: inline-block; /* Crucial for background to wrap text */
+    margin-bottom: 10px;
     transition: background-color 0.3s, color 0.3s;
 }
-body.dark-mode .content-section h3 { background-color: var(--strong-bg-dark); color: var(--text-color-dark); }
-body:not(.dark-mode) .content-section h3 { background-color: var(--strong-bg-light); color: var(--header-color-light); }
-/* --- END OF NEW STYLE --- */
+body.dark-mode .content-section h3 strong {
+    background-color: var(--strong-bg-dark);
+    color: var(--header-color-dark);
+}
+body:not(.dark-mode) .content-section h3 strong {
+    background-color: var(--strong-bg-light);
+    color: var(--header-color-light);
+}
+/* --- END OF ADDITION --- */
+
 .content-section p { font-size: 1.1em; text-align: justify; margin-bottom: 15px; }
 .content-section ul { list-style-position: inside; padding-left: 5px; }
 .content-section li { margin-bottom: 8px; }
