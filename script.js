@@ -1,7 +1,7 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 6.0 (Reverse-Engineered from Final Product)
+Version: 6.1 (Tooltip Enhancement)
 Architect: [Username] & System Architect Ailey
 Description: This is a complete and unabridged script extracted directly
 from the user-provided final HTML. It powers all dynamic content rendering,
@@ -112,16 +112,36 @@ document.addEventListener('DOMContentLoaded', function () {
         clockElement.textContent = now.toLocaleString('ko-KR', options);
     }
 
+    /* --- MODIFIED/ADDED FOR UNIVERSAL TOOLTIP --- */
     function initializeTooltips() {
+        // For .keyword-chip elements
         const keywordChips = document.querySelectorAll('.keyword-chip');
         keywordChips.forEach(chip => {
             const tooltipText = chip.dataset.tooltip;
-            const tooltipElement = chip.querySelector('.tooltip');
-            if (tooltipText && tooltipElement) {
-                tooltipElement.textContent = tooltipText;
+            if (tooltipText) {
+                chip.classList.add('has-tooltip');
+                const tooltipElement = chip.querySelector('.tooltip');
+                if (tooltipElement) {
+                    tooltipElement.textContent = tooltipText;
+                }
+            }
+        });
+
+        // For inline <strong> elements
+        const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]');
+        inlineHighlights.forEach(highlight => {
+            const tooltipText = highlight.dataset.tooltip;
+            if(tooltipText && !highlight.querySelector('.tooltip')) {
+                 highlight.classList.add('has-tooltip');
+                 const tooltipElement = document.createElement('span');
+                 tooltipElement.className = 'tooltip';
+                 tooltipElement.textContent = tooltipText;
+                 highlight.appendChild(tooltipElement);
             }
         });
     }
+    /* --- END OF MODIFICATION --- */
+
 
     function makePanelDraggable(panelElement) {
         if(!panelElement) return;
@@ -246,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if(chatMessages) chatMessages.appendChild(aiMessageDiv);
 
         const apiKey = ""; 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
         const payload = {
             contents: [{ role: "user", parts: [{ text: generateTutorPrompt(selectedMode, userQuery) }] }]
         };
@@ -457,9 +477,9 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const aiResponse = await new Promise(resolve => setTimeout(() => resolve(JSON.stringify({
                 "questions": [
-                    {"question": "정조가 젊은 인재를 양성하고 정책을 연구하기 위해 설립한 개혁의 핵심 기구는 무엇인가요?", "options": ["집현전", "장용영", "규장각", "성균관"], "answer": "규장각"},
-                    {"question": "정조가 상인들의 독점권을 폐지하고 자유로운 상업 활동을 보장한 경제 정책은 무엇인가요?", "options": ["과전법", "대동법", "균역법", "신해통공"], "answer": "신해통공"},
-                    {"question": "정조의 효심과 개혁 의지가 담겨 있으며, 정약용의 거중기 등 최신 과학 기술이 동원된 건축물은 무엇인가요?", "options": ["경복궁", "창덕궁", "수원 화성", "남한산성"], "answer": "수원 화성"}
+                    {"question": "(e.g)정조가 젊은 인재를 양성하고 정책을 연구하기 위해 설립한 개혁의 핵심 기구는 무엇인가요?", "options": ["집현전", "장용영", "규장각", "성균관"], "answer": "규장각"},
+                    {"question": "(e.g)정조가 상인들의 독점권을 폐지하고 자유로운 상업 활동을 보장한 경제 정책은 무엇인가요?", "options": ["과전법", "대동법", "균역법", "신해통공"], "answer": "신해통공"},
+                    {"question": "(e.g)정조의 효심과 개혁 의지가 담겨 있으며, 정약용의 거중기 등 최신 과학 기술이 동원된 건축물은 무엇인가요?", "options": ["경복궁", "창덕궁", "수원 화성", "남한산성"], "answer": "수원 화성"}
                 ]
             })), 1000));
             currentQuizData = JSON.parse(aiResponse);
