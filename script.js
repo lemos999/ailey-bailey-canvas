@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 6.4 (Universal Navigation & Tooltip Scanner)
+Version: 6.5 (Precision Navigation & Dynamic Tooltips)
 Architect: [Username] & System Architect Ailey
-Description: Upgraded the navigation scanner to include all h3 subheadings from all content sections for a universal ToC. Tooltip initialization is now globally applied.
+Description: Implemented precision navigation using '.nav-item' class. Unified tooltip logic to dynamically apply to all elements with 'data-tooltip' attribute. Updated clock format.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -106,34 +106,23 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateClock() {
         if (!clockElement) return;
         const now = new Date();
-        const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        // MODIFIED: Removed 'year' from options
+        const options = { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
         clockElement.textContent = now.toLocaleString('ko-KR', options);
     }
     
+    // MODIFIED: Unified Tooltip Logic
     function initializeTooltips() {
-        // For .keyword-chip elements
-        const keywordChips = document.querySelectorAll('.keyword-chip');
-        keywordChips.forEach(chip => {
-            const tooltipText = chip.dataset.tooltip;
-            if (tooltipText) {
-                chip.classList.add('has-tooltip');
-                const tooltipElement = chip.querySelector('.tooltip');
-                if (tooltipElement) {
-                    tooltipElement.textContent = tooltipText;
-                }
-            }
-        });
-
-        // For inline <strong> elements
-        const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]');
-        inlineHighlights.forEach(highlight => {
-            const tooltipText = highlight.dataset.tooltip;
-            if(tooltipText && !highlight.querySelector('.tooltip')) {
-                 highlight.classList.add('has-tooltip');
-                 const tooltipElement = document.createElement('span');
-                 tooltipElement.className = 'tooltip';
-                 tooltipElement.textContent = tooltipText;
-                 highlight.appendChild(tooltipElement);
+        const elementsWithTooltips = document.querySelectorAll('[data-tooltip]');
+        elementsWithTooltips.forEach(element => {
+            const tooltipText = element.dataset.tooltip;
+            // Ensure tooltip text exists and a tooltip hasn't already been created
+            if (tooltipText && !element.querySelector('.tooltip')) {
+                element.classList.add('has-tooltip');
+                const tooltipElement = document.createElement('span');
+                tooltipElement.className = 'tooltip';
+                tooltipElement.textContent = tooltipText;
+                element.appendChild(tooltipElement);
             }
         });
     }
@@ -166,13 +155,13 @@ document.addEventListener('DOMContentLoaded', function () {
         panelElement.style.display = show ? 'flex' : 'none';
     }
 
-    /* --- MODIFIED: UPGRADED UNIVERSAL NAVIGATION SCANNER --- */
+    // MODIFIED: Precision Navigation Scanner
     function setupNavigator() {
         const scrollNav = document.getElementById('scroll-nav');
         if (!scrollNav || !learningContent) return;
         
-        // Upgraded selector to include h2 and ALL h3 > strong elements as headers
-        const headers = learningContent.querySelectorAll('h2, .content-section h3 > strong');
+        // Upgraded selector to only target elements with the '.nav-item' class
+        const headers = learningContent.querySelectorAll('.nav-item');
         
         if (headers.length === 0) {
             scrollNav.style.display = 'none';
@@ -184,15 +173,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const navList = document.createElement('ul');
         headers.forEach((header, index) => {
-            let targetElement;
-            let isSubheading = false;
-            if (header.tagName === 'H2') {
-                targetElement = header.closest('.content-section');
-            } else { // It's a STRONG tag inside an H3
-                targetElement = header.closest('.content-section');
-                isSubheading = true;
-            }
-
+            const targetElement = header.closest('.content-section');
+            
             if (targetElement && !targetElement.id) {
                 targetElement.id = `nav-target-${index}`;
             }
@@ -201,8 +183,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 const listItem = document.createElement('li');
                 const link = document.createElement('a');
                 
-                // For h3>strong, remove brackets and emojis for a cleaner nav text
-                let navText = header.textContent.trim().replace(/\[|\]|🤓|⏳|📖/g, '').trim();
+                // Clean the text by removing icons and brackets for the nav display
+                let navText = header.textContent.trim().replace(/\[|\]|🎯|🔑|📖|🖊️|⏳|🤓/g, '').trim();
+                
                 const maxLen = 25;
                 if (navText.length > maxLen) {
                     navText = navText.substring(0, maxLen - 3) + '...';
@@ -210,7 +193,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 link.textContent = navText;
                 link.href = `#${targetElement.id}`;
 
-                if (isSubheading) {
+                // Add indentation for h3 items to create visual hierarchy
+                if (header.tagName === 'H3') {
                     link.style.paddingLeft = '25px';
                     link.style.fontSize = '0.9em';
                 }
@@ -239,8 +223,6 @@ document.addEventListener('DOMContentLoaded', function () {
             observer.observe(el);
         });
     }
-    /* --- END OF MODIFICATION --- */
-
 
     // Modals
     function openPromptModal() {
