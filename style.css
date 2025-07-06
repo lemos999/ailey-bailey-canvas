@@ -1,7 +1,7 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 6.0 (Reverse-Engineered from Final Product)
+Version: 6.1 (Tooltip Enhancement)
 Architect: [Username] & System Architect Ailey
 Description: This is a complete and unabridged stylesheet extracted directly 
 from the user-provided final HTML. It contains all visual elements required 
@@ -46,14 +46,52 @@ body:not(.dark-mode) blockquote { background-color: var(--quote-bg-light); borde
 .keyword-list { padding: 20px; margin: 10px 0; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; transition: background-color 0.3s; }
 body.dark-mode .keyword-list { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .keyword-list { background-color: var(--quote-bg-light); }
-.keyword-chip { background-color: #B97F74; color: #FAF7F2; padding: 5px 13px; border-radius: 15px; font-weight: 700; font-size: 1.0em; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: help; position: relative; }
-.keyword-chip .tooltip { visibility: hidden; width: 250px; text-align: left; border-radius: 6px; padding: 10px 12px; position: absolute; z-index: 10; bottom: 130%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; font-family: 'Gowun Batang', serif; font-size: 0.95em; line-height: 1.6; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid; }
-body.dark-mode .keyword-chip .tooltip { background-color: #2c2c2c; color: var(--text-color-dark); border-color: #444; }
-body:not(.dark-mode) .keyword-chip .tooltip { background-color: #FFFFF0; color: var(--text-color-light); border-color: var(--border-color-light); }
-.keyword-chip .tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; transition: border-color 0.3s; }
-body.dark-mode .keyword-chip .tooltip::after { border-color: #2c2c2c transparent transparent transparent; }
-body:not(.dark-mode) .keyword-chip .tooltip::after { border-color: #FFFFF0 transparent transparent transparent; }
-.keyword-chip:hover .tooltip { visibility: visible; opacity: 1; }
+.keyword-chip { background-color: #B97F74; color: #FAF7F2; padding: 5px 13px; border-radius: 15px; font-weight: 700; font-size: 1.0em; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+/* --- MODIFIED/ADDED FOR UNIVERSAL TOOLTIP --- */
+.has-tooltip {
+    position: relative;
+    cursor: help;
+}
+.tooltip {
+    visibility: hidden;
+    width: 250px;
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px 12px;
+    position: absolute;
+    z-index: 10;
+    bottom: 130%;
+    left: 50%;
+    margin-left: -125px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-family: 'Gowun Batang', serif;
+    font-size: 0.95em;
+    line-height: 1.6;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 1px solid;
+}
+body.dark-mode .tooltip { background-color: #2c2c2c; color: var(--text-color-dark); border-color: #444; }
+body:not(.dark-mode) .tooltip { background-color: #FFFFF0; color: var(--text-color-light); border-color: var(--border-color-light); }
+.tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    transition: border-color 0.3s;
+}
+body.dark-mode .tooltip::after { border-color: #2c2c2c transparent transparent transparent; }
+body:not(.dark-mode) .tooltip::after { border-color: #FFFFF0 transparent transparent transparent; }
+.has-tooltip:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+/* --- END OF MODIFICATION --- */
+
 
 #real-time-clock { position: fixed; top: 15px; left: 20px; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 18px; border-radius: 10px; font-size: 1em; z-index: 2000; font-family: 'Gowun Batang', serif; backdrop-filter: blur(5px); box-shadow: 0 2px 10px rgba(0,0,0,0.3); transition: all 0.4s ease; }
 #real-time-clock.tucked { left: -250px; opacity: 0; }
