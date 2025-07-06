@@ -1,10 +1,10 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 6.3 (Compatible with UI Enhancement v6.3)
+Version: 6.3 (Upgraded Navigation Scanner)
 Architect: [Username] & System Architect Ailey
-Description: This script powers all dynamic content rendering, Firebase integration,
-and interactive features. Includes fix for long navigation titles.
+Description: Upgraded the navigation scanner to include list-based subheadings
+from the main content for a richer ToC.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -167,10 +167,14 @@ document.addEventListener('DOMContentLoaded', function () {
         panelElement.style.display = show ? 'flex' : 'none';
     }
 
+    /* --- MODIFIED: UPGRADED NAVIGATION SCANNER --- */
     function setupNavigator() {
         const scrollNav = document.getElementById('scroll-nav');
-        if (!scrollNav || !learningContent) return; 
-        const headers = learningContent.querySelectorAll('h2, h3');
+        if (!scrollNav || !learningContent) return;
+        
+        // Upgraded selector to include h2 and specific li > strong elements as headers
+        const headers = learningContent.querySelectorAll('h2, #section-3 ul li > strong');
+        
         if (headers.length === 0) {
             scrollNav.style.display = 'none';
             if(wrapper) wrapper.classList.add('toc-hidden');
@@ -180,25 +184,41 @@ document.addEventListener('DOMContentLoaded', function () {
         if(wrapper) wrapper.classList.remove('toc-hidden');
 
         const navList = document.createElement('ul');
-        headers.forEach(header => {
-            if (!header.id) header.id = 'header-' + Math.random().toString(36).substr(2, 9);
-            const listItem = document.createElement('li');
-            const link = document.createElement('a');
-            
-            let navText = header.textContent.trim();
-            const maxLen = 25;
-            if (navText.length > maxLen) {
-                navText = navText.substring(0, maxLen - 3) + '...';
+        headers.forEach((header, index) => {
+            // Determine the actual element to set the ID on (the h2's parent div, or the li)
+            let targetElement;
+            let isSubheading = false;
+            if (header.tagName === 'H2') {
+                targetElement = header.closest('.content-section');
+            } else { // It's a STRONG tag inside an LI
+                targetElement = header.closest('li');
+                isSubheading = true;
             }
-            link.textContent = navText;
 
-            link.href = `#${header.id}`;
-            if (header.tagName === 'H3') {
-                link.style.paddingLeft = '25px';
-                link.style.fontSize = '0.9em';
+            if (targetElement && !targetElement.id) {
+                targetElement.id = `nav-target-${index}`;
             }
-            listItem.appendChild(link);
-            navList.appendChild(listItem);
+            
+            if (targetElement) {
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                
+                let navText = header.textContent.trim();
+                const maxLen = 25;
+                if (navText.length > maxLen) {
+                    navText = navText.substring(0, maxLen - 3) + '...';
+                }
+                link.textContent = navText;
+                link.href = `#${targetElement.id}`;
+
+                if (isSubheading) {
+                    link.style.paddingLeft = '25px';
+                    link.style.fontSize = '0.9em';
+                }
+                
+                listItem.appendChild(link);
+                navList.appendChild(listItem);
+            }
         });
         scrollNav.innerHTML = '<h3>학습 내비게이션</h3>';
         scrollNav.appendChild(navList);
@@ -208,14 +228,22 @@ document.addEventListener('DOMContentLoaded', function () {
             entries.forEach(entry => {
                 const id = entry.target.getAttribute('id');
                 const navLink = scrollNav.querySelector(`a[href="#${id}"]`);
-                if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                if (navLink && entry.isIntersecting && entry.intersectionRatio > 0.5) {
                     links.forEach(l => l.classList.remove('active'));
-                    if(navLink) navLink.classList.add('active');
+                    navLink.classList.add('active');
                 }
             });
         }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 });
-        headers.forEach(header => observer.observe(header));
+
+        headers.forEach(header => {
+            const targetElement = header.tagName === 'H2' ? header.closest('.content-section') : header.closest('li');
+            if (targetElement) {
+                observer.observe(targetElement);
+            }
+        });
     }
+    /* --- END OF MODIFICATION --- */
+
 
     // Modals
     function openPromptModal() {
@@ -269,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if(chatMessages) chatMessages.appendChild(aiMessageDiv);
 
         const apiKey = ""; 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${apiKey}`;
         const payload = {
             contents: [{ role: "user", parts: [{ text: generateTutorPrompt(selectedMode, userQuery) }] }]
         };
