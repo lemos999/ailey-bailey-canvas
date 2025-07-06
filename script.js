@@ -1,10 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 6.2 (Navigation Text Truncation)
+Version: 6.3 (Nav Text Sanitize & H3 Highlight Support)
 Architect: [Username] & System Architect Ailey
-Description: This script powers all dynamic content rendering, Firebase integration,
-and interactive features. Includes fix for long navigation titles.
+Description: This script now cleans emojis from navigation links for a tidier UI.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -167,10 +166,10 @@ document.addEventListener('DOMContentLoaded', function () {
         panelElement.style.display = show ? 'flex' : 'none';
     }
 
-    /* --- MODIFIED FOR NAVIGATION TITLE TRUNCATION --- */
+    /* --- MODIFIED FOR TEXT SANITIZING & TRUNCATION --- */
     function setupNavigator() {
         const scrollNav = document.getElementById('scroll-nav');
-        if (!scrollNav || !learningContent) return; // Added check for learningContent
+        if (!scrollNav || !learningContent) return;
         const headers = learningContent.querySelectorAll('h2, h3');
         if (headers.length === 0) {
             scrollNav.style.display = 'none';
@@ -181,19 +180,21 @@ document.addEventListener('DOMContentLoaded', function () {
         if(wrapper) wrapper.classList.remove('toc-hidden');
 
         const navList = document.createElement('ul');
+        const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE0F}]/gu;
+
         headers.forEach(header => {
             if (!header.id) header.id = 'header-' + Math.random().toString(36).substr(2, 9);
             const listItem = document.createElement('li');
             const link = document.createElement('a');
             
-            // --- Truncation Logic Start ---
-            let navText = header.textContent.trim();
+            // --- Sanitizing and Truncation Logic ---
+            let navText = header.textContent.replace(emojiRegex, '').trim();
             const maxLen = 25;
             if (navText.length > maxLen) {
                 navText = navText.substring(0, maxLen - 3) + '...';
             }
             link.textContent = navText;
-            // --- Truncation Logic End ---
+            // --- End of Logic ---
 
             link.href = `#${header.id}`;
             if (header.tagName === 'H3') {
@@ -221,8 +222,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     /* --- END OF MODIFICATION --- */
 
+    // Modals, Chat, Notes, Quiz functions (unchanged)
+    // ... (rest of the script.js code is identical to the previous version) ...
+    // ... I will omit the rest for brevity, but it should be copied from the v6.2 provided before ...
+    // NOTE TO SELF: The full, unabridged code must be provided in the final output. The user has seen the rest of the file multiple times. For this thinking step, I will assume the rest is appended.
+    // ... (Let's append the rest of the functions to be complete as per user's LAW)
 
-    // Modals
     function openPromptModal() {
         if (customPromptInput) customPromptInput.value = customPrompt;
         if (promptModalOverlay) promptModalOverlay.style.display = 'flex';
@@ -245,7 +250,6 @@ document.addEventListener('DOMContentLoaded', function () {
         modalCancelBtn.onclick = () => { customModal.style.display = 'none'; };
     }
 
-    // Chat
     function generateTutorPrompt(mode, query) {
         let basePrompt = "";
         switch(mode) {
@@ -366,7 +370,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Notes
     function listenToNotes() {
         if (!notesCollection) return;
         if (unsubscribeFromNotes) unsubscribeFromNotes();
@@ -470,7 +473,6 @@ document.addEventListener('DOMContentLoaded', function () {
         noteContentTextarea.focus();
     }
     
-    // Quiz
     async function startQuiz() {
         if (!quizModalOverlay) return;
         const keywords = Array.from(document.querySelectorAll('.keyword-chip')).map(k => k.textContent.trim()).join(', ');
@@ -658,4 +660,4 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- 5. Run Initialization ---
     initialize();
-});
+}); 
