@@ -1,11 +1,10 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 6.1 (Tooltip Enhancement)
+Version: 6.2 (Navigation Title Truncation)
 Architect: [Username] & System Architect Ailey
-Description: This is a complete and unabridged script extracted directly
-from the user-provided final HTML. It powers all dynamic content rendering,
-Firebase integration, and interactive features for the learning notebook.
+Description: This is a complete and unabridged script. This version introduces
+logic to truncate long header titles in the navigation panel for better readability.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -111,8 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
         clockElement.textContent = now.toLocaleString('ko-KR', options);
     }
-
-    /* --- MODIFIED/ADDED FOR UNIVERSAL TOOLTIP --- */
+    
     function initializeTooltips() {
         // For .keyword-chip elements
         const keywordChips = document.querySelectorAll('.keyword-chip');
@@ -140,8 +138,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-    /* --- END OF MODIFICATION --- */
-
 
     function makePanelDraggable(panelElement) {
         if(!panelElement) return;
@@ -171,9 +167,10 @@ document.addEventListener('DOMContentLoaded', function () {
         panelElement.style.display = show ? 'flex' : 'none';
     }
 
+    /* --- MODIFIED/ADDED FOR NAVIGATION TITLE TRUNCATION --- */
     function setupNavigator() {
         const scrollNav = document.getElementById('scroll-nav');
-        if (!scrollNav) return;
+        if (!scrollNav || !learningContent) return;
         const headers = learningContent.querySelectorAll('h2, h3');
         if (headers.length === 0) {
             scrollNav.style.display = 'none';
@@ -188,8 +185,19 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!header.id) header.id = 'header-' + Math.random().toString(36).substr(2, 9);
             const listItem = document.createElement('li');
             const link = document.createElement('a');
-            link.textContent = header.textContent;
+            
+            const fullHeaderText = header.textContent.trim();
+            const delimiter = ':';
+            const delimiterIndex = fullHeaderText.indexOf(delimiter);
+            
+            // Use the part before the colon for nav, or the full text if no colon
+            const navText = delimiterIndex !== -1 
+                ? fullHeaderText.substring(0, delimiterIndex).trim() 
+                : fullHeaderText;
+
+            link.textContent = navText;
             link.href = `#${header.id}`;
+
             if (header.tagName === 'H3') {
                 link.style.paddingLeft = '25px';
                 link.style.fontSize = '0.9em';
@@ -213,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 });
         headers.forEach(header => observer.observe(header));
     }
+    /* --- END OF MODIFICATION --- */
 
     // Modals
     function openPromptModal() {
