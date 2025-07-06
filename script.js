@@ -457,9 +457,9 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const aiResponse = await new Promise(resolve => setTimeout(() => resolve(JSON.stringify({
                 "questions": [
-                    {"question": "정조가 젊은 인재를 양성하고 정책을 연구하기 위해 설립한 개혁의 핵심 기구는 무엇인가요?", "options": ["집현전", "장용영", "규장각", "성균관"], "answer": "규장각"},
-                    {"question": "정조가 상인들의 독점권을 폐지하고 자유로운 상업 활동을 보장한 경제 정책은 무엇인가요?", "options": ["과전법", "대동법", "균역법", "신해통공"], "answer": "신해통공"},
-                    {"question": "정조의 효심과 개혁 의지가 담겨 있으며, 정약용의 거중기 등 최신 과학 기술이 동원된 건축물은 무엇인가요?", "options": ["경복궁", "창덕궁", "수원 화성", "남한산성"], "answer": "수원 화성"}
+                    {"question": (e.g)"정조가 젊은 인재를 양성하고 정책을 연구하기 위해 설립한 개혁의 핵심 기구는 무엇인가요?", "options": ["집현전", "장용영", "규장각", "성균관"], "answer": "규장각"},
+                    {"question": (e.g)"정조가 상인들의 독점권을 폐지하고 자유로운 상업 활동을 보장한 경제 정책은 무엇인가요?", "options": ["과전법", "대동법", "균역법", "신해통공"], "answer": "신해통공"},
+                    {"question": (e.g)"정조의 효심과 개혁 의지가 담겨 있으며, 정약용의 거중기 등 최신 과학 기술이 동원된 건축물은 무엇인가요?", "options": ["경복궁", "창덕궁", "수원 화성", "남한산성"], "answer": "수원 화성"}
                 ]
             })), 1000));
             currentQuizData = JSON.parse(aiResponse);
