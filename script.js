@@ -1,17 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 8.0 (Data-Driven UI Engine)
+Version: 7.1 (Chat Persistence & Renaming)
 Architect: [Username] & System Architect Ailey
-Description: Complete re-architecture to a data-driven model. This script now acts as the rendering engine.
-- Implemented `renderContentFromJSON` to dynamically build the entire learning page from an AI-generated JSON object.
-- Integrated all 7 user requests:
-  - #1: Renamed "AI Tutorbot" to "Learning Copilot".
-  - #2: Added Firebase cloud sync for chat history.
-  - #4: Expanded TOC generation to include all h2/h3 sections.
-  - #5: Added a selection popover for "Ask AI" / "Add to Note".
-  - #6: Implemented multi-select and delete for the notes app.
-  - #7: Upgraded the chat send button to an SVG icon.
+Description: Implemented Firebase-backed persistence for chat history, allowing conversations to be saved and loaded across sessions. Renamed "AI Tutor" to "AI 러닝메이트" throughout the UI for a friendlier user experience.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -60,157 +52,56 @@ document.addEventListener('DOMContentLoaded', function () {
     const themeToggle = document.getElementById('theme-toggle');
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
-    // Note selection elements (#6)
-    const noteListHeader = document.querySelector('#note-list-view .panel-header');
-
 
     // --- 2. State Management ---
     let db, notesCollection, chatCollectionRef;
     let currentUser = null;
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'AileyBailey_Global_Space';
-    // Use a dynamic storage key based on the generated content title for chat history
-    let chatStorageKey = 'global-chat'; 
+    let storageKey = 'learningNote-' + (document.title || 'default-page');
     let localNotesCache = [];
     let currentNoteId = null;
     let unsubscribeFromNotes = null;
     let debounceTimer = null;
-    let isNoteSelectionMode = false;
-
-    // Chat State (#2)
+    
+    // --- REFINED CHAT STATE ---
     let chatHistories = { ailey_coaching: [], deep_learning: [], custom: [] };
     let selectedMode = 'ailey_coaching'; // Default mode
     let chatQuizState = 'idle'; // State for deep_learning mode: 'idle', 'awaiting_answer'
     let lastQuestion = ''; // Stores the last question asked in quiz mode
-    let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 AI 튜터야. 사용자의 모든 질문에 답변해줘.';
+    let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
     let unsubscribeFromChat = null;
     let currentQuizData = null;
 
-    // --- 3. Core Rendering Engine ---
+    // --- 3. Function Definitions (in logical order) ---
 
-    /**
-     * Renders the entire page content from a structured JSON object.
-     * @param {object} data The JSON data from the AI.
-     */
-    function renderContentFromJSON(data) {
-        if (!learningContent || !data) {
-            learningContent.innerHTML = '<h2>콘텐츠를 불러오는 데 실패했습니다.</h2>';
-            return;
-        }
-        learningContent.innerHTML = ''; // Clear previous content
-
-        // Set page title
-        document.title = data.title || '새 학습';
-        chatStorageKey = data.title.replace(/\s+/g, '_'); // Update chat storage key
-
-        // Render Header
-        const header = document.createElement('div');
-        header.className = 'header';
-        header.innerHTML = `
-            <h1>${data.title}</h1>
-            <p class="subtitle">${data.subtitle}</p>
-        `;
-        learningContent.appendChild(header);
-
-        // Render Sections
-        data.sections.forEach(section => {
-            const sectionDiv = document.createElement('div');
-            sectionDiv.id = `section-${section.id}`;
-            sectionDiv.className = 'content-section';
-
-            const titleEl = document.createElement(section.type === 'article' ? 'h2' : 'h3');
-            titleEl.innerHTML = section.title;
-            sectionDiv.appendChild(titleEl);
-            
-            // Re-map h3 titles to h2 for main sections for correct styling
-            const mainSectionTitles = ["🎯 오늘의 학습 목표", "🔑 핵심 키워드", "📖 핵심 원리와 개념"];
-            if(mainSectionTitles.includes(section.title)) {
-                titleEl.tagName.toLowerCase() === 'h3' && (titleEl.outerHTML = titleEl.outerHTML.replace('<h3', '<h2').replace('</h3>', '</h2>'));
-            }
-
-
-            switch (section.type) {
-                case 'blockquote':
-                    const bq = document.createElement('blockquote');
-                    bq.innerHTML = section.content;
-                    sectionDiv.appendChild(bq);
-                    break;
-                case 'chips':
-                    const chipContainer = document.createElement('div');
-                    chipContainer.className = 'keyword-list';
-                    section.content.forEach(chip => {
-                        const chipEl = document.createElement('span');
-                        chipEl.className = 'keyword-chip';
-                        chipEl.textContent = chip.term;
-                        chipEl.dataset.tooltip = chip.description;
-                        chipContainer.appendChild(chipEl);
-                    });
-                    sectionDiv.appendChild(chipContainer);
-                    break;
-                case 'article':
-                    section.content.forEach(articlePart => {
-                        const subHeading = document.createElement('h3');
-                        subHeading.innerHTML = articlePart.heading;
-                        sectionDiv.appendChild(subHeading);
-                        articlePart.paragraphs.forEach(pText => {
-                            const pEl = document.createElement('p');
-                            // Parse custom tooltip syntax: [[Keyword|Description]]
-                            pEl.innerHTML = pText.replace(/\[\[(.*?)\|(.*?)\]\]/g, '<strong data-tooltip="$2">$1</strong>');
-                            sectionDiv.appendChild(pEl);
-                        });
-                    });
-                    break;
-                case 'list':
-                    const ul = document.createElement('ul');
-                    section.content.forEach(item => {
-                        const li = document.createElement('li');
-                        li.innerHTML = item.item;
-                        ul.appendChild(li);
-                    });
-                    sectionDiv.appendChild(ul);
-                    break;
-            }
-            learningContent.appendChild(sectionDiv);
-        });
-        
-        // After rendering, initialize components that depend on the content
-        initializeTooltips();
-        setupNavigator();
-    }
-
-
-    // --- 4. Function Definitions (in logical order) ---
-
-    // Firebase (#2)
+    // Firebase
     async function initializeFirebase() {
         try {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
             const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            if (Object.keys(firebaseConfig).length === 0) { throw new Error("Firebase config not found."); }
-
+            if (!firebaseConfig) { throw new Error("Firebase config not found."); }
             if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
             const auth = firebase.auth();
             db = firebase.firestore();
-
             if (initialAuthToken) {
-                await auth.signInWithCustomToken(initialAuthToken).catch(err => {
+                await auth.signInWithCustomToken(initialAuthToken).catch(async (err) => {
                    console.warn("Custom token sign-in failed, trying anonymous.", err);
-                   return auth.signInAnonymously();
+                   await auth.signInAnonymously();
                 });
-            } else if (!auth.currentUser) {
+            } else {
                 await auth.signInAnonymously();
             }
-
             currentUser = auth.currentUser;
             if (currentUser) {
                 notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/notes`);
-                chatCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatHistories`);
                 listenToNotes();
+                chatCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatHistories`).doc(storageKey);
                 listenToChatHistory();
             }
         } catch (error) {
-            console.error("Firebase Initialization/Auth Failed:", error);
-            if (notesList) notesList.innerHTML = '<div>Cloud notes failed to load.</div>';
-            if (chatMessages) chatMessages.innerHTML = '<div>Learning Copilot connection failed.</div>';
+            console.error("Firebase 초기화 또는 인증 실패:", error);
+            if (notesList) notesList.innerHTML = '<div>클라우드 메모장을 불러오는 데 실패했습니다.</div>';
+            if (chatMessages) chatMessages.innerHTML = '<div>AI 러닝메이트 연결에 실패했습니다.</div>';
         }
     }
 
@@ -223,20 +114,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function initializeTooltips() {
-        // This function now needs to be more robust for dynamically added content.
-        const tooltippedElements = document.querySelectorAll('[data-tooltip]');
-        
-        tooltippedElements.forEach(el => {
-            // Avoid re-adding tooltips
-            if (el.classList.contains('has-tooltip')) return;
-
-            const tooltipText = el.dataset.tooltip;
+        const keywordChips = document.querySelectorAll('.keyword-chip');
+        keywordChips.forEach(chip => {
+            const tooltipText = chip.dataset.tooltip;
             if (tooltipText) {
-                el.classList.add('has-tooltip');
-                const tooltipElement = document.createElement('span');
-                tooltipElement.className = 'tooltip';
-                tooltipElement.textContent = tooltipText;
-                el.appendChild(tooltipElement);
+                chip.classList.add('has-tooltip');
+                const tooltipElement = chip.querySelector('.tooltip');
+                if (tooltipElement) { tooltipElement.textContent = tooltipText; }
+            }
+        });
+        const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]');
+        inlineHighlights.forEach(highlight => {
+            const tooltipText = highlight.dataset.tooltip;
+            if(tooltipText && !highlight.querySelector('.tooltip')) {
+                 highlight.classList.add('has-tooltip');
+                 const tooltipElement = document.createElement('span');
+                 tooltipElement.className = 'tooltip';
+                 tooltipElement.textContent = tooltipText;
+                 highlight.appendChild(tooltipElement);
             }
         });
     }
@@ -254,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.removeEventListener('mouseup', onMouseUp); 
         };
         header.addEventListener('mousedown', e => {
-            if (e.target.closest('button, input, .close-btn, #delete-history-btn, #chat-mode-selector, .header-button-group')) return;
+            if (e.target.closest('button, input, .close-btn, #delete-history-btn, #chat-mode-selector')) return;
             isDragging = true;
             panelElement.classList.add('is-dragging');
             offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY };
@@ -269,14 +164,10 @@ document.addEventListener('DOMContentLoaded', function () {
         panelElement.style.display = show ? 'flex' : 'none';
     }
 
-    // --- EXPANDED NAVIGATION (#4) ---
     function setupNavigator() {
         const scrollNav = document.getElementById('scroll-nav');
         if (!scrollNav || !learningContent) return;
-
-        // Find all H2 and H3 tags within the content sections
-        const headers = learningContent.querySelectorAll('.content-section h2, .content-section h3');
-
+        const headers = learningContent.querySelectorAll('h2, #section-3 ul li > strong');
         if (headers.length === 0) {
             scrollNav.style.display = 'none';
             if(wrapper) wrapper.classList.add('toc-hidden');
@@ -284,30 +175,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         scrollNav.style.display = 'block';
         if(wrapper) wrapper.classList.remove('toc-hidden');
-
         const navList = document.createElement('ul');
         headers.forEach((header, index) => {
-            const targetElement = header;
-            if (!targetElement.id) { targetElement.id = `nav-target-${index}`; }
-            
-            const listItem = document.createElement('li');
-            const link = document.createElement('a');
-            let navText = header.textContent.trim();
-            link.textContent = navText;
-            link.href = `#${targetElement.id}`;
-            
-            // Indent H3 links for visual hierarchy
-            if (header.tagName === 'H3') {
-                link.style.paddingLeft = '25px';
-                link.style.fontSize = '0.9em';
+            let targetElement;
+            let isSubheading = false;
+            if (header.tagName === 'H2') {
+                targetElement = header.closest('.content-section');
+            } else {
+                targetElement = header.closest('li');
+                isSubheading = true;
             }
-
-            listItem.appendChild(link);
-            navList.appendChild(listItem);
+            if (targetElement && !targetElement.id) { targetElement.id = `nav-target-${index}`; }
+            if (targetElement) {
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                let navText = header.textContent.trim();
+                const maxLen = 25;
+                if (navText.length > maxLen) { navText = navText.substring(0, maxLen - 3) + '...'; }
+                link.textContent = navText;
+                link.href = `#${targetElement.id}`;
+                if (isSubheading) {
+                    link.style.paddingLeft = '25px';
+                    link.style.fontSize = '0.9em';
+                }
+                listItem.appendChild(link);
+                navList.appendChild(listItem);
+            }
         });
         scrollNav.innerHTML = '<h3>학습 내비게이션</h3>';
         scrollNav.appendChild(navList);
-        
         const links = scrollNav.querySelectorAll('a');
         const observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
@@ -319,7 +215,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 });
-        headers.forEach(header => observer.observe(header));
+        headers.forEach(header => {
+            const targetElement = header.tagName === 'H2' ? header.closest('.content-section') : header.closest('li');
+            if (targetElement) { observer.observe(targetElement); }
+        });
     }
 
     // Modals
@@ -339,47 +238,99 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function showModal(message, onConfirm) {
         if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return;
-        modalMessage.innerHTML = message; // Use innerHTML to support simple HTML tags
+        modalMessage.textContent = message;
         customModal.style.display = 'flex';
-        const confirmHandler = () => {
-            onConfirm();
-            customModal.style.display = 'none';
-            modalConfirmBtn.removeEventListener('click', confirmHandler);
-        };
-        const cancelHandler = () => {
-            customModal.style.display = 'none';
-            modalCancelBtn.removeEventListener('click', cancelHandler);
-        };
-        modalConfirmBtn.addEventListener('click', confirmHandler, { once: true });
-        modalCancelBtn.addEventListener('click', cancelHandler, { once: true });
+        modalConfirmBtn.onclick = () => { onConfirm(); customModal.style.display = 'none'; };
+        modalCancelBtn.onclick = () => { customModal.style.display = 'none'; };
     }
 
-    // Chat (#1, #2, #7)
+    // --- REFINED CHAT ---
+    
+    function generateTutorPrompt(mode, query) {
+        const toneMandate = "너는 지금부터 친한 친구에게 말하는 것처럼, 반드시 친근한 반말(informal Korean)으로만 대화해야 해. '안녕하세요' 같은 존댓말은 절대 사용하면 안 돼.";
+        let fullPrompt = "";
+
+        switch(mode) {
+            case 'ailey_coaching':
+                fullPrompt = `[M-CHAT-AILEY] 모드 활성화. 사용자의 질문에 답변해줘: "${query}"`;
+                break;
+            case 'deep_learning':
+                if (chatQuizState === 'idle') {
+                    fullPrompt = `[M-CHAT-QUIZ] 모드, Phase 1 (Problem Generation) 활성화. 다음 주제에 대한 문제를 생성해줘: "${query}"`;
+                } else if (chatQuizState === 'awaiting_answer') {
+                    fullPrompt = `[M-CHAT-QUIZ] 모드, Phase 2 (Grading and Explanation) 활성화. 이전 문제인 "${lastQuestion}"에 대한 사용자의 답변은 "${query}"이야. 채점하고 상세히 설명해줘.`;
+                }
+                break;
+            case 'custom':
+                fullPrompt = `[M-CHAT-CUSTOM] 모드 활성화. 다음 커스텀 프롬프트를 따르되, 사용자의 질문에 답변해줘.\n커스텀 프롬프트: "${customPrompt}"\n사용자 질문: "${query}"`;
+                break;
+        }
+        return `${fullPrompt}\n\n${toneMandate}`;
+    }
+
     async function handleChatSend() {
         if (!chatInput || !chatSendBtn) return;
         const userQuery = chatInput.value.trim();
         if (!userQuery) return;
-
         chatInput.disabled = true;
         chatSendBtn.disabled = true;
 
         const currentHistory = chatHistories[selectedMode] || [];
         currentHistory.push({ role: 'user', content: userQuery, timestamp: new Date().toISOString() });
-        renderChatHistory(selectedMode); // Optimistic update
+        renderChatHistory(selectedMode); // Show user message immediately
         
-        // This should be replaced with a call to the actual Gemini API
-        setTimeout(async () => {
-            const aiResponse = `[Generated Response for "${userQuery}"]`; // Placeholder
-            currentHistory.push({ role: 'ai', content: aiResponse, timestamp: new Date().toISOString() });
-            await saveChatHistory(); // Save after getting AI response
-            renderChatHistory(selectedMode); // Render final state
+        const aiMessageDiv = document.createElement('div');
+        aiMessageDiv.className = 'chat-message ai';
+        aiMessageDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>';
+        if(chatMessages) chatMessages.appendChild(aiMessageDiv);
+        if(chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 
+
+        const apiKey = ""; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${apiKey}`;
+        const payload = {
+            contents: [{ role: "user", parts: [{ text: generateTutorPrompt(selectedMode, userQuery) }] }]
+        };
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            const result = await response.json();
+            
+            let aiResponse = "죄송해요, 답변을 생성하는 데 문제가 발생했어요. 😥";
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                aiResponse = result.candidates[0].content.parts[0].text;
+            }
+            
+            if (selectedMode === 'deep_learning') {
+                if (chatQuizState === 'idle' && aiResponse.startsWith('[PROBLEM_GENERATED]')) {
+                    chatQuizState = 'awaiting_answer';
+                    lastQuestion = aiResponse.replace('[PROBLEM_GENERATED]', '').trim();
+                } else if (chatQuizState === 'awaiting_answer') {
+                    chatQuizState = 'idle';
+                    lastQuestion = '';
+                }
+            }
+
+            currentHistory.push({ role: 'ai', content: aiResponse, timestamp: new Date().toISOString() });
+            await saveChatHistory();
+            // The listener will call renderChatHistory, so explicit call is removed to avoid double render
+        } catch (error) {
+            console.error("AI API Error:", error);
+            const errorMessage = `오류가 발생했습니다: ${error.message}`;
+            currentHistory.push({ role: 'ai', content: errorMessage, timestamp: new Date().toISOString() });
+            await saveChatHistory();
+        } finally {
             chatInput.disabled = false;
             chatSendBtn.disabled = false;
             chatInput.value = '';
             chatInput.style.height = 'auto';
             chatInput.focus();
-        }, 1000);
+        }
     }
     
     function renderChatHistory(mode) {
@@ -390,8 +341,32 @@ document.addEventListener('DOMContentLoaded', function () {
             const msgDiv = document.createElement('div');
             msgDiv.className = `chat-message ${msg.role}`;
             
+            let content = msg.content;
+            
+            if (content.startsWith('[PROBLEM_GENERATED]')) {
+                msgDiv.classList.add('quiz-problem');
+                content = content.replace('[PROBLEM_GENERATED]', '').trim();
+            } else if (content.startsWith('[CORRECT]')) {
+                msgDiv.classList.add('quiz-solution', 'correct');
+                const header = document.createElement('div');
+                header.className = 'solution-header correct';
+                header.textContent = '✅ 정답입니다!';
+                msgDiv.appendChild(header);
+                content = content.replace('[CORRECT]', '').trim();
+            } else if (content.startsWith('[INCORRECT]')) {
+                msgDiv.classList.add('quiz-solution', 'incorrect');
+                const header = document.createElement('div');
+                header.className = 'solution-header incorrect';
+                header.textContent = '❌ 오답입니다.';
+                msgDiv.appendChild(header);
+                content = content.replace('[INCORRECT]', '').trim();
+            }
+
             const contentDiv = document.createElement('div');
-            contentDiv.innerHTML = msg.content.replace(/\n/g, '<br>'); // Simple formatting
+            contentDiv.innerHTML = content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+
             msgDiv.appendChild(contentDiv);
 
             if (msg.timestamp) {
@@ -400,12 +375,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 timeDiv.textContent = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 msgDiv.appendChild(timeDiv);
             }
-            if (msg.role === 'ai') {
+            if(msg.role === 'ai') {
                 const sendToNoteBtn = document.createElement('button');
                 sendToNoteBtn.className = 'send-to-note-btn';
                 sendToNoteBtn.textContent = '메모로 보내기';
                 sendToNoteBtn.onclick = (e) => {
-                    addNote(`[학습 코파일럿] ${msg.content}`);
+                    addNote(`[AI 러닝메이트] ${contentDiv.textContent}`);
                     e.target.textContent = '✅';
                     e.target.disabled = true;
                 };
@@ -419,8 +394,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function listenToChatHistory() {
         if (!chatCollectionRef) return;
         if (unsubscribeFromChat) unsubscribeFromChat();
-
-        unsubscribeFromChat = chatCollectionRef.doc(chatStorageKey).onSnapshot(doc => {
+        unsubscribeFromChat = chatCollectionRef.onSnapshot(doc => {
             const defaultHistories = { ailey_coaching: [], deep_learning: [], custom: [] };
             if (doc.exists) {
                 chatHistories = { ...defaultHistories, ...doc.data() };
@@ -433,18 +407,14 @@ document.addEventListener('DOMContentLoaded', function () {
     
     async function saveChatHistory() {
         if (chatCollectionRef) {
-            try {
-                // Set, not update, to overwrite the entire modes object
-                await chatCollectionRef.doc(chatStorageKey).set(chatHistories, { merge: true });
-            } catch (error) {
-                console.error("Failed to save chat history:", error);
-            }
+            try { await chatCollectionRef.set(chatHistories); } 
+            catch (error) { console.error("Failed to save chat history:", error); }
         }
     }
     
     function setupChatModeSelector() {
         if (!chatModeSelector) return;
-        chatModeSelector.innerHTML = ''; // Clear existing buttons
+        chatModeSelector.innerHTML = '';
         const modes = [
             { id: 'ailey_coaching', text: '기본 코칭 💬' },
             { id: 'deep_learning', text: '심화 학습 🧠' },
@@ -465,32 +435,34 @@ document.addEventListener('DOMContentLoaded', function () {
                 chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
                 
-                if (selectedMode === 'custom') openPromptModal();
+                if (selectedMode === 'custom') {
+                    openPromptModal();
+                }
                 renderChatHistory(selectedMode);
             });
             chatModeSelector.appendChild(button);
         });
     }
 
-    // --- NOTES APP LOGIC (with #6 multi-select) ---
+
+    // Notes
     function listenToNotes() {
         if (!notesCollection) return;
         if (unsubscribeFromNotes) unsubscribeFromNotes();
-        unsubscribeFromNotes = notesCollection.orderBy('updatedAt', 'desc').onSnapshot(snapshot => {
+        unsubscribeFromNotes = notesCollection.onSnapshot(snapshot => {
             localNotesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderNoteList();
-        }, error => console.error("노트 실시간 수신 오류:", error));
+        }, error => { console.error("노트 실시간 수신 오류:", error); });
     }
-    
     function renderNoteList() {
         if (!notesList || !searchInput) return;
         const searchTerm = searchInput.value.toLowerCase();
-        const filteredNotes = localNotesCache.filter(note => 
-            (note.title && note.title.toLowerCase().includes(searchTerm)) || 
-            (note.content && note.content.toLowerCase().includes(searchTerm))
-        );
-        filteredNotes.sort((a, b) => (a.isPinned === b.isPinned) ? 0 : a.isPinned ? -1 : 1);
-
+        const filteredNotes = localNotesCache.filter(note => (note.title && note.title.toLowerCase().includes(searchTerm)) || (note.content && note.content.toLowerCase().includes(searchTerm)));
+        filteredNotes.sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0);
+        });
         notesList.innerHTML = '';
         if (filteredNotes.length === 0) {
             notesList.innerHTML = '<div>표시할 메모가 없습니다.</div>';
@@ -502,55 +474,10 @@ document.addEventListener('DOMContentLoaded', function () {
             item.dataset.id = note.id;
             if (note.isPinned) item.classList.add('pinned');
             const date = note.updatedAt ? new Date(note.updatedAt.toMillis()).toLocaleString() : '날짜 없음';
-            item.innerHTML = `
-                <input type="checkbox" class="note-item-selector" data-id="${note.id}">
-                <div class="note-item-content">
-                    <div class="note-item-title">${note.title || '무제'}</div>
-                    <div class="note-item-date">${date}</div>
-                </div>
-                <div class="note-item-actions">
-                    <button class="item-action-btn pin-btn ${note.isPinned ? 'pinned-active' : ''}" title="고정">${note.isPinned ? '📌' : '📍'}</button>
-                    <button class="item-action-btn delete-btn" title="삭제">🗑️</button>
-                </div>
-            `;
+            item.innerHTML = `<div class="note-item-content"><div class="note-item-title">${note.title || '무제'}</div><div class="note-item-date">${date}</div></div><div class="note-item-actions"><button class="item-action-btn pin-btn ${note.isPinned ? 'pinned-active' : ''}" title="고정">${note.isPinned ? '📌' : '📍'}</button><button class="item-action-btn delete-btn" title="삭제">🗑️</button></div>`;
             notesList.appendChild(item);
         });
     }
-
-    function toggleNoteSelectionMode() {
-        isNoteSelectionMode = !isNoteSelectionMode;
-        if(noteListView) noteListView.classList.toggle('selection-mode', isNoteSelectionMode);
-        
-        // Uncheck all items when exiting mode
-        if (!isNoteSelectionMode) {
-            document.querySelectorAll('.note-item-selector:checked').forEach(cb => cb.checked = false);
-            document.querySelectorAll('.note-item.selected').forEach(item => item.classList.remove('selected'));
-        }
-    }
-
-    async function deleteSelectedNotes() {
-        if (!notesCollection) return;
-        const selectedIds = Array.from(document.querySelectorAll('.note-item-selector:checked')).map(cb => cb.dataset.id);
-        
-        if (selectedIds.length === 0) {
-            alert('삭제할 메모를 선택해주세요.');
-            return;
-        }
-
-        showModal(`선택한 ${selectedIds.length}개의 메모를 정말로 삭제하시겠습니까?`, async () => {
-            const batch = db.batch();
-            selectedIds.forEach(id => {
-                batch.delete(notesCollection.doc(id));
-            });
-            try {
-                await batch.commit();
-                toggleNoteSelectionMode(); // Exit selection mode after deletion
-            } catch (error) {
-                console.error("메모 일괄 삭제 실패:", error);
-            }
-        });
-    }
-
     async function addNote(initialContent = '') {
         if (!notesCollection) return;
         try {
@@ -562,69 +489,29 @@ document.addEventListener('DOMContentLoaded', function () {
             openNoteEditor(newNoteRef.id);
         } catch (error) { console.error("새 메모 추가 실패:", error); }
     }
-    
     function saveNote() {
         if (debounceTimer) clearTimeout(debounceTimer);
         if (!currentNoteId || !notesCollection) return;
         const noteData = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
         notesCollection.doc(currentNoteId).update(noteData).then(() => updateStatus('저장됨 ✓', true)).catch(error => { console.error("메모 저장 실패:", error); updateStatus('저장 실패 ❌', false); });
     }
-
-    // --- 5. Selection Popover Logic (#5) ---
-    function setupSelectionPopover() {
-        document.addEventListener('mouseup', (e) => {
-            // Don't show popover inside inputs or the popover itself
-            if (e.target.closest('input, textarea, #selection-popover')) return;
-
-            const selection = window.getSelection();
-            const selectedText = selection.toString().trim();
-            
-            if (selectedText.length > 0) {
-                const range = selection.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-                selectionPopover.style.display = 'flex';
-                selectionPopover.style.left = `${rect.left + window.scrollX + (rect.width / 2) - (selectionPopover.offsetWidth / 2)}px`;
-                selectionPopover.style.top = `${rect.top + window.scrollY - selectionPopover.offsetHeight - 10}px`;
-            } else {
-                selectionPopover.style.display = 'none';
-            }
-        });
-
-        document.addEventListener('mousedown', (e) => {
-            if (!e.target.closest('#selection-popover')) {
-                selectionPopover.style.display = 'none';
-            }
-        });
-        
-        popoverAskAi.addEventListener('click', () => {
-            const selectedText = window.getSelection().toString().trim();
-            if(selectedText) {
-                chatInput.value = selectedText;
-                togglePanel(chatPanel, true);
-                chatInput.focus();
-                selectionPopover.style.display = 'none';
-            }
-        });
-
-        popoverAddNote.addEventListener('click', () => {
-            const selectedText = window.getSelection().toString().trim();
-            if(selectedText) {
-                addNote(selectedText);
-                togglePanel(notesAppPanel, true);
-                selectionPopover.style.display = 'none';
-            }
+    function handleDeleteRequest(noteId) {
+        showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => {
+            if (notesCollection) notesCollection.doc(noteId).delete().catch(error => console.error("메모 삭제 실패:", error));
         });
     }
-
-    // Other functions (unchanged or minor adjustments from original)
-    function openNoteEditor(noteId) {
+    async function togglePin(noteId) {
+        if (!notesCollection) return;
         const note = localNotesCache.find(n => n.id === noteId);
-        if (note && noteTitleInput && noteContentTextarea) {
-            currentNoteId = noteId;
-            noteTitleInput.value = note.title || '';
-            noteContentTextarea.value = note.content || '';
-            switchView('editor');
-        }
+        if (note) await notesCollection.doc(noteId).update({ isPinned: !note.isPinned });
+    }
+    function exportNotes() {
+        const dataStr = JSON.stringify(localNotesCache, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'my-notes.json'; a.click();
+        URL.revokeObjectURL(url);
     }
     function switchView(viewName) {
         if (viewName === 'editor') {
@@ -636,103 +523,206 @@ document.addEventListener('DOMContentLoaded', function () {
             currentNoteId = null;
         }
     }
-    function updateStatus(message, success) { /*...*/ }
-    function applyFormat(format) { /*...*/ }
-
-    // --- 6. Global Initialization ---
-    function initialize() {
-        if (!body || !wrapper) return;
-        
-        // Check for AI-generated data on load
-        if (typeof window.aiGeneratedData !== 'undefined') {
-            renderContentFromJSON(window.aiGeneratedData);
-        } else {
-            if(learningContent) learningContent.innerHTML = '<h2>학습할 내용을 불러와주세요.</h2>';
+    function openNoteEditor(noteId) {
+        const note = localNotesCache.find(n => n.id === noteId);
+        if (note && noteTitleInput && noteContentTextarea) {
+            currentNoteId = noteId;
+            noteTitleInput.value = note.title || '';
+            noteContentTextarea.value = note.content || '';
+            switchView('editor');
         }
+    }
+    function updateStatus(message, success) {
+        if (!autoSaveStatus) return;
+        autoSaveStatus.textContent = message;
+        autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral';
+        setTimeout(() => { autoSaveStatus.textContent = ''; }, 2000);
+    }
+    function applyFormat(format) {
+        if (!noteContentTextarea) return;
+        const start = noteContentTextarea.selectionStart;
+        const end = noteContentTextarea.selectionEnd;
+        const selectedText = noteContentTextarea.value.substring(start, end);
+        const marker = format === 'bold' ? '**' : (format === 'italic' ? '*' : '`');
+        const newText = `${noteContentTextarea.value.substring(0, start)}${marker}${selectedText}${marker}${noteContentTextarea.value.substring(end)}`;
+        noteContentTextarea.value = newText;
+        noteContentTextarea.focus();
+    }
+    
+    // Quiz
+    async function startQuiz() {
+        if (!quizModalOverlay) return;
+        const keywords = Array.from(document.querySelectorAll('.keyword-chip')).map(k => k.textContent.trim()).join(', ');
+        if (!keywords) { 
+            showModal("퀴즈를 생성할 키워드가 없습니다.", () => { if(quizModalOverlay) quizModalOverlay.style.display = 'none'; });
+            return;
+        }
+        const prompt = `다음 키워드들을 기반으로 객관식 퀴즈 3개를 생성해줘: ${keywords}. 각 문제는 4개의 선택지를 가져야 해. 출력 형식은 반드시 아래 JSON 포맷을 따라야 하며, 다른 설명은 절대 추가하지 마.\n\n{"questions": [{"question": "...", "options": [...], "answer": "..."}, ...]}`;
+        if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈를 생성 중입니다...</div>';
+        if (quizResults) quizResults.innerHTML = '';
+        quizModalOverlay.style.display = 'flex';
+        try {
+            const aiResponse = await new Promise(resolve => setTimeout(() => resolve(JSON.stringify({
+                "questions": [
+                    {"question": "(e.g)정조가 젊은 인재를 양성하고 정책을 연구하기 위해 설립한 개혁의 핵심 기구는 무엇인가요?", "options": ["집현전", "장용영", "규장각", "성균관"], "answer": "규장각"},
+                    {"question": "(e.g)정조가 상인들의 독점권을 폐지하고 자유로운 상업 활동을 보장한 경제 정책은 무엇인가요?", "options": ["과전법", "대동법", "균역법", "신해통공"], "answer": "신해통공"},
+                    {"question": "(e.g)정조의 효심과 개혁 의지가 담겨 있으며, 정약용의 거중기 등 최신 과학 기술이 동원된 건축물은 무엇인가요?", "options": ["경복궁", "창덕궁", "수원 화성", "남한산성"], "answer": "수원 화성"}
+                ]
+            })), 1000));
+            currentQuizData = JSON.parse(aiResponse);
+            renderQuiz(currentQuizData);
+        } catch (e) {
+            if (quizContainer) quizContainer.innerHTML = '퀴즈 생성에 실패했습니다. 다시 시도해주세요.';
+            console.error("Invalid quiz JSON", e);
+        }
+    }
+    function renderQuiz(data) {
+        if (!quizContainer || !data || !data.questions) return;
+        quizContainer.innerHTML = '';
+        data.questions.forEach((q, index) => {
+            const questionBlock = document.createElement('div');
+            questionBlock.className = 'quiz-question-block';
+            const questionText = document.createElement('p');
+            questionText.textContent = `${index + 1}. ${q.question}`;
+            const optionsDiv = document.createElement('div');
+            optionsDiv.className = 'quiz-options';
+            q.options.forEach(option => {
+                const label = document.createElement('label');
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = `question-${index}`;
+                radio.value = option;
+                label.appendChild(radio);
+                label.appendChild(document.createTextNode(` ${option}`));
+                optionsDiv.appendChild(label);
+            });
+            questionBlock.appendChild(questionText);
+            questionBlock.appendChild(optionsDiv);
+            quizContainer.appendChild(questionBlock);
+        });
+    }
 
-        // Clock
-        updateClock(); setInterval(updateClock, 1000);
-
-        // Draggable Panels
-        makePanelDraggable(chatPanel); makePanelDraggable(notesAppPanel);
+    // --- 4. Global Initialization ---
+    function initialize() {
+        if (!body || !wrapper) {
+            console.error("Core layout elements not found. Initialization aborted.");
+            return;
+        }
         
-        // Popover
-        setupSelectionPopover();
+        // Clock
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // Tooltips
+        initializeTooltips();
+        
+        // Draggable Panels
+        makePanelDraggable(chatPanel);
+        makePanelDraggable(notesAppPanel);
 
         // Event Listeners
-        themeToggle?.addEventListener('click', () => {
+        if (themeToggle) themeToggle.addEventListener('click', () => {
             body.classList.toggle('dark-mode');
             themeToggle.textContent = body.classList.contains('dark-mode') ? '☀️' : '🌙';
         });
-        tocToggleBtn?.addEventListener('click', () => {
+        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => {
             wrapper.classList.toggle('toc-hidden');
             clockElement.classList.toggle('tucked');
         });
-        chatToggleBtn?.addEventListener('click', () => togglePanel(chatPanel));
-        chatPanel?.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
-        notesAppToggleBtn?.addEventListener('click', () => togglePanel(notesAppPanel));
-        chatForm?.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
-        chatInput?.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
-        
-        deleteHistoryBtn?.addEventListener('click', async () => {
-            const modeText = chatModeSelector.querySelector(`button[data-mode="${selectedMode}"]`).textContent;
+        if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
+        if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
+        if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => togglePanel(notesAppPanel));
+        if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
+        if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
+        if (deleteHistoryBtn) deleteHistoryBtn.addEventListener('click', async () => {
+            const modeTextMap = { 'ailey_coaching': '기본 코칭', 'deep_learning': '심화 학습', 'custom': '커스텀' };
+            const modeText = modeTextMap[selectedMode] || selectedMode;
             showModal(`'${modeText}' 모드의 대화 기록을 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`, async () => {
-                chatHistories[selectedMode] = [];
-                await saveChatHistory();
+                if(chatHistories[selectedMode]) {
+                    chatHistories[selectedMode] = [];
+                    await saveChatHistory();
+                }
             });
         });
-        
-        promptSaveBtn?.addEventListener('click', saveCustomPrompt);
-        promptCancelBtn?.addEventListener('click', closePromptModal);
+        if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
+        if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
+        if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
+        if (quizSubmitBtn) quizSubmitBtn.addEventListener('click', () => {
+            if (!currentQuizData || !quizResults) return;
+            let score = 0;
+            let allAnswered = true;
+            currentQuizData.questions.forEach((q, index) => {
+                const selected = document.querySelector(`input[name="question-${index}"]:checked`);
+                if (!selected) { allAnswered = false; }
+            });
+            if (!allAnswered) {
+                quizResults.textContent = "모든 문제에 답해주세요!";
+                quizResults.style.color = 'orange';
+                return;
+            }
+            currentQuizData.questions.forEach((q, index) => {
+                const selected = document.querySelector(`input[name="question-${index}"]:checked`);
+                const questionBlock = document.querySelectorAll('.quiz-question-block')[index];
+                const labels = questionBlock.querySelectorAll('label');
+                labels.forEach(label => {
+                    const radio = label.querySelector('input');
+                    if (radio.value === q.answer) {
+                        label.style.color = 'lightgreen';
+                        label.style.fontWeight = 'bold';
+                    }
+                    if (radio.checked && radio.value !== q.answer) {
+                        label.style.color = 'lightcoral';
+                    }
+                });
+                if (selected.value === q.answer) { score++; }
+            });
+            quizResults.textContent = `결과: ${currentQuizData.questions.length}문제 중 ${score}개를 맞혔습니다!`;
+            quizResults.style.color = score === currentQuizData.questions.length ? 'lightgreen' : 'orange';
+        });
+        if(quizModalOverlay) quizModalOverlay.addEventListener('click', (e) => {
+            if (e.target === quizModalOverlay) {
+                quizModalOverlay.style.display = 'none';
+            }
+        });
 
         // Notes App Listeners
-        addNewNoteBtn?.addEventListener('click', () => addNote());
-        backToListBtn?.addEventListener('click', () => switchView('list'));
-        searchInput?.addEventListener('input', renderNoteList);
-        exportNotesBtn?.addEventListener('click', () => { /* export logic */ });
-        const handleInput = () => { /* saveNote logic */ };
-        noteTitleInput?.addEventListener('input', handleInput);
-        noteContentTextarea?.addEventListener('input', handleInput);
-        
-        notesList?.addEventListener('click', e => {
+        if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
+        if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
+        if (searchInput) searchInput.addEventListener('input', renderNoteList);
+        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportNotes);
+        const handleInput = () => {
+            updateStatus('입력 중...', true);
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(saveNote, 1000);
+        };
+        if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
+        if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
+        if (notesList) notesList.addEventListener('click', e => {
             const noteItem = e.target.closest('.note-item');
             if (!noteItem) return;
             const noteId = noteItem.dataset.id;
-
-            if (isNoteSelectionMode) {
-                const checkbox = noteItem.querySelector('.note-item-selector');
-                checkbox.checked = !checkbox.checked;
-                noteItem.classList.toggle('selected', checkbox.checked);
-                return;
-            }
-
-            if (e.target.closest('.delete-btn')) { /* handleDeleteRequest(noteId) */ }
-            else if (e.target.closest('.pin-btn')) { /* togglePin(noteId) */ }
+            if (e.target.closest('.delete-btn')) handleDeleteRequest(noteId);
+            else if (e.target.closest('.pin-btn')) togglePin(noteId);
             else openNoteEditor(noteId);
         });
+        if (formatToolbar) formatToolbar.addEventListener('click', e => {
+            const button = e.target.closest('.format-btn');
+            if (button) applyFormat(button.dataset.format);
+        });
+        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => {
+            if(!noteContentTextarea) return;
+            const topicTitle = document.title || '현재 학습';
+            const linkText = `\n\n🔗 연관 학습: [${topicTitle}]`;
+            noteContentTextarea.value += linkText;
+            saveNote();
+        });
         
-        // Create and add note selection buttons (#6)
-        if (noteListHeader) {
-            const defaultGroup = document.createElement('div');
-            defaultGroup.className = 'header-button-group default-controls';
-            defaultGroup.innerHTML = `<button id="select-notes-btn" class="notes-btn secondary">선택</button>`;
-            noteListHeader.appendChild(defaultGroup);
-
-            const selectionGroup = document.createElement('div');
-            selectionGroup.className = 'header-button-group selection-controls';
-            selectionGroup.innerHTML = `<button id="delete-selected-btn" class="notes-btn secondary">선택 삭제</button><button id="cancel-selection-btn" class="notes-btn">취소</button>`;
-            noteListHeader.appendChild(selectionGroup);
-
-            document.getElementById('select-notes-btn')?.addEventListener('click', toggleNoteSelectionMode);
-            document.getElementById('cancel-selection-btn')?.addEventListener('click', toggleNoteSelectionMode);
-            document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelectedNotes);
-        }
-
         // Initial Setup Calls
+        setupNavigator();
         setupChatModeSelector();
         initializeFirebase();
     }
 
-    // --- 7. Run Initialization ---
+    // --- 5. Run Initialization ---
     initialize();
 });
