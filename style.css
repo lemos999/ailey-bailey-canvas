@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 6.3 (UI Enhancement Patch)
+Version: 6.4 (Tabbed UI & PG Panel Patch)
 Architect: [Username] & System Architect Ailey
-Description: Added h3 subheading highlight styles.
+Description: Added styles for the new 3-tab chat interface and the dedicated Problem Generator panel.
 */
 
 :root {
@@ -32,25 +32,9 @@ body:not(.dark-mode) .header .subtitle { color: var(--sub-text-color-light); }
 .content-section h2 { font-family: 'Noto Serif KR', serif; font-size: 1.8em; padding-left: 15px; margin-bottom: 20px; transition: color 0.3s, border-color 0.3s; }
 body.dark-mode .content-section h2 { color: var(--h2-color-dark); border-left: 4px solid var(--h2-border-dark); }
 body:not(.dark-mode) .content-section h2 { color: var(--h2-color-light); border-left: 4px solid var(--h2-border-light); }
-
-/* --- ADDED FOR H3 SUBHEADING HIGHLIGHT --- */
-.content-section h3 strong {
-    padding: 5px 12px;
-    border-radius: 6px;
-    display: inline-block; /* Crucial for background to wrap text */
-    margin-bottom: 10px;
-    transition: background-color 0.3s, color 0.3s;
-}
-body.dark-mode .content-section h3 strong {
-    background-color: var(--strong-bg-dark);
-    color: var(--header-color-dark);
-}
-body:not(.dark-mode) .content-section h3 strong {
-    background-color: var(--strong-bg-light);
-    color: var(--header-color-light);
-}
-/* --- END OF ADDITION --- */
-
+.content-section h3 strong { padding: 5px 12px; border-radius: 6px; display: inline-block; margin-bottom: 10px; transition: background-color 0.3s, color 0.3s; }
+body.dark-mode .content-section h3 strong { background-color: var(--strong-bg-dark); color: var(--header-color-dark); }
+body:not(.dark-mode) .content-section h3 strong { background-color: var(--strong-bg-light); color: var(--header-color-light); }
 .content-section p { font-size: 1.1em; text-align: justify; margin-bottom: 15px; }
 .content-section ul { list-style-position: inside; padding-left: 5px; }
 .content-section li { margin-bottom: 8px; }
@@ -64,7 +48,6 @@ body:not(.dark-mode) blockquote { background-color: var(--quote-bg-light); borde
 body.dark-mode .keyword-list { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .keyword-list { background-color: var(--quote-bg-light); }
 .keyword-chip { background-color: #B97F74; color: #FAF7F2; padding: 5px 13px; border-radius: 15px; font-weight: 700; font-size: 1.0em; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-
 .has-tooltip { position: relative; cursor: help; }
 .tooltip { visibility: hidden; width: 250px; text-align: left; border-radius: 6px; padding: 10px 12px; position: absolute; z-index: 10; bottom: 130%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; font-family: 'Gowun Batang', serif; font-size: 0.95em; line-height: 1.6; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid; }
 body.dark-mode .tooltip { background-color: #2c2c2c; color: var(--text-color-dark); border-color: #444; }
@@ -73,10 +56,8 @@ body:not(.dark-mode) .tooltip { background-color: #FFFFF0; color: var(--text-col
 body.dark-mode .tooltip::after { border-color: #2c2c2c transparent transparent transparent; }
 body:not(.dark-mode) .tooltip::after { border-color: #FFFFF0 transparent transparent transparent; }
 .has-tooltip:hover .tooltip { visibility: visible; opacity: 1; }
-
 #real-time-clock { position: fixed; top: 15px; left: 20px; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 18px; border-radius: 10px; font-size: 1em; z-index: 2000; font-family: 'Gowun Batang', serif; backdrop-filter: blur(5px); box-shadow: 0 2px 10px rgba(0,0,0,0.3); transition: all 0.4s ease; }
 #real-time-clock.tucked { left: -250px; opacity: 0; }
-
 .scroll-nav { width: 220px; position: sticky; top: 80px; align-self: flex-start; height: calc(100vh - 120px); overflow-y: auto; transition: opacity 0.4s, width 0.4s, padding 0.4s, margin 0.4s ease; z-index: 900; }
 .wrapper.toc-hidden .scroll-nav { opacity: 0; width: 0; padding: 0; margin: 0; pointer-events: none; }
 .scroll-nav h3 { font-family: 'Noto Serif KR', serif; padding-bottom: 10px; transition: color 0.3s, border-color 0.3s; }
@@ -91,39 +72,46 @@ body:not(.dark-mode) .scroll-nav li a:hover { background-color: var(--quote-bg-l
 .scroll-nav li a.active { font-weight: 700; }
 body.dark-mode .scroll-nav li a.active { color: var(--header-color-dark); background-color: var(--strong-bg-dark); border-left-color: var(--h2-border-dark); }
 body:not(.dark-mode) .scroll-nav li a.active { color: var(--h2-color-light); background-color: var(--strong-bg-light); border-left-color: var(--h2-border-light); }
-
 .fixed-tool-container { position: fixed; bottom: 30px; left: 20px; z-index: 1000; display: flex; flex-direction: column-reverse; gap: 10px; align-items: flex-start; opacity: 0.3; transition: opacity 0.3s ease; }
 .fixed-tool-container:hover { opacity: 1; }
 .tool-button { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer; user-select: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: all 0.3s; }
 body.dark-mode .tool-button { background-color: #333; color: #fff; }
 body:not(.dark-mode) .tool-button { background-color: #fff; color: #4B4237; }
-
 #selection-popover { position: absolute; display: none; background-color: #333; color: white; border-radius: 8px; padding: 5px; gap: 5px; z-index: 1050; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
 #selection-popover button { background-color: #4a4a4a; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
 #selection-popover button:hover { background-color: #5f5f5f; }
-
 .draggable-panel { position: fixed; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: none; flex-direction: column; resize: both; overflow: auto; transition: background-color 0.3s; z-index: 1100; }
 .draggable-panel.is-dragging { z-index: 1200; }
 body.dark-mode .draggable-panel { background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) .draggable-panel { background-color: var(--container-bg-light); border: 1px solid var(--border-color-light); }
 
-.panel-header { padding: 10px; cursor: move; font-family: 'Noto Serif KR', serif; font-weight: bold; user-select: none; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; transition: background-color 0.3s, border-color 0.3s; position: sticky; top: 0; z-index: 1; }
+.panel-header { padding: 10px; cursor: move; font-weight: bold; user-select: none; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; transition: background-color 0.3s, border-color 0.3s; position: sticky; top: 0; z-index: 1; }
 body.dark-mode .panel-header { background-color: #2a2a2a; border-bottom: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1px solid var(--border-color-light); }
-.panel-header .close-btn { cursor: pointer; font-size: 20px; }
 
-#chat-panel .panel-header { gap: 5px; }
-#chat-mode-selector { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; width: 100%; justify-content: center; padding: 5px 0; border-top: 1px solid transparent; }
-body:not(.dark-mode) #chat-mode-selector { border-top-color: var(--border-color-light); }
-body.dark-mode #chat-mode-selector { border-top-color: var(--border-color-dark); }
-#chat-mode-selector button { padding: 5px 10px; font-size: 0.8em; border-radius: 15px; border: 1px solid transparent; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
-#chat-mode-selector button.active { font-weight: bold; }
-body:not(.dark-mode) #chat-mode-selector button { background-color: #e0d8ca; }
-body:not(.dark-mode) #chat-mode-selector button.active { background-color: var(--h2-color-light); color: white; }
-body.dark-mode #chat-mode-selector button { background-color: #3f3f3f; color: var(--text-color-dark); }
-body.dark-mode #chat-mode-selector button.active { background-color: var(--h2-color-dark); }
+/* --- [NEW] CHAT PANEL & TABS STYLES --- */
+#chat-panel { bottom: 100px; right: 100px; height: 500px; width: 380px; padding: 0; }
+.panel-header .chat-tabs { flex-grow: 1; display: flex; }
+.chat-tab { background: none; border: none; border-bottom: 3px solid transparent; padding: 10px 12px; cursor: pointer; font-family: 'Gowun Batang', serif; font-size: 0.9em; font-weight: bold; transition: all 0.2s ease; opacity: 0.6; }
+body.dark-mode .chat-tab { color: var(--text-color-dark); }
+body:not(.dark-mode) .chat-tab { color: var(--text-color-light); }
+.chat-tab.active { opacity: 1; }
+body.dark-mode .chat-tab.active { border-bottom-color: var(--header-color-dark); }
+body:not(.dark-mode) .chat-tab.active { border-bottom-color: var(--header-color-light); }
+.chat-tab:hover { opacity: 1; }
+body.dark-mode .chat-tab:hover { background-color: rgba(255,255,255,0.05); }
+body:not(.dark-mode) .chat-tab:hover { background-color: rgba(0,0,0,0.05); }
+.chat-header-controls { display: flex; align-items: center; padding-right: 5px; }
+.chat-header-controls .close-btn { cursor: pointer; font-size: 20px; }
+.chat-content-panels { flex-grow: 1; position: relative; }
+.chat-content-panel { display: none; flex-direction: column; height: 100%; position: absolute; top: 0; left: 0; width: 100%; }
+.chat-content-panel.active { display: flex; }
 
-#chat-panel { bottom: 100px; right: 100px; height: 500px; width: 350px; }
+.custom-tutor-header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; }
+body.dark-mode .custom-tutor-header { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .custom-tutor-header { background-color: var(--quote-bg-light); }
+#current-prompt-display { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.8; }
+#edit-custom-prompt-btn { padding: 5px 10px; font-size: 0.9em; flex-shrink: 0; }
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 .chat-message { max-width: 85%; padding: 10px 15px; border-radius: 18px; line-height: 1.6; word-wrap: break-word; position: relative; }
 .chat-message.ai { background-color: var(--chat-ai-bg-dark); align-self: flex-start; border-bottom-left-radius: 4px; }
@@ -136,23 +124,41 @@ body:not(.dark-mode) .chat-timestamp { color: var(--sub-text-color-light); }
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; }
 body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
 body:not(.dark-mode) .chat-input-form { border-top-color: var(--border-color-light); }
-#chat-input { flex-grow: 1; border: 1px solid; border-radius: 20px; padding: 10px 15px; resize: none; outline: none; font-family: 'Gowun Batang', serif; font-size: 1em; transition: all 0.3s; }
-body.dark-mode #chat-input { background-color: #2a2a2a; color: var(--text-color-dark); border-color: var(--border-color-dark); }
-body:not(.dark-mode) #chat-input { background-color: #fff; color: var(--text-color-light); border-color: var(--border-color-light); }
-#chat-send-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; transition: color 0.3s; }
-body.dark-mode #chat-send-btn { color: var(--header-color-dark); }
-body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
-#chat-input:disabled, #chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.chat-input-form textarea { flex-grow: 1; border: 1px solid; border-radius: 20px; padding: 10px 15px; resize: none; outline: none; font-family: 'Gowun Batang', serif; font-size: 1em; transition: all 0.3s; }
+body.dark-mode .chat-input-form textarea { background-color: #2a2a2a; color: var(--text-color-dark); border-color: var(--border-color-dark); }
+body:not(.dark-mode) .chat-input-form textarea { background-color: #fff; color: var(--text-color-light); border-color: var(--border-color-light); }
+.chat-input-form button { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; transition: color 0.3s; }
+body.dark-mode .chat-input-form button { color: var(--header-color-dark); }
+body:not(.dark-mode) .chat-input-form button { color: var(--header-color-light); }
+.chat-input-form textarea:disabled, .chat-input-form button:disabled { opacity: 0.5; cursor: not-allowed; }
 .loading-indicator { font-style: italic; opacity: 0.7; }
 .send-to-note-btn { background: none; border: 1px solid; border-radius: 10px; padding: 3px 8px; font-size: 0.8em; cursor: pointer; margin-top: 8px; display: block; }
 body:dark-mode .send-to-note-btn { border-color: var(--sub-text-color-dark); color: var(--sub-text-color-dark); }
 body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-light); color: var(--sub-text-color-light); }
 .send-to-note-btn:disabled { cursor: not-allowed; opacity: 0.5; border-color: gray; color: gray; }
 
+/* --- [NEW] PROBLEM GENERATOR PANEL STYLES --- */
+#problem-generator { padding: 15px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.problem-generator-controls h4 { margin: 0 0 5px 0; font-family: 'Noto Serif KR', serif; }
+.problem-generator-controls p { font-size: 0.9em; margin: 0 0 15px 0; opacity: 0.8; }
+.problem-generator-controls label { font-size: 0.9em; font-weight: bold; margin: 10px 0 3px 0; display: block; }
+.problem-generator-controls input, .problem-generator-controls select { width: 100%; padding: 8px 10px; border-radius: 5px; font-family: 'Gowun Batang', serif; font-size: 1em; }
+body:dark-mode .problem-generator-controls input, body:dark-mode .problem-generator-controls select { background-color: #2a2a2a; color: var(--text-color-dark); border: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) .problem-generator-controls input, body:not(.dark-mode) .problem-generator-controls select { background-color: #fff; color: var(--text-color-light); border: 1px solid var(--border-color-light); }
+#pg-generate-btn { width: 100%; padding: 10px; margin-top: 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+body:dark-mode #pg-generate-btn { background-color: var(--h2-color-dark); color: #fff; }
+body:not(.dark-mode) #pg-generate-btn { background-color: var(--h2-color-light); color: #fff; }
+.pg-result-area { margin-top: 15px; border-top: 1px solid; padding-top: 15px; flex-grow: 1; overflow-y: auto; }
+body:dark-mode .pg-result-area { border-top-color: var(--border-color-dark); }
+body:not(.dark-mode) .pg-result-area { border-top-color: var(--border-color-light); }
+
+/* --- END OF NEW CHAT STYLES --- */
+
 /* Notes App Panel Styles */
 #notes-app-panel { bottom: 100px; left: 100px; width: 400px; height: 600px; padding: 0; }
 .notes-view { display: none; flex-direction: column; height: 100%; }
 .notes-view.active { display: flex; }
+#note-list-view .panel-header { font-family: 'Noto Serif KR', serif; }
 #note-list-view .panel-header .header-button-group { display: flex; gap: 10px; }
 #note-list-view .list-header { padding: 10px 15px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) #note-list-view .list-header { border-bottom-color: var(--border-color-light); }
@@ -175,8 +181,7 @@ body.dark-mode .note-item.pinned { background-color: #2e281d; }
 .item-action-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 5px; border-radius: 50%; }
 .item-action-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
 .pin-btn.pinned-active { color: var(--pin-color); }
-#note-editor-view .editor-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
-body:not(.dark-mode) #note-editor-view .editor-header { border-bottom-color: var(--border-color-light); }
+#note-editor-view .panel-header { font-family: 'Noto Serif KR', serif; }
 #note-title-input { font-size: 1.2em; font-weight: bold; width: 100%; border: none; background: transparent; padding: 10px 15px; color: var(--text-color-dark); }
 body:not(.dark-mode) #note-title-input { color: var(--text-color-light); }
 .format-toolbar { display: flex; gap: 10px; padding: 8px 15px; border-bottom: 1px solid var(--border-color-dark); }
@@ -215,3 +220,7 @@ body:not(:dark-mode) #quiz-submit-btn { background-color: var(--h2-color-light);
 /* Prompt Modal */
 #prompt-modal-overlay textarea { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
 body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }
+#prompt-library-buttons { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+#prompt-library-buttons button { font-size: 0.8em; padding: 5px 10px; border-radius: 15px; border: 1px solid; cursor: pointer; }
+body:dark-mode #prompt-library-buttons button { border-color: var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) #prompt-library-buttons button { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
