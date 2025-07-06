@@ -1,13 +1,15 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.0 (TutorBot v2.0 - Copilot Integration)
+Version: 8.0 (GitHub Data-Driven Canvas)
 Architect: [Username] & System Architect Ailey
-Description: Implemented the "Learning Copilot" system for the AI Tutor.
-- Added a state machine (`chatQuizState`) to handle multi-turn quiz interactions.
-- Reworked `handleChatSend` to dispatch to different AI protocols based on the selected mode.
-- Enhanced `renderChatHistory` to parse special tags and apply unique styling for problems and solutions.
-- Dynamically generates mode selector buttons.
+Description: Major architectural overhaul. This script now acts as a dynamic rendering engine.
+- Implemented `renderPageContent` to build the learning UI from a JSON object provided by the AI.
+- Integrated Firebase for the "AI Tutor" chat, enabling persistent, multi-session conversation history with a delete function.
+- Added a `selection-popover` menu that appears on text selection for quick actions (Ask AI, Add to Note).
+- Implemented a selection mode in the "Knowledge Lab" (Notes App) for multi-item deletion.
+- Enhanced `setupNavigator` to build ToC from dynamically rendered H2 and H3 headers.
+- Updated UI element names and icons as per user request.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -20,31 +22,24 @@ document.addEventListener('DOMContentLoaded', function () {
     const popoverAskAi = document.getElementById('popover-ask-ai');
     const popoverAddNote = document.getElementById('popover-add-note');
     const tocToggleBtn = document.getElementById('toc-toggle-btn');
-    const quizModalOverlay = document.getElementById('quiz-modal-overlay');
-    const quizContainer = document.getElementById('quiz-container');
-    const quizSubmitBtn = document.getElementById('quiz-submit-btn');
-    const quizResults = document.getElementById('quiz-results');
-    const startQuizBtn = document.getElementById('start-quiz-btn');
-    const chatModeSelector = document.getElementById('chat-mode-selector');
-    const deleteHistoryBtn = document.getElementById('delete-history-btn');
     const chatPanel = document.getElementById('chat-panel');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
     const chatMessages = document.getElementById('chat-messages');
     const chatSendBtn = document.getElementById('chat-send-btn');
+    const chatToggleBtn = document.getElementById('chat-toggle-btn');
+    const chatModeSelector = document.getElementById('chat-mode-selector');
+    const deleteHistoryBtn = document.getElementById('delete-history-btn');
     const notesAppPanel = document.getElementById('notes-app-panel');
+    const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
     const noteListView = document.getElementById('note-list-view');
     const noteEditorView = document.getElementById('note-editor-view');
     const notesList = document.getElementById('notes-list');
-    const searchInput = document.getElementById('search-input');
-    const addNewNoteBtn = document.getElementById('add-new-note-btn');
-    const backToListBtn = document.getElementById('back-to-list-btn');
     const noteTitleInput = document.getElementById('note-title-input');
     const noteContentTextarea = document.getElementById('note-content-textarea');
     const autoSaveStatus = document.getElementById('auto-save-status');
-    const formatToolbar = document.querySelector('.format-toolbar');
-    const linkTopicBtn = document.getElementById('link-topic-btn');
-    const exportNotesBtn = document.getElementById('export-notes-btn');
+    const listHeader = document.querySelector('#note-list-view .list-header');
+    const headerButtonGroup = document.querySelector('#note-list-view .panel-header .header-button-group');
     const customModal = document.getElementById('custom-modal');
     const modalMessage = document.getElementById('modal-message');
     const modalConfirmBtn = document.getElementById('modal-confirm-btn');
@@ -54,39 +49,37 @@ document.addEventListener('DOMContentLoaded', function () {
     const promptSaveBtn = document.getElementById('prompt-save-btn');
     const promptCancelBtn = document.getElementById('prompt-cancel-btn');
     const themeToggle = document.getElementById('theme-toggle');
-    const chatToggleBtn = document.getElementById('chat-toggle-btn');
-    const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
 
     // --- 2. State Management ---
     let db, notesCollection, chatCollectionRef;
     let currentUser = null;
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'AileyBailey_Global_Space';
-    let storageKey = 'learningNote-' + (document.title || 'default-page');
+    let storageKey = 'learningSession-' + (document.title || 'default-page').replace(/\s+/g, '_');
     let localNotesCache = [];
     let currentNoteId = null;
     let unsubscribeFromNotes = null;
     let debounceTimer = null;
-    
-    // --- REFINED CHAT STATE ---
+    let isNoteSelectionMode = false;
+
+    // Chat State
     let chatHistories = { ailey_coaching: [], deep_learning: [], custom: [] };
-    let selectedMode = 'ailey_coaching'; // Default mode
-    let chatQuizState = 'idle'; // State for deep_learning mode: 'idle', 'awaiting_answer'
-    let lastQuestion = ''; // Stores the last question asked in quiz mode
+    let selectedMode = 'ailey_coaching';
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 AI 튜터야. 사용자의 모든 질문에 답변해줘.';
     let unsubscribeFromChat = null;
-    let currentQuizData = null;
+    let chatQuizState = 'idle'; 
+    let lastQuestion = ''; 
 
-    // --- 3. Function Definitions (in logical order) ---
+    // --- 3. Function Definitions ---
 
-    // Firebase
+    // Firebase & Cloud Sync
     async function initializeFirebase() {
         try {
             const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
             const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
             if (!firebaseConfig) { throw new Error("Firebase config not found."); }
             if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-            const auth = firebase.auth();
             db = firebase.firestore();
+            const auth = firebase.auth();
             if (initialAuthToken) {
                 await auth.signInWithCustomToken(initialAuthToken).catch(async (err) => {
                    console.warn("Custom token sign-in failed, trying anonymous.", err);
@@ -98,15 +91,88 @@ document.addEventListener('DOMContentLoaded', function () {
             currentUser = auth.currentUser;
             if (currentUser) {
                 notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/notes`);
-                listenToNotes();
                 chatCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatHistories`).doc(storageKey);
+                listenToNotes();
                 listenToChatHistory();
             }
         } catch (error) {
             console.error("Firebase 초기화 또는 인증 실패:", error);
-            if (notesList) notesList.innerHTML = '<div>클라우드 메모장을 불러오는 데 실패했습니다.</div>';
+            if (notesList) notesList.innerHTML = "<div>클라우드 '지식 발전소'를 불러오는 데 실패했습니다.</div>";
             if (chatMessages) chatMessages.innerHTML = '<div>AI 튜터 연결에 실패했습니다.</div>';
         }
+    }
+
+    // Dynamic Content Rendering Engine
+    function parseTooltipSyntax(text) {
+        if (!text) return '';
+        return text.replace(/{([^}]+?)\|([^}]+?)}/g, '<strong class="has-tooltip" data-tooltip="$2">$1</strong>');
+    }
+
+    function renderPageContent(jsonData) {
+        if (!learningContent || !jsonData) return;
+        
+        learningContent.innerHTML = '';
+        document.title = jsonData.title || 'Ailey & Bailey Canvas';
+
+        const header = document.createElement('div');
+        header.className = 'header';
+        header.innerHTML = `<h1>${jsonData.title}</h1><p class="subtitle">${jsonData.subtitle}</p>`;
+        learningContent.appendChild(header);
+
+        jsonData.sections.forEach(section => {
+            const sectionEl = document.createElement('div');
+            sectionEl.id = section.id;
+            sectionEl.className = 'content-section';
+            
+            const titleEl = document.createElement(section.type === 'content' && section.content[0]?.type === 'h3' ? 'h3' : 'h2');
+            titleEl.innerHTML = parseTooltipSyntax(section.title);
+            sectionEl.appendChild(titleEl);
+
+            switch (section.type) {
+                case 'quote':
+                    sectionEl.innerHTML += `<blockquote>${parseTooltipSyntax(section.content)}</blockquote>`;
+                    break;
+                case 'keywords':
+                    const keywordList = document.createElement('div');
+                    keywordList.className = 'keyword-list';
+                    section.content.forEach(kw => {
+                        keywordList.innerHTML += `<span class="keyword-chip" data-tooltip="${kw.tooltip}">${kw.term}</span>`;
+                    });
+                    sectionEl.appendChild(keywordList);
+                    break;
+                case 'content':
+                    section.content.forEach(item => {
+                        let itemEl;
+                        if (item.type === 'ul') {
+                            itemEl = document.createElement('ul');
+                            item.items.forEach(li => {
+                                const liEl = document.createElement('li');
+                                liEl.innerHTML = parseTooltipSyntax(li);
+                                itemEl.appendChild(liEl);
+                            });
+                        } else {
+                            itemEl = document.createElement(item.type); // h3, p
+                            itemEl.innerHTML = parseTooltipSyntax(item.text);
+                        }
+                        sectionEl.appendChild(itemEl);
+                    });
+                    break;
+                case 'timeline':
+                case 'glossary':
+                    const listEl = document.createElement('ul');
+                    section.content.forEach(item => {
+                        const liEl = document.createElement('li');
+                        liEl.innerHTML = `<strong>${item.year || item.term}:</strong> ${parseTooltipSyntax(item.event || item.definition)}`;
+                        listEl.appendChild(liEl);
+                    });
+                    sectionEl.appendChild(listEl);
+                    break;
+            }
+            learningContent.appendChild(sectionEl);
+        });
+        
+        setupNavigator();
+        initializeTooltips();
     }
 
     // UI & Utilities
@@ -118,24 +184,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function initializeTooltips() {
-        const keywordChips = document.querySelectorAll('.keyword-chip');
-        keywordChips.forEach(chip => {
-            const tooltipText = chip.dataset.tooltip;
-            if (tooltipText) {
-                chip.classList.add('has-tooltip');
-                const tooltipElement = chip.querySelector('.tooltip');
-                if (tooltipElement) { tooltipElement.textContent = tooltipText; }
-            }
-        });
-        const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]');
-        inlineHighlights.forEach(highlight => {
-            const tooltipText = highlight.dataset.tooltip;
-            if(tooltipText && !highlight.querySelector('.tooltip')) {
-                 highlight.classList.add('has-tooltip');
+        const tooltippedElements = document.querySelectorAll('[data-tooltip]');
+        tooltippedElements.forEach(el => {
+            const tooltipText = el.dataset.tooltip;
+            if (tooltipText && !el.querySelector('.tooltip')) {
+                 el.classList.add('has-tooltip');
                  const tooltipElement = document.createElement('span');
                  tooltipElement.className = 'tooltip';
                  tooltipElement.textContent = tooltipText;
-                 highlight.appendChild(tooltipElement);
+                 el.appendChild(tooltipElement);
             }
         });
     }
@@ -171,43 +228,30 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupNavigator() {
         const scrollNav = document.getElementById('scroll-nav');
         if (!scrollNav || !learningContent) return;
-        const headers = learningContent.querySelectorAll('h2, #section-3 ul li > strong');
+        const headers = learningContent.querySelectorAll('h2, h3');
         if (headers.length === 0) {
-            scrollNav.style.display = 'none';
-            if(wrapper) wrapper.classList.add('toc-hidden');
+            if (wrapper) wrapper.classList.add('toc-hidden');
             return;
         }
-        scrollNav.style.display = 'block';
-        if(wrapper) wrapper.classList.remove('toc-hidden');
+        if (wrapper) wrapper.classList.remove('toc-hidden');
+
         const navList = document.createElement('ul');
         headers.forEach((header, index) => {
-            let targetElement;
-            let isSubheading = false;
-            if (header.tagName === 'H2') {
-                targetElement = header.closest('.content-section');
-            } else {
-                targetElement = header.closest('li');
-                isSubheading = true;
-            }
-            if (targetElement && !targetElement.id) { targetElement.id = `nav-target-${index}`; }
+            const targetElement = header.closest('.content-section');
             if (targetElement) {
+                if (!targetElement.id) { targetElement.id = `nav-target-${index}`; }
                 const listItem = document.createElement('li');
                 const link = document.createElement('a');
-                let navText = header.textContent.trim();
-                const maxLen = 25;
-                if (navText.length > maxLen) { navText = navText.substring(0, maxLen - 3) + '...'; }
-                link.textContent = navText;
+                link.textContent = header.textContent.trim();
                 link.href = `#${targetElement.id}`;
-                if (isSubheading) {
-                    link.style.paddingLeft = '25px';
-                    link.style.fontSize = '0.9em';
-                }
+                if (header.tagName === 'H3') link.classList.add('sub-item');
                 listItem.appendChild(link);
                 navList.appendChild(listItem);
             }
         });
         scrollNav.innerHTML = '<h3>학습 내비게이션</h3>';
         scrollNav.appendChild(navList);
+
         const links = scrollNav.querySelectorAll('a');
         const observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
@@ -219,27 +263,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 });
-        headers.forEach(header => {
-            const targetElement = header.tagName === 'H2' ? header.closest('.content-section') : header.closest('li');
-            if (targetElement) { observer.observe(targetElement); }
-        });
+        document.querySelectorAll('.content-section').forEach(section => observer.observe(section));
     }
-
-    // Modals
-    function openPromptModal() {
-        if (customPromptInput) customPromptInput.value = customPrompt;
-        if (promptModalOverlay) promptModalOverlay.style.display = 'flex';
-    }
-    function closePromptModal() {
-        if (promptModalOverlay) promptModalOverlay.style.display = 'none';
-    }
-    function saveCustomPrompt() {
-        if (customPromptInput) {
-            customPrompt = customPromptInput.value;
-            localStorage.setItem('customTutorPrompt', customPrompt);
-            closePromptModal();
-        }
-    }
+    
     function showModal(message, onConfirm) {
         if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return;
         modalMessage.textContent = message;
@@ -248,154 +274,51 @@ document.addEventListener('DOMContentLoaded', function () {
         modalCancelBtn.onclick = () => { customModal.style.display = 'none'; };
     }
 
-    // --- REFINED CHAT ---
-    
-    function generateTutorPrompt(mode, query) {
-        const toneMandate = "너는 지금부터 친한 친구에게 말하는 것처럼, 반드시 친근한 반말(informal Korean)으로만 대화해야 해. '안녕하세요' 같은 존댓말은 절대 사용하면 안 돼.";
-        let fullPrompt = "";
-
-        switch(mode) {
-            case 'ailey_coaching':
-                fullPrompt = `[M-CHAT-AILEY] 모드 활성화. 사용자의 질문에 답변해줘: "${query}"`;
-                break;
-            case 'deep_learning':
-                if (chatQuizState === 'idle') {
-                    fullPrompt = `[M-CHAT-QUIZ] 모드, Phase 1 (Problem Generation) 활성화. 다음 주제에 대한 문제를 생성해줘: "${query}"`;
-                } else if (chatQuizState === 'awaiting_answer') {
-                    fullPrompt = `[M-CHAT-QUIZ] 모드, Phase 2 (Grading and Explanation) 활성화. 이전 문제인 "${lastQuestion}"에 대한 사용자의 답변은 "${query}"이야. 채점하고 상세히 설명해줘.`;
-                }
-                break;
-            case 'custom':
-                fullPrompt = `[M-CHAT-CUSTOM] 모드 활성화. 다음 커스텀 프롬프트를 따르되, 사용자의 질문에 답변해줘.\n커스텀 프롬프트: "${customPrompt}"\n사용자 질문: "${query}"`;
-                break;
-        }
-        return `${fullPrompt}\n\n${toneMandate}`;
-    }
-
-    async function handleChatSend() {
-        if (!chatInput || !chatSendBtn) return;
-        const userQuery = chatInput.value.trim();
-        if (!userQuery) return;
-        chatInput.disabled = true;
-        chatSendBtn.disabled = true;
-
-        const currentHistory = chatHistories[selectedMode] || [];
-        currentHistory.push({ role: 'user', content: userQuery, timestamp: new Date().toISOString() });
-        renderChatHistory(selectedMode);
-        
-        const aiMessageDiv = document.createElement('div');
-        aiMessageDiv.className = 'chat-message ai';
-        aiMessageDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>';
-        if(chatMessages) chatMessages.appendChild(aiMessageDiv);
-
-        const apiKey = ""; 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${apiKey}`;
-        const payload = {
-            contents: [{ role: "user", parts: [{ text: generateTutorPrompt(selectedMode, userQuery) }] }]
-        };
-
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
-            const result = await response.json();
-            
-            let aiResponse = "죄송해요, 답변을 생성하는 데 문제가 발생했어요. 😥";
-            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-                aiResponse = result.candidates[0].content.parts[0].text;
+    // Selection Popover
+    function setupSelectionPopover() {
+        document.addEventListener('mouseup', e => {
+            if (e.target.closest('#selection-popover')) return;
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            if (selectedText.length > 0 && selectedText.length < 500) { // Limit length
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                selectionPopover.style.left = `${rect.left + window.scrollX + rect.width / 2 - selectionPopover.offsetWidth / 2}px`;
+                selectionPopover.style.top = `${rect.top + window.scrollY - selectionPopover.offsetHeight - 10}px`;
+                selectionPopover.style.display = 'flex';
+            } else {
+                selectionPopover.style.display = 'none';
             }
-            
-            // State transition for quiz mode
-            if (selectedMode === 'deep_learning') {
-                if (chatQuizState === 'idle' && aiResponse.startsWith('[PROBLEM_GENERATED]')) {
-                    chatQuizState = 'awaiting_answer';
-                    lastQuestion = aiResponse.replace('[PROBLEM_GENERATED]', '').trim();
-                } else if (chatQuizState === 'awaiting_answer') {
-                    chatQuizState = 'idle';
-                    lastQuestion = '';
-                }
-            }
-
-            currentHistory.push({ role: 'ai', content: aiResponse, timestamp: new Date().toISOString() });
-            await saveChatHistory();
-            renderChatHistory(selectedMode);
-        } catch (error) {
-            console.error("AI API Error:", error);
-            currentHistory.push({ role: 'ai', content: `오류가 발생했습니다: ${error.message}`, timestamp: new Date().toISOString() });
-            renderChatHistory(selectedMode);
-        } finally {
-            chatInput.disabled = false;
-            chatSendBtn.disabled = false;
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
-            chatInput.focus();
-        }
-    }
-    
-    function renderChatHistory(mode) {
-        if (!chatMessages) return;
-        chatMessages.innerHTML = '';
-        const history = chatHistories[mode] || [];
-        history.forEach(msg => {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `chat-message ${msg.role}`;
-            
-            let content = msg.content;
-            
-            // Parse special tags for quiz mode
-            if (content.startsWith('[PROBLEM_GENERATED]')) {
-                msgDiv.classList.add('quiz-problem');
-                content = content.replace('[PROBLEM_GENERATED]', '').trim();
-            } else if (content.startsWith('[CORRECT]')) {
-                msgDiv.classList.add('quiz-solution', 'correct');
-                const header = document.createElement('div');
-                header.className = 'solution-header correct';
-                header.textContent = '✅ 정답입니다!';
-                msgDiv.appendChild(header);
-                content = content.replace('[CORRECT]', '').trim();
-            } else if (content.startsWith('[INCORRECT]')) {
-                msgDiv.classList.add('quiz-solution', 'incorrect');
-                const header = document.createElement('div');
-                header.className = 'solution-header incorrect';
-                header.textContent = '❌ 오답입니다.';
-                msgDiv.appendChild(header);
-                content = content.replace('[INCORRECT]', '').trim();
-            }
-
-            const contentDiv = document.createElement('div');
-            // Basic Markdown to HTML conversion for bold and newlines
-            contentDiv.innerHTML = content
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\n/g, '<br>');
-
-            msgDiv.appendChild(contentDiv);
-
-            if (msg.timestamp) {
-                const timeDiv = document.createElement('div');
-                timeDiv.className = 'chat-timestamp';
-                timeDiv.textContent = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                msgDiv.appendChild(timeDiv);
-            }
-            if(msg.role === 'ai') {
-                const sendToNoteBtn = document.createElement('button');
-                sendToNoteBtn.className = 'send-to-note-btn';
-                sendToNoteBtn.textContent = '메모로 보내기';
-                sendToNoteBtn.onclick = (e) => {
-                    // Send parsed content, not raw
-                    addNote(`[AI 튜터] ${contentDiv.textContent}`);
-                    e.target.textContent = '✅';
-                    e.target.disabled = true;
-                };
-                contentDiv.appendChild(sendToNoteBtn);
-            }
-            chatMessages.appendChild(msgDiv);
         });
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        document.addEventListener('mousedown', e => {
+            if (!selectionPopover.contains(e.target)) {
+                selectionPopover.style.display = 'none';
+            }
+        });
+        
+        popoverAskAi.addEventListener('click', () => {
+            const selectedText = window.getSelection().toString().trim();
+            if(selectedText) {
+                togglePanel(chatPanel, true);
+                chatInput.value = `이 내용에 대해 더 자세히 알려줘: "${selectedText}"`;
+                chatInput.focus();
+                chatInput.style.height = 'auto';
+                chatInput.style.height = (chatInput.scrollHeight) + 'px';
+            }
+            selectionPopover.style.display = 'none';
+        });
+
+        popoverAddNote.addEventListener('click', () => {
+            const selectedText = window.getSelection().toString().trim();
+            if (selectedText) {
+                addNote(`- ${selectedText}`);
+            }
+            selectionPopover.style.display = 'none';
+        });
     }
-    
+
+    // AI Tutor Chat
     async function listenToChatHistory() {
         if (!chatCollectionRef) return;
         if (unsubscribeFromChat) unsubscribeFromChat();
@@ -412,14 +335,78 @@ document.addEventListener('DOMContentLoaded', function () {
     
     async function saveChatHistory() {
         if (chatCollectionRef) {
-            try { await chatCollectionRef.set(chatHistories); } 
+            try { await chatCollectionRef.set(chatHistories, { merge: true }); } 
             catch (error) { console.error("Failed to save chat history:", error); }
+        }
+    }
+    
+    function renderChatHistory(mode) {
+        if (!chatMessages) return;
+        chatMessages.innerHTML = '';
+        const history = chatHistories[mode] || [];
+        history.forEach(msg => {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${msg.role === 'user' ? 'user' : 'ai'}`;
+            const contentDiv = document.createElement('div');
+            contentDiv.innerHTML = msg.content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+            msgDiv.appendChild(contentDiv);
+            if (msg.timestamp) {
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'chat-timestamp';
+                timeDiv.textContent = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                msgDiv.appendChild(timeDiv);
+            }
+            chatMessages.appendChild(msgDiv);
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function handleChatSend() {
+        if (!chatInput || !chatSendBtn) return;
+        const userQuery = chatInput.value.trim();
+        if (!userQuery) return;
+
+        chatInput.disabled = true;
+        chatSendBtn.disabled = true;
+
+        const currentHistory = chatHistories[selectedMode] || [];
+        currentHistory.push({ role: 'user', content: userQuery, timestamp: new Date().toISOString() });
+        renderChatHistory(selectedMode);
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+
+        const aiMessageDiv = document.createElement('div');
+        aiMessageDiv.className = 'chat-message ai';
+        aiMessageDiv.innerHTML = '<div class="loading-indicator">AI가 생각 중...</div>';
+        if (chatMessages) {
+            chatMessages.appendChild(aiMessageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        try {
+            // Placeholder for actual AI call. Replace with your AI logic.
+            const aiResponse = `"${userQuery}"에 대한 답변입니다. (시뮬레이션)`;
+            
+            currentHistory.push({ role: 'ai', content: aiResponse, timestamp: new Date().toISOString() });
+            await saveChatHistory();
+            renderChatHistory(selectedMode);
+        } catch (error) {
+            console.error("AI API Error:", error);
+            currentHistory.push({ role: 'ai', content: `오류가 발생했습니다: ${error.message}`, timestamp: new Date().toISOString() });
+            await saveChatHistory();
+            renderChatHistory(selectedMode);
+        } finally {
+            chatInput.disabled = false;
+            chatSendBtn.disabled = false;
+            chatInput.focus();
         }
     }
     
     function setupChatModeSelector() {
         if (!chatModeSelector) return;
-        chatModeSelector.innerHTML = ''; // Clear existing buttons
+        chatModeSelector.innerHTML = '';
         const modes = [
             { id: 'ailey_coaching', text: '기본 코칭 💬' },
             { id: 'deep_learning', text: '심화 학습 🧠' },
@@ -434,15 +421,11 @@ document.addEventListener('DOMContentLoaded', function () {
             
             button.addEventListener('click', () => {
                 selectedMode = mode.id;
-                // Reset quiz state when switching modes
-                chatQuizState = 'idle'; 
-                lastQuestion = '';
-                
                 chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                
                 if (selectedMode === 'custom') {
-                    openPromptModal();
+                    if (promptModalOverlay) promptModalOverlay.style.display = 'flex';
+                    if (customPromptInput) customPromptInput.value = customPrompt;
                 }
                 renderChatHistory(selectedMode);
             });
@@ -450,8 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-
-    // Notes
+    // Knowledge Lab (Notes App)
     function listenToNotes() {
         if (!notesCollection) return;
         if (unsubscribeFromNotes) unsubscribeFromNotes();
@@ -460,9 +442,11 @@ document.addEventListener('DOMContentLoaded', function () {
             renderNoteList();
         }, error => { console.error("노트 실시간 수신 오류:", error); });
     }
+
     function renderNoteList() {
-        if (!notesList || !searchInput) return;
-        const searchTerm = searchInput.value.toLowerCase();
+        if (!notesList) return;
+        const searchInputEl = document.getElementById('search-input');
+        const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase() : '';
         const filteredNotes = localNotesCache.filter(note => (note.title && note.title.toLowerCase().includes(searchTerm)) || (note.content && note.content.toLowerCase().includes(searchTerm)));
         filteredNotes.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
@@ -470,20 +454,100 @@ document.addEventListener('DOMContentLoaded', function () {
             return (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0);
         });
         notesList.innerHTML = '';
-        if (filteredNotes.length === 0) {
-            notesList.innerHTML = '<div>표시할 메모가 없습니다.</div>';
-            return;
-        }
         filteredNotes.forEach(note => {
             const item = document.createElement('div');
             item.className = 'note-item';
             item.dataset.id = note.id;
             if (note.isPinned) item.classList.add('pinned');
             const date = note.updatedAt ? new Date(note.updatedAt.toMillis()).toLocaleString() : '날짜 없음';
-            item.innerHTML = `<div class="note-item-content"><div class="note-item-title">${note.title || '무제'}</div><div class="note-item-date">${date}</div></div><div class="note-item-actions"><button class="item-action-btn pin-btn ${note.isPinned ? 'pinned-active' : ''}" title="고정">${note.isPinned ? '📌' : '📍'}</button><button class="item-action-btn delete-btn" title="삭제">🗑️</button></div>`;
+            
+            item.innerHTML = `
+                <input type="checkbox" class="note-item-checkbox" data-id="${note.id}" style="display: ${isNoteSelectionMode ? 'block' : 'none'};">
+                <div class="note-item-content">
+                    <div class="note-item-title">${note.title || '무제'}</div>
+                    <div class="note-item-date">${date}</div>
+                </div>
+                <div class="note-item-actions">
+                    <button class="item-action-btn pin-btn ${note.isPinned ? 'pinned-active' : ''}" title="고정">${note.isPinned ? '📌' : '📍'}</button>
+                    <button class="item-action-btn delete-btn" title="삭제">🗑️</button>
+                </div>`;
+            
+            item.querySelector('.note-item-checkbox').addEventListener('change', (e) => {
+                item.classList.toggle('selected', e.target.checked);
+            });
+
+            const contentPart = item.querySelector('.note-item-content');
+            contentPart.addEventListener('click', () => {
+                if (!isNoteSelectionMode) {
+                    openNoteEditor(note.id);
+                } else {
+                    const checkbox = item.querySelector('.note-item-checkbox');
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+            
             notesList.appendChild(item);
         });
     }
+
+    function toggleNoteSelectionMode(forceExit = false) {
+        isNoteSelectionMode = forceExit ? false : !isNoteSelectionMode;
+        noteListView.classList.toggle('selection-mode', isNoteSelectionMode);
+        
+        if (isNoteSelectionMode) {
+            listHeader.innerHTML = `
+                <div class="selection-controls">
+                    <button id="select-all-notes-btn" class="notes-btn">모두 선택</button>
+                    <button id="delete-selected-notes-btn" class="notes-btn" style="background-color: #d9534f;">선택 삭제</button>
+                </div>`;
+            headerButtonGroup.innerHTML = `<button id="cancel-selection-btn" class="notes-btn">취소</button>`;
+            
+            document.getElementById('select-all-notes-btn').addEventListener('click', () => {
+                const checkboxes = notesList.querySelectorAll('.note-item-checkbox');
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                checkboxes.forEach(cb => {
+                    cb.checked = !allChecked;
+                    cb.dispatchEvent(new Event('change'));
+                });
+            });
+            document.getElementById('delete-selected-notes-btn').addEventListener('click', handleDeleteSelectedNotes);
+            document.getElementById('cancel-selection-btn').addEventListener('click', () => toggleNoteSelectionMode(true));
+
+        } else {
+            listHeader.innerHTML = `<input type="text" id="search-input" placeholder="메모 검색...">`;
+            headerButtonGroup.innerHTML = `
+                <button id="select-mode-btn" class="notes-btn">선택</button>
+                <button id="add-new-note-btn" class="notes-btn">새 메모 +</button>
+                <button id="export-notes-btn" class="notes-btn" title="모든 메모 내보내기"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"></path></svg></button>`;
+            
+            document.getElementById('search-input').addEventListener('input', renderNoteList);
+            document.getElementById('select-mode-btn').addEventListener('click', () => toggleNoteSelectionMode());
+            document.getElementById('add-new-note-btn').addEventListener('click', () => addNote());
+        }
+        renderNoteList();
+    }
+
+    async function handleDeleteSelectedNotes() {
+        const selectedCheckboxes = notesList.querySelectorAll('.note-item-checkbox:checked');
+        const idsToDelete = Array.from(selectedCheckboxes).map(cb => cb.dataset.id);
+
+        if (idsToDelete.length === 0) { return; }
+
+        showModal(`${idsToDelete.length}개의 메모를 영구적으로 삭제하시겠습니까?`, async () => {
+            const batch = db.batch();
+            idsToDelete.forEach(id => {
+                batch.delete(notesCollection.doc(id));
+            });
+            try {
+                await batch.commit();
+                toggleNoteSelectionMode(true);
+            } catch (error) {
+                console.error("선택한 메모 삭제 실패:", error);
+            }
+        });
+    }
+
     async function addNote(initialContent = '') {
         if (!notesCollection) return;
         try {
@@ -495,30 +559,16 @@ document.addEventListener('DOMContentLoaded', function () {
             openNoteEditor(newNoteRef.id);
         } catch (error) { console.error("새 메모 추가 실패:", error); }
     }
+    
     function saveNote() {
         if (debounceTimer) clearTimeout(debounceTimer);
         if (!currentNoteId || !notesCollection) return;
         const noteData = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-        notesCollection.doc(currentNoteId).update(noteData).then(() => updateStatus('저장됨 ✓', true)).catch(error => { console.error("메모 저장 실패:", error); updateStatus('저장 실패 ❌', false); });
+        notesCollection.doc(currentNoteId).update(noteData)
+          .then(() => autoSaveStatus.textContent = '저장됨 ✓')
+          .catch(error => console.error("메모 저장 실패:", error));
     }
-    function handleDeleteRequest(noteId) {
-        showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => {
-            if (notesCollection) notesCollection.doc(noteId).delete().catch(error => console.error("메모 삭제 실패:", error));
-        });
-    }
-    async function togglePin(noteId) {
-        if (!notesCollection) return;
-        const note = localNotesCache.find(n => n.id === noteId);
-        if (note) await notesCollection.doc(noteId).update({ isPinned: !note.isPinned });
-    }
-    function exportNotes() {
-        const dataStr = JSON.stringify(localNotesCache, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'my-notes.json'; a.click();
-        URL.revokeObjectURL(url);
-    }
+    
     function switchView(viewName) {
         if (viewName === 'editor') {
             if(noteListView) noteListView.classList.remove('active');
@@ -529,6 +579,7 @@ document.addEventListener('DOMContentLoaded', function () {
             currentNoteId = null;
         }
     }
+
     function openNoteEditor(noteId) {
         const note = localNotesCache.find(n => n.id === noteId);
         if (note && noteTitleInput && noteContentTextarea) {
@@ -538,193 +589,82 @@ document.addEventListener('DOMContentLoaded', function () {
             switchView('editor');
         }
     }
-    function updateStatus(message, success) {
-        if (!autoSaveStatus) return;
-        autoSaveStatus.textContent = message;
-        autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral';
-        setTimeout(() => { autoSaveStatus.textContent = ''; }, 2000);
-    }
-    function applyFormat(format) {
-        if (!noteContentTextarea) return;
-        const start = noteContentTextarea.selectionStart;
-        const end = noteContentTextarea.selectionEnd;
-        const selectedText = noteContentTextarea.value.substring(start, end);
-        const marker = format === 'bold' ? '**' : (format === 'italic' ? '*' : '`');
-        const newText = `${noteContentTextarea.value.substring(0, start)}${marker}${selectedText}${marker}${noteContentTextarea.value.substring(end)}`;
-        noteContentTextarea.value = newText;
-        noteContentTextarea.focus();
-    }
-    
-    // Quiz
-    async function startQuiz() {
-        if (!quizModalOverlay) return;
-        const keywords = Array.from(document.querySelectorAll('.keyword-chip')).map(k => k.textContent.trim()).join(', ');
-        if (!keywords) { 
-            showModal("퀴즈를 생성할 키워드가 없습니다.", () => { if(quizModalOverlay) quizModalOverlay.style.display = 'none'; });
-            return;
-        }
-        const prompt = `다음 키워드들을 기반으로 객관식 퀴즈 3개를 생성해줘: ${keywords}. 각 문제는 4개의 선택지를 가져야 해. 출력 형식은 반드시 아래 JSON 포맷을 따라야 하며, 다른 설명은 절대 추가하지 마.\n\n{"questions": [{"question": "...", "options": [...], "answer": "..."}, ...]}`;
-        if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈를 생성 중입니다...</div>';
-        if (quizResults) quizResults.innerHTML = '';
-        quizModalOverlay.style.display = 'flex';
-        try {
-            const aiResponse = await new Promise(resolve => setTimeout(() => resolve(JSON.stringify({
-                "questions": [
-                    {"question": "(e.g)정조가 젊은 인재를 양성하고 정책을 연구하기 위해 설립한 개혁의 핵심 기구는 무엇인가요?", "options": ["집현전", "장용영", "규장각", "성균관"], "answer": "규장각"},
-                    {"question": "(e.g)정조가 상인들의 독점권을 폐지하고 자유로운 상업 활동을 보장한 경제 정책은 무엇인가요?", "options": ["과전법", "대동법", "균역법", "신해통공"], "answer": "신해통공"},
-                    {"question": "(e.g)정조의 효심과 개혁 의지가 담겨 있으며, 정약용의 거중기 등 최신 과학 기술이 동원된 건축물은 무엇인가요?", "options": ["경복궁", "창덕궁", "수원 화성", "남한산성"], "answer": "수원 화성"}
-                ]
-            })), 1000));
-            currentQuizData = JSON.parse(aiResponse);
-            renderQuiz(currentQuizData);
-        } catch (e) {
-            if (quizContainer) quizContainer.innerHTML = '퀴즈 생성에 실패했습니다. 다시 시도해주세요.';
-            console.error("Invalid quiz JSON", e);
-        }
-    }
-    function renderQuiz(data) {
-        if (!quizContainer || !data || !data.questions) return;
-        quizContainer.innerHTML = '';
-        data.questions.forEach((q, index) => {
-            const questionBlock = document.createElement('div');
-            questionBlock.className = 'quiz-question-block';
-            const questionText = document.createElement('p');
-            questionText.textContent = `${index + 1}. ${q.question}`;
-            const optionsDiv = document.createElement('div');
-            optionsDiv.className = 'quiz-options';
-            q.options.forEach(option => {
-                const label = document.createElement('label');
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = `question-${index}`;
-                radio.value = option;
-                label.appendChild(radio);
-                label.appendChild(document.createTextNode(` ${option}`));
-                optionsDiv.appendChild(label);
-            });
-            questionBlock.appendChild(questionText);
-            questionBlock.appendChild(optionsDiv);
-            quizContainer.appendChild(questionBlock);
-        });
-    }
 
     // --- 4. Global Initialization ---
     function initialize() {
-        if (!body || !wrapper) {
-            console.error("Core layout elements not found. Initialization aborted.");
-            return;
-        }
-        
-        // Clock
-        updateClock();
-        setInterval(updateClock, 1000);
+        if (!body || !wrapper) { return; }
 
-        // Tooltips
-        initializeTooltips();
+        initializeFirebase();
+        setupSelectionPopover();
         
-        // Draggable Panels
-        makePanelDraggable(chatPanel);
-        makePanelDraggable(notesAppPanel);
-
-        // Event Listeners
-        if (themeToggle) themeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-mode');
-            themeToggle.textContent = body.classList.contains('dark-mode') ? '☀️' : '🌙';
-        });
-        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => {
-            wrapper.classList.toggle('toc-hidden');
-            clockElement.classList.toggle('tucked');
-        });
+        if (themeToggle) themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); });
+        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); });
         if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
         if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => togglePanel(notesAppPanel));
         if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
-        if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
+        
         if (deleteHistoryBtn) deleteHistoryBtn.addEventListener('click', async () => {
             const modeText = chatModeSelector.querySelector(`button[data-mode="${selectedMode}"]`).textContent;
-            showModal(`'${modeText}' 모드의 대화 기록을 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`, async () => {
+            showModal(`'${modeText}' 모드의 대화 기록을 정말로 삭제하시겠습니까?`, async () => {
                 chatHistories[selectedMode] = [];
                 await saveChatHistory();
-                renderChatHistory(selectedMode);
             });
         });
-        if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
-        if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
-        if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
-        if (quizSubmitBtn) quizSubmitBtn.addEventListener('click', () => {
-            if (!currentQuizData || !quizResults) return;
-            let score = 0;
-            let allAnswered = true;
-            currentQuizData.questions.forEach((q, index) => {
-                const selected = document.querySelector(`input[name="question-${index}"]:checked`);
-                if (!selected) { allAnswered = false; }
-            });
-            if (!allAnswered) {
-                quizResults.textContent = "모든 문제에 답해주세요!";
-                quizResults.style.color = 'orange';
-                return;
-            }
-            currentQuizData.questions.forEach((q, index) => {
-                const selected = document.querySelector(`input[name="question-${index}"]:checked`);
-                const questionBlock = document.querySelectorAll('.quiz-question-block')[index];
-                const labels = questionBlock.querySelectorAll('label');
-                labels.forEach(label => {
-                    const radio = label.querySelector('input');
-                    if (radio.value === q.answer) {
-                        label.style.color = 'lightgreen';
-                        label.style.fontWeight = 'bold';
-                    }
-                    if (radio.checked && radio.value !== q.answer) {
-                        label.style.color = 'lightcoral';
-                    }
-                });
-                if (selected.value === q.answer) { score++; }
-            });
-            quizResults.textContent = `결과: ${currentQuizData.questions.length}문제 중 ${score}개를 맞혔습니다!`;
-            quizResults.style.color = score === currentQuizData.questions.length ? 'lightgreen' : 'orange';
+        
+        if(promptSaveBtn) promptSaveBtn.addEventListener('click', () => {
+            customPrompt = customPromptInput.value;
+            localStorage.setItem('customTutorPrompt', customPrompt);
+            if (promptModalOverlay) promptModalOverlay.style.display = 'none';
         });
-        if(quizModalOverlay) quizModalOverlay.addEventListener('click', (e) => {
-            if (e.target === quizModalOverlay) {
-                quizModalOverlay.style.display = 'none';
-            }
+        if(promptCancelBtn) promptCancelBtn.addEventListener('click', () => {
+            if (promptModalOverlay) promptModalOverlay.style.display = 'none';
         });
 
         // Notes App Listeners
-        if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
         if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
-        if (searchInput) searchInput.addEventListener('input', renderNoteList);
-        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportNotes);
+        if (notesList) notesList.addEventListener('click', e => {
+            const itemAction = e.target.closest('.item-action-btn');
+            if(itemAction) {
+                const noteId = itemAction.closest('.note-item').dataset.id;
+                if(itemAction.classList.contains('delete-btn')) {
+                    showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => {
+                        if (notesCollection) notesCollection.doc(noteId).delete();
+                    });
+                }
+                if(itemAction.classList.contains('pin-btn')) {
+                    const note = localNotesCache.find(n => n.id === noteId);
+                    if (note) notesCollection.doc(noteId).update({ isPinned: !note.isPinned });
+                }
+            }
+        });
         const handleInput = () => {
-            updateStatus('입력 중...', true);
+            autoSaveStatus.textContent = '입력 중...';
             if (debounceTimer) clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(saveNote, 1000);
+            debounceTimer = setTimeout(saveNote, 1500);
         };
         if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
-        if (notesList) notesList.addEventListener('click', e => {
-            const noteItem = e.target.closest('.note-item');
-            if (!noteItem) return;
-            const noteId = noteItem.dataset.id;
-            if (e.target.closest('.delete-btn')) handleDeleteRequest(noteId);
-            else if (e.target.closest('.pin-btn')) togglePin(noteId);
-            else openNoteEditor(noteId);
-        });
-        if (formatToolbar) formatToolbar.addEventListener('click', e => {
-            const button = e.target.closest('.format-btn');
-            if (button) applyFormat(button.dataset.format);
-        });
-        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => {
-            if(!noteContentTextarea) return;
-            const topicTitle = document.title || '현재 학습';
-            const linkText = `\n\n🔗 연관 학습: [${topicTitle}]`;
-            noteContentTextarea.value += linkText;
-            saveNote();
-        });
-        
-        // Initial Setup Calls
-        setupNavigator();
-        setupChatModeSelector(); // Setup the new dynamic buttons
-        initializeFirebase();
+
+        toggleNoteSelectionMode(true); // Initialize with default buttons
+        makePanelDraggable(chatPanel);
+        makePanelDraggable(notesAppPanel);
+        updateClock();
+        setInterval(updateClock, 1000);
+        setupChatModeSelector();
+
+        // For demonstration, a sample JSON can be used to render the page on load
+        const sampleJsonData = {
+          "title": "선조, 비운의 군주",
+          "subtitle": "임진왜란의 위기 속, 그의 선택과 리더십",
+          "sections": [
+            { "id": "section-1", "title": "🎯 오늘의 학습 목표", "type": "quote", "content": "선조 시대의 복잡한 정치 상황과 임진왜란이라는 거대한 위기 속에서 그가 내린 결정들의 배경과 결과를 이해하고, 그의 리더십에 대한 다양한 평가를 비판적으로 분석할 수 있다." },
+            { "id": "section-2", "title": "🔑 핵심 키워드", "type": "keywords", "content": [ { "term": "방계 혈통", "tooltip": "왕의 직계가 아닌 방계 친족의 혈통. 선조는 명종의 양자 자격으로 즉위했다." }, { "term": "붕당 정치", "tooltip": "학문과 정치 성향을 같이하는 관료 집단(붕당)이 서로 견제하며 이끌어가는 정치 형태. 동인과 서인의 대립이 대표적이다." }, { "term": "임진왜란", "tooltip": "1592년 일본의 침략으로 시작되어 7년간 지속된 전쟁." }, { "term": "의병", "tooltip": "나라가 위급할 때, 관군의 소속이 아닌데도 백성들이 스스로 일어나 싸우는 군대." } ] },
+            { "id": "section-3", "title": "📖 핵심 원리와 개념", "type": "content", "content": [ { "type": "h3", "text": "왕위 계승의 정통성 문제" }, { "type": "p", "text": "선조는 조선 역사상 처음으로 {방계 혈통|왕의 직계가 아닌 방계 친족의 혈통}으로 왕위에 오른 인물이야. 이는 그에게 평생의 정치적 부담으로 작용했어. 자신의 정통성이 약하다고 생각했기 때문에, 그는 왕권을 강화하고 신하들을 통제하는 데 더욱 집착하게 되었지." }, { "type": "h3", "text": "붕당 정치의 시작과 심화" }, { "type": "p", "text": "선조 시대는 사림 세력이 중앙 정계를 장악하며 {붕당 정치|학문과 정치 성향을 같이하는 관료 집단}가 본격적으로 시작된 시기야. 처음에는 동인과 서인으로 나뉘어 서로를 견제하며 건강한 논쟁을 벌였지만, 점차 대립이 격화되면서 국론 분열의 원인이 되기도 했어." } ] },
+            { "id": "section-4", "title": "🧐 최종 핵심 요약", "type": "content", "content": [ { "type": "p", "text": "선조는 방계 출신이라는 정통성 약점과 붕당 정치의 격화, 그리고 임진왜란이라는 최악의 국난을 맞이한 군주였다. 그는 전쟁 준비에 미흡했고, 의주로 피난하며 백성들의 비판을 받았지만, 이순신, 권율 등 유능한 장수들을 등용하고 의병 활동을 독려하여 위기를 극복하는 데 기여한 측면도 있다. 그의 리더십은 오늘날까지도 복합적인 평가를 받고 있다." } ] }
+          ]
+        };
+        renderPageContent(sampleJsonData);
     }
 
     // --- 5. Run Initialization ---
