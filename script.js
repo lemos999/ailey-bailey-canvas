@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.1 (Chat Persistence & Renaming)
+Version: 7.2 (Selection Popover Fix & Functionality)
 Architect: [Username] & System Architect Ailey
-Description: Implemented Firebase-backed persistence for chat history, allowing conversations to be saved and loaded across sessions. Renamed "AI Tutor" to "AI 러닝메이트" throughout the UI for a friendlier user experience.
+Description: Fixed the selection popover positioning bug by implementing logic to detect text selection and dynamically move the popover. Added functionality to the "Ask AI" and "Add to Note" buttons to operate on the selected text.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -62,7 +62,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentNoteId = null;
     let unsubscribeFromNotes = null;
     let debounceTimer = null;
-    
+    let lastSelectedText = ''; // To store the selected text for popover actions
+
     // --- REFINED CHAT STATE ---
     let chatHistories = { ailey_coaching: [], deep_learning: [], custom: [] };
     let selectedMode = 'ailey_coaching'; // Default mode
@@ -220,6 +221,59 @@ document.addEventListener('DOMContentLoaded', function () {
             if (targetElement) { observer.observe(targetElement); }
         });
     }
+    
+    // --- [NEW] Selection Popover Logic ---
+    function handleTextSelection(e) {
+        if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container')) {
+            return;
+        }
+
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+
+        if (selectedText.length > 3) { // Show popover for selections longer than 3 chars
+            lastSelectedText = selectedText;
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            
+            const popover = selectionPopover;
+            let top = rect.top + window.scrollY - popover.offsetHeight - 10;
+            let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2);
+
+            if (top < window.scrollY) { // If popover goes off-screen top, show it below
+                top = rect.bottom + window.scrollY + 10;
+            }
+            if (left < 0) left = 5;
+            if (left + popover.offsetWidth > window.innerWidth) {
+                left = window.innerWidth - popover.offsetWidth - 5;
+            }
+
+            popover.style.top = `${top}px`;
+            popover.style.left = `${left}px`;
+            popover.style.display = 'flex';
+        } else {
+             if (!e.target.closest('#selection-popover')) {
+                selectionPopover.style.display = 'none';
+             }
+        }
+    }
+
+    function handlePopoverAskAi() {
+        if (!lastSelectedText || !chatInput) return;
+        togglePanel(chatPanel, true); // Force show the chat panel
+        chatInput.value = `"${lastSelectedText}"\n\n이 내용에 대해 더 자세히 설명해줄래?`;
+        chatInput.style.height = 'auto';
+        chatInput.style.height = (chatInput.scrollHeight) + 'px';
+        chatInput.focus();
+        selectionPopover.style.display = 'none'; // Hide popover after action
+    }
+
+    function handlePopoverAddNote() {
+        if (!lastSelectedText) return;
+        addNote(`> ${lastSelectedText}\n\n`); // Add selected text as a quote
+        selectionPopover.style.display = 'none'; // Hide popover after action
+    }
+
 
     // Modals
     function openPromptModal() {
@@ -244,16 +298,12 @@ document.addEventListener('DOMContentLoaded', function () {
         modalCancelBtn.onclick = () => { customModal.style.display = 'none'; };
     }
 
-    // --- REFINED CHAT ---
-    
+    // Chat
     function generateTutorPrompt(mode, query) {
         const toneMandate = "너는 지금부터 친한 친구에게 말하는 것처럼, 반드시 친근한 반말(informal Korean)으로만 대화해야 해. '안녕하세요' 같은 존댓말은 절대 사용하면 안 돼.";
         let fullPrompt = "";
-
         switch(mode) {
-            case 'ailey_coaching':
-                fullPrompt = `[M-CHAT-AILEY] 모드 활성화. 사용자의 질문에 답변해줘: "${query}"`;
-                break;
+            case 'ailey_coaching': fullPrompt = `[M-CHAT-AILEY] 모드 활성화. 사용자의 질문에 답변해줘: "${query}"`; break;
             case 'deep_learning':
                 if (chatQuizState === 'idle') {
                     fullPrompt = `[M-CHAT-QUIZ] 모드, Phase 1 (Problem Generation) 활성화. 다음 주제에 대한 문제를 생성해줘: "${query}"`;
@@ -261,9 +311,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     fullPrompt = `[M-CHAT-QUIZ] 모드, Phase 2 (Grading and Explanation) 활성화. 이전 문제인 "${lastQuestion}"에 대한 사용자의 답변은 "${query}"이야. 채점하고 상세히 설명해줘.`;
                 }
                 break;
-            case 'custom':
-                fullPrompt = `[M-CHAT-CUSTOM] 모드 활성화. 다음 커스텀 프롬프트를 따르되, 사용자의 질문에 답변해줘.\n커스텀 프롬프트: "${customPrompt}"\n사용자 질문: "${query}"`;
-                break;
+            case 'custom': fullPrompt = `[M-CHAT-CUSTOM] 모드 활성화. 다음 커스텀 프롬프트를 따르되, 사용자의 질문에 답변해줘.\n커스텀 프롬프트: "${customPrompt}"\n사용자 질문: "${query}"`; break;
         }
         return `${fullPrompt}\n\n${toneMandate}`;
     }
@@ -277,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const currentHistory = chatHistories[selectedMode] || [];
         currentHistory.push({ role: 'user', content: userQuery, timestamp: new Date().toISOString() });
-        renderChatHistory(selectedMode); // Show user message immediately
+        renderChatHistory(selectedMode);
         
         const aiMessageDiv = document.createElement('div');
         aiMessageDiv.className = 'chat-message ai';
@@ -285,19 +333,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if(chatMessages) chatMessages.appendChild(aiMessageDiv);
         if(chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 
-
         const apiKey = ""; 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${apiKey}`;
-        const payload = {
-            contents: [{ role: "user", parts: [{ text: generateTutorPrompt(selectedMode, userQuery) }] }]
-        };
+        const payload = { contents: [{ role: "user", parts: [{ text: generateTutorPrompt(selectedMode, userQuery) }] }] };
 
         try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
             const result = await response.json();
             
@@ -315,14 +356,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     lastQuestion = '';
                 }
             }
-
             currentHistory.push({ role: 'ai', content: aiResponse, timestamp: new Date().toISOString() });
             await saveChatHistory();
-            // The listener will call renderChatHistory, so explicit call is removed to avoid double render
         } catch (error) {
             console.error("AI API Error:", error);
-            const errorMessage = `오류가 발생했습니다: ${error.message}`;
-            currentHistory.push({ role: 'ai', content: errorMessage, timestamp: new Date().toISOString() });
+            currentHistory.push({ role: 'ai', content: `오류가 발생했습니다: ${error.message}`, timestamp: new Date().toISOString() });
             await saveChatHistory();
         } finally {
             chatInput.disabled = false;
@@ -340,35 +378,26 @@ document.addEventListener('DOMContentLoaded', function () {
         history.forEach(msg => {
             const msgDiv = document.createElement('div');
             msgDiv.className = `chat-message ${msg.role}`;
-            
             let content = msg.content;
-            
             if (content.startsWith('[PROBLEM_GENERATED]')) {
                 msgDiv.classList.add('quiz-problem');
                 content = content.replace('[PROBLEM_GENERATED]', '').trim();
             } else if (content.startsWith('[CORRECT]')) {
                 msgDiv.classList.add('quiz-solution', 'correct');
                 const header = document.createElement('div');
-                header.className = 'solution-header correct';
-                header.textContent = '✅ 정답입니다!';
+                header.className = 'solution-header correct'; header.textContent = '✅ 정답입니다!';
                 msgDiv.appendChild(header);
                 content = content.replace('[CORRECT]', '').trim();
             } else if (content.startsWith('[INCORRECT]')) {
                 msgDiv.classList.add('quiz-solution', 'incorrect');
                 const header = document.createElement('div');
-                header.className = 'solution-header incorrect';
-                header.textContent = '❌ 오답입니다.';
+                header.className = 'solution-header incorrect'; header.textContent = '❌ 오답입니다.';
                 msgDiv.appendChild(header);
                 content = content.replace('[INCORRECT]', '').trim();
             }
-
             const contentDiv = document.createElement('div');
-            contentDiv.innerHTML = content
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\n/g, '<br>');
-
+            contentDiv.innerHTML = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
             msgDiv.appendChild(contentDiv);
-
             if (msg.timestamp) {
                 const timeDiv = document.createElement('div');
                 timeDiv.className = 'chat-timestamp';
@@ -381,8 +410,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 sendToNoteBtn.textContent = '메모로 보내기';
                 sendToNoteBtn.onclick = (e) => {
                     addNote(`[AI 러닝메이트] ${contentDiv.textContent}`);
-                    e.target.textContent = '✅';
-                    e.target.disabled = true;
+                    e.target.textContent = '✅'; e.target.disabled = true;
                 };
                 contentDiv.appendChild(sendToNoteBtn);
             }
@@ -415,35 +443,21 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupChatModeSelector() {
         if (!chatModeSelector) return;
         chatModeSelector.innerHTML = '';
-        const modes = [
-            { id: 'ailey_coaching', text: '기본 코칭 💬' },
-            { id: 'deep_learning', text: '심화 학습 🧠' },
-            { id: 'custom', text: '커스텀 ⚙️' }
-        ];
-
+        const modes = [ { id: 'ailey_coaching', text: '기본 코칭 💬' }, { id: 'deep_learning', text: '심화 학습 🧠' }, { id: 'custom', text: '커스텀 ⚙️' } ];
         modes.forEach(mode => {
             const button = document.createElement('button');
-            button.dataset.mode = mode.id;
-            button.innerHTML = mode.text;
+            button.dataset.mode = mode.id; button.innerHTML = mode.text;
             if (mode.id === selectedMode) button.classList.add('active');
-            
             button.addEventListener('click', () => {
-                selectedMode = mode.id;
-                chatQuizState = 'idle'; 
-                lastQuestion = '';
-                
+                selectedMode = mode.id; chatQuizState = 'idle'; lastQuestion = '';
                 chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                
-                if (selectedMode === 'custom') {
-                    openPromptModal();
-                }
+                if (selectedMode === 'custom') { openPromptModal(); }
                 renderChatHistory(selectedMode);
             });
             chatModeSelector.appendChild(button);
         });
     }
-
 
     // Notes
     function listenToNotes() {
@@ -459,19 +473,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const searchTerm = searchInput.value.toLowerCase();
         const filteredNotes = localNotesCache.filter(note => (note.title && note.title.toLowerCase().includes(searchTerm)) || (note.content && note.content.toLowerCase().includes(searchTerm)));
         filteredNotes.sort((a, b) => {
-            if (a.isPinned && !b.isPinned) return -1;
-            if (!a.isPinned && b.isPinned) return 1;
+            if (a.isPinned && !b.isPinned) return -1; if (!a.isPinned && b.isPinned) return 1;
             return (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0);
         });
         notesList.innerHTML = '';
-        if (filteredNotes.length === 0) {
-            notesList.innerHTML = '<div>표시할 메모가 없습니다.</div>';
-            return;
-        }
+        if (filteredNotes.length === 0) { notesList.innerHTML = '<div>표시할 메모가 없습니다.</div>'; return; }
         filteredNotes.forEach(note => {
             const item = document.createElement('div');
-            item.className = 'note-item';
-            item.dataset.id = note.id;
+            item.className = 'note-item'; item.dataset.id = note.id;
             if (note.isPinned) item.classList.add('pinned');
             const date = note.updatedAt ? new Date(note.updatedAt.toMillis()).toLocaleString() : '날짜 없음';
             item.innerHTML = `<div class="note-item-content"><div class="note-item-title">${note.title || '무제'}</div><div class="note-item-date">${date}</div></div><div class="note-item-actions"><button class="item-action-btn pin-btn ${note.isPinned ? 'pinned-active' : ''}" title="고정">${note.isPinned ? '📌' : '📍'}</button><button class="item-action-btn delete-btn" title="삭제">🗑️</button></div>`;
@@ -481,11 +490,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function addNote(initialContent = '') {
         if (!notesCollection) return;
         try {
-            const newNoteRef = await notesCollection.add({
-                title: '새 메모', content: initialContent, isPinned: false,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            const newNoteRef = await notesCollection.add({ title: '새 메모', content: initialContent, isPinned: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
             openNoteEditor(newNoteRef.id);
         } catch (error) { console.error("새 메모 추가 실패:", error); }
     }
@@ -540,35 +545,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function applyFormat(format) {
         if (!noteContentTextarea) return;
-        const start = noteContentTextarea.selectionStart;
-        const end = noteContentTextarea.selectionEnd;
+        const start = noteContentTextarea.selectionStart; const end = noteContentTextarea.selectionEnd;
         const selectedText = noteContentTextarea.value.substring(start, end);
         const marker = format === 'bold' ? '**' : (format === 'italic' ? '*' : '`');
         const newText = `${noteContentTextarea.value.substring(0, start)}${marker}${selectedText}${marker}${noteContentTextarea.value.substring(end)}`;
-        noteContentTextarea.value = newText;
-        noteContentTextarea.focus();
+        noteContentTextarea.value = newText; noteContentTextarea.focus();
     }
     
     // Quiz
     async function startQuiz() {
         if (!quizModalOverlay) return;
         const keywords = Array.from(document.querySelectorAll('.keyword-chip')).map(k => k.textContent.trim()).join(', ');
-        if (!keywords) { 
-            showModal("퀴즈를 생성할 키워드가 없습니다.", () => { if(quizModalOverlay) quizModalOverlay.style.display = 'none'; });
-            return;
-        }
+        if (!keywords) { showModal("퀴즈를 생성할 키워드가 없습니다.", () => { if(quizModalOverlay) quizModalOverlay.style.display = 'none'; }); return; }
         const prompt = `다음 키워드들을 기반으로 객관식 퀴즈 3개를 생성해줘: ${keywords}. 각 문제는 4개의 선택지를 가져야 해. 출력 형식은 반드시 아래 JSON 포맷을 따라야 하며, 다른 설명은 절대 추가하지 마.\n\n{"questions": [{"question": "...", "options": [...], "answer": "..."}, ...]}`;
         if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈를 생성 중입니다...</div>';
         if (quizResults) quizResults.innerHTML = '';
         quizModalOverlay.style.display = 'flex';
         try {
-            const aiResponse = await new Promise(resolve => setTimeout(() => resolve(JSON.stringify({
-                "questions": [
-                    {"question": "(e.g)정조가 젊은 인재를 양성하고 정책을 연구하기 위해 설립한 개혁의 핵심 기구는 무엇인가요?", "options": ["집현전", "장용영", "규장각", "성균관"], "answer": "규장각"},
-                    {"question": "(e.g)정조가 상인들의 독점권을 폐지하고 자유로운 상업 활동을 보장한 경제 정책은 무엇인가요?", "options": ["과전법", "대동법", "균역법", "신해통공"], "answer": "신해통공"},
-                    {"question": "(e.g)정조의 효심과 개혁 의지가 담겨 있으며, 정약용의 거중기 등 최신 과학 기술이 동원된 건축물은 무엇인가요?", "options": ["경복궁", "창덕궁", "수원 화성", "남한산성"], "answer": "수원 화성"}
-                ]
-            })), 1000));
+            const aiResponse = await new Promise(resolve => setTimeout(() => resolve(JSON.stringify({ "questions": [ {"question": "(e.g)정조가 젊은 인재를 양성하고 정책을 연구하기 위해 설립한 개혁의 핵심 기구는 무엇인가요?", "options": ["집현전", "장용영", "규장각", "성균관"], "answer": "규장각"}, {"question": "(e.g)정조가 상인들의 독점권을 폐지하고 자유로운 상업 활동을 보장한 경제 정책은 무엇인가요?", "options": ["과전법", "대동법", "균역법", "신해통공"], "answer": "신해통공"}, {"question": "(e.g)정조의 효심과 개혁 의지가 담겨 있으며, 정약용의 거중기 등 최신 과학 기술이 동원된 건축물은 무엇인가요?", "options": ["경복궁", "창덕궁", "수원 화성", "남한산성"], "answer": "수원 화성"} ] })), 1000));
             currentQuizData = JSON.parse(aiResponse);
             renderQuiz(currentQuizData);
         } catch (e) {
@@ -589,38 +583,28 @@ document.addEventListener('DOMContentLoaded', function () {
             q.options.forEach(option => {
                 const label = document.createElement('label');
                 const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = `question-${index}`;
-                radio.value = option;
-                label.appendChild(radio);
-                label.appendChild(document.createTextNode(` ${option}`));
+                radio.type = 'radio'; radio.name = `question-${index}`; radio.value = option;
+                label.appendChild(radio); label.appendChild(document.createTextNode(` ${option}`));
                 optionsDiv.appendChild(label);
             });
-            questionBlock.appendChild(questionText);
-            questionBlock.appendChild(optionsDiv);
+            questionBlock.appendChild(questionText); questionBlock.appendChild(optionsDiv);
             quizContainer.appendChild(questionBlock);
         });
     }
 
     // --- 4. Global Initialization ---
     function initialize() {
-        if (!body || !wrapper) {
-            console.error("Core layout elements not found. Initialization aborted.");
-            return;
-        }
+        if (!body || !wrapper) { console.error("Core layout elements not found. Initialization aborted."); return; }
         
-        // Clock
-        updateClock();
-        setInterval(updateClock, 1000);
-
-        // Tooltips
+        updateClock(); setInterval(updateClock, 1000);
         initializeTooltips();
-        
-        // Draggable Panels
-        makePanelDraggable(chatPanel);
-        makePanelDraggable(notesAppPanel);
+        makePanelDraggable(chatPanel); makePanelDraggable(notesAppPanel);
 
-        // Event Listeners
+        // --- Event Listeners ---
+        document.addEventListener('mouseup', handleTextSelection); // Listen for text selection globally
+        if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
+        if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
+        
         if (themeToggle) themeToggle.addEventListener('click', () => {
             body.classList.toggle('dark-mode');
             themeToggle.textContent = body.classList.contains('dark-mode') ? '☀️' : '🌙';
@@ -638,10 +622,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const modeTextMap = { 'ailey_coaching': '기본 코칭', 'deep_learning': '심화 학습', 'custom': '커스텀' };
             const modeText = modeTextMap[selectedMode] || selectedMode;
             showModal(`'${modeText}' 모드의 대화 기록을 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`, async () => {
-                if(chatHistories[selectedMode]) {
-                    chatHistories[selectedMode] = [];
-                    await saveChatHistory();
-                }
+                if(chatHistories[selectedMode]) { chatHistories[selectedMode] = []; await saveChatHistory(); }
             });
         });
         if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
@@ -649,57 +630,34 @@ document.addEventListener('DOMContentLoaded', function () {
         if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
         if (quizSubmitBtn) quizSubmitBtn.addEventListener('click', () => {
             if (!currentQuizData || !quizResults) return;
-            let score = 0;
-            let allAnswered = true;
+            let score = 0; let allAnswered = true;
+            currentQuizData.questions.forEach((q, index) => { if (!document.querySelector(`input[name="question-${index}"]:checked`)) { allAnswered = false; } });
+            if (!allAnswered) { quizResults.textContent = "모든 문제에 답해주세요!"; quizResults.style.color = 'orange'; return; }
             currentQuizData.questions.forEach((q, index) => {
                 const selected = document.querySelector(`input[name="question-${index}"]:checked`);
-                if (!selected) { allAnswered = false; }
-            });
-            if (!allAnswered) {
-                quizResults.textContent = "모든 문제에 답해주세요!";
-                quizResults.style.color = 'orange';
-                return;
-            }
-            currentQuizData.questions.forEach((q, index) => {
-                const selected = document.querySelector(`input[name="question-${index}"]:checked`);
-                const questionBlock = document.querySelectorAll('.quiz-question-block')[index];
-                const labels = questionBlock.querySelectorAll('label');
+                const labels = document.querySelectorAll('.quiz-question-block')[index].querySelectorAll('label');
                 labels.forEach(label => {
                     const radio = label.querySelector('input');
-                    if (radio.value === q.answer) {
-                        label.style.color = 'lightgreen';
-                        label.style.fontWeight = 'bold';
-                    }
-                    if (radio.checked && radio.value !== q.answer) {
-                        label.style.color = 'lightcoral';
-                    }
+                    if (radio.value === q.answer) { label.style.color = 'lightgreen'; label.style.fontWeight = 'bold'; }
+                    if (radio.checked && radio.value !== q.answer) { label.style.color = 'lightcoral'; }
                 });
                 if (selected.value === q.answer) { score++; }
             });
             quizResults.textContent = `결과: ${currentQuizData.questions.length}문제 중 ${score}개를 맞혔습니다!`;
             quizResults.style.color = score === currentQuizData.questions.length ? 'lightgreen' : 'orange';
         });
-        if(quizModalOverlay) quizModalOverlay.addEventListener('click', (e) => {
-            if (e.target === quizModalOverlay) {
-                quizModalOverlay.style.display = 'none';
-            }
-        });
+        if(quizModalOverlay) quizModalOverlay.addEventListener('click', (e) => { if (e.target === quizModalOverlay) { quizModalOverlay.style.display = 'none'; } });
 
         // Notes App Listeners
         if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
         if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
         if (searchInput) searchInput.addEventListener('input', renderNoteList);
         if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportNotes);
-        const handleInput = () => {
-            updateStatus('입력 중...', true);
-            if (debounceTimer) clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(saveNote, 1000);
-        };
+        const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
         if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
         if (notesList) notesList.addEventListener('click', e => {
-            const noteItem = e.target.closest('.note-item');
-            if (!noteItem) return;
+            const noteItem = e.target.closest('.note-item'); if (!noteItem) return;
             const noteId = noteItem.dataset.id;
             if (e.target.closest('.delete-btn')) handleDeleteRequest(noteId);
             else if (e.target.closest('.pin-btn')) togglePin(noteId);
@@ -713,11 +671,9 @@ document.addEventListener('DOMContentLoaded', function () {
             if(!noteContentTextarea) return;
             const topicTitle = document.title || '현재 학습';
             const linkText = `\n\n🔗 연관 학습: [${topicTitle}]`;
-            noteContentTextarea.value += linkText;
-            saveNote();
+            noteContentTextarea.value += linkText; saveNote();
         });
         
-        // Initial Setup Calls
         setupNavigator();
         setupChatModeSelector();
         initializeFirebase();
