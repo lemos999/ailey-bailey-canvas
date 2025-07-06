@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 6.3 (UI Enhancement: Sub-heading Highlight)
+Version: 6.3 (UI Enhancement: h3 Style & Tooltip)
 Architect: [Username] & System Architect Ailey
-Description: Added highlight style for h3 sub-headings within content sections.
+Description: This is a complete and unabridged stylesheet.
 */
 
 :root {
@@ -32,28 +32,24 @@ body:not(.dark-mode) .header .subtitle { color: var(--sub-text-color-light); }
 .content-section h2 { font-family: 'Noto Serif KR', serif; font-size: 1.8em; padding-left: 15px; margin-bottom: 20px; transition: color 0.3s, border-color 0.3s; }
 body.dark-mode .content-section h2 { color: var(--h2-color-dark); border-left: 4px solid var(--h2-border-dark); }
 body:not(.dark-mode) .content-section h2 { color: var(--h2-color-light); border-left: 4px solid var(--h2-border-light); }
+/* --- NEW STYLE FOR H3 SUBHEADINGS --- */
+.content-section h3 {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 1.2em;
+    margin: 20px 0 15px;
+    transition: background-color 0.3s, color 0.3s;
+}
+body.dark-mode .content-section h3 { background-color: var(--strong-bg-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) .content-section h3 { background-color: var(--strong-bg-light); color: var(--header-color-light); }
+/* --- END OF NEW STYLE --- */
 .content-section p { font-size: 1.1em; text-align: justify; margin-bottom: 15px; }
 .content-section ul { list-style-position: inside; padding-left: 5px; }
 .content-section li { margin-bottom: 8px; }
 .content-section p strong { padding: 0px 6px; border-radius: 4px; font-weight: 700; transition: background-color 0.3s, color 0.3s; }
-
-/* --- MODIFIED for Sub-heading highlight --- */
-.content-section h3 strong {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 5px;
-}
-body.dark-mode .content-section p strong,
-body.dark-mode .content-section h3 strong { 
-    background-color: var(--strong-bg-dark); color: var(--text-color-dark); 
-}
-body:not(.dark-mode) .content-section p strong,
-body:not(.dark-mode) .content-section h3 strong { 
-    background-color: var(--strong-bg-light); color: var(--header-color-light); 
-}
-/* --- END OF MODIFICATION --- */
-
-
+body.dark-mode .content-section p strong { background-color: var(--strong-bg-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) .content-section p strong { background-color: var(--strong-bg-light); color: var(--header-color-light); }
 blockquote { margin: 25px 0; padding: 15px 25px; font-style: italic; transition: background-color 0.3s, border-color 0.3s; }
 body.dark-mode blockquote { background-color: var(--quote-bg-dark); border-left: 3px solid var(--border-color-dark); color: var(--sub-text-color-dark); }
 body:not(.dark-mode) blockquote { background-color: var(--quote-bg-light); border-left: 3px solid var(--border-color-light); color: var(--sub-text-color-light); }
