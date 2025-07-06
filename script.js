@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.4 (Final Architecture - Per-Canvas Persistence & ID Display)
+Version: 7.5 (Global Notes & Robust Copy)
 Architect: [Username] & System Architect Ailey
-Description: Completed the core architectural upgrade. The script now reads the unique Canvas ID and User UID to establish fully independent cloud storage paths for notes and chat. Dynamically populates the new System Info Widget with ID display, copy functionality, and a detailed hover tooltip.
+Description: Re-architected notes to be global across all canvases for a unified knowledge base. Chat remains canvas-specific. Fixed the copy ID button to work reliably in all environments using a fallback method.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -98,13 +98,16 @@ document.addEventListener('DOMContentLoaded', function () {
             currentUser = auth.currentUser;
 
             if (currentUser) {
-                // [CRITICAL] Set up data paths using the unique Canvas ID
-                notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/canvases/${canvasId}/notes`);
+                // [CRITICAL ARCHITECTURE CHANGE]
+                // Notes are now GLOBAL to the user, not tied to a canvas.
+                notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/notes`);
+                
+                // Chat remains specific to each canvas.
                 chatCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatHistories`).doc(canvasId);
                 
                 listenToNotes();
                 listenToChatHistory();
-                setupSystemInfoWidget(); // Setup widget after getting user info
+                setupSystemInfoWidget();
             }
         } catch (error) {
             console.error("Firebase 초기화 또는 인증 실패:", error);
@@ -125,24 +128,33 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupSystemInfoWidget() {
         if (!systemInfoWidget || !currentUser) return;
 
-        // Display abbreviated Canvas ID
         const canvasIdDisplay = document.getElementById('canvas-id-display');
         if (canvasIdDisplay) {
             canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...';
         }
 
-        // Setup copy button
+        // [MODIFIED] Robust copy functionality
         const copyBtn = document.getElementById('copy-canvas-id');
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(canvasId).then(() => {
+                const tempTextarea = document.createElement('textarea');
+                tempTextarea.value = canvasId;
+                tempTextarea.style.position = 'absolute';
+                tempTextarea.style.left = '-9999px'; // Hide the textarea
+                document.body.appendChild(tempTextarea);
+                tempTextarea.select();
+                try {
+                    document.execCommand('copy');
                     copyBtn.textContent = '✅';
-                    setTimeout(() => { copyBtn.textContent = '📋'; }, 1500);
-                });
+                } catch (err) {
+                    console.error('Copy failed', err);
+                    copyBtn.textContent = '❌';
+                }
+                document.body.removeChild(tempTextarea);
+                setTimeout(() => { copyBtn.textContent = '📋'; }, 1500);
             });
         }
         
-        // Create and append the detailed tooltip
         const tooltip = document.createElement('div');
         tooltip.className = 'system-tooltip';
         tooltip.innerHTML = `
@@ -243,8 +255,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } else { if (!e.target.closest('#selection-popover')) selectionPopover.style.display = 'none'; }
     }
     
-    // All other functions (handlePopoverAskAi, handlePopoverAddNote, Modals, Chat, Notes, Quiz, etc.) remain largely the same.
-    // They now implicitly use the correctly scoped `notesCollection` and `chatCollectionRef`.
     function handlePopoverAskAi() { if (!lastSelectedText || !chatInput) return; togglePanel(chatPanel, true); chatInput.value = `"${lastSelectedText}"\n\n이 내용에 대해 더 자세히 설명해줄래?`; chatInput.style.height = 'auto'; chatInput.style.height = (chatInput.scrollHeight) + 'px'; chatInput.focus(); selectionPopover.style.display = 'none'; }
     function handlePopoverAddNote() { if (!lastSelectedText) return; addNote(`> ${lastSelectedText}\n\n`); selectionPopover.style.display = 'none'; }
     function openPromptModal() { if (customPromptInput) customPromptInput.value = customPrompt; if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; }
@@ -275,6 +285,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function initialize() {
         if (!body || !wrapper) { console.error("Core layout elements not found."); return; }
         updateClock(); setInterval(updateClock, 1000);
+        
         initializeFirebase().then(() => {
             setupNavigator();
             setupChatModeSelector();
@@ -287,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
         if (themeToggle) themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); themeToggle.textContent = body.classList.contains('dark-mode') ? '☀️' : '🌙'; });
-        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => systemInfoWidget?.classList.toggle('tucked'));
+        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); systemInfoWidget?.classList.toggle('tucked'); });
         if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
         if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => togglePanel(notesAppPanel));
