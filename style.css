@@ -1,14 +1,15 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 7.3 (System Reset UI)
+Version: 8.0 (Chat UX Overhaul)
 Architect: [Username] & System Architect Ailey
-Description: Added styles for the new System Reset button to provide a clear visual warning for this critical function.
+Description: Major Chat UX improvement. Added styles for foldable chat session folders, a new right-click context menu for session management, and a sleek SVG send icon.
 */
 
 :root {
     --bg-color-light: #FDF8F0; --text-color-light: #4B4237; --container-bg-light: #F7F3E9; --border-color-light: #EAE0D3; --header-color-light: #6D5D4B; --h2-color-light: #8C6D46; --h2-border-light: #B99C7A; --sub-text-color-light: #8C7B6A; --quote-bg-light: #F2EEE5; --strong-bg-light: #EADCB5; --highlight-color: #ffe875; --chat-ai-bg-light: #E9E4DB; --pin-color: #e58a8a; --correct-color: #3e8e41; --incorrect-color: #d9534f;
     --bg-color-dark: #121212; --text-color-dark: #E0E0E0; --container-bg-dark: #1E1E1E; --border-color-dark: #333333; --header-color-dark: #D4B28C; --h2-color-dark: #B99C7A; --h2-border-dark: #8C6D46; --sub-text-color-dark: #9E9E9E; --quote-bg-dark: #2A2A2A; --strong-bg-dark: #5a4a3a; --chat-ai-bg-dark: #2C2C2C; --correct-color-dark: #66bb6a; --incorrect-color-dark: #ef5350;
+    --context-menu-bg-light: #F5F1E8; --context-menu-bg-dark: #2C2C2C; --context-menu-shadow: rgba(0,0,0,0.25);
 }
 
 html { scroll-behavior: smooth; }
@@ -106,14 +107,14 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 .panel-header .close-btn { cursor: pointer; font-size: 20px; }
 
 
-/* --- [REFINED] CHAT STYLES for SESSION MANAGEMENT --- */
+/* --- [OVERHAULED] CHAT STYLES for SESSIONS, FOLDERS, and CONTEXT MENU --- */
 #chat-panel {
     bottom: 100px;
     right: 100px;
-    height: 600px; /* Increased height */
-    width: 700px; /* Increased width */
-    flex-direction: row; /* Key change for side-by-side layout */
-    overflow: hidden; /* Prevent resize from breaking layout */
+    height: 600px;
+    width: 700px;
+    flex-direction: row;
+    overflow: hidden;
 }
 
 #chat-session-sidebar {
@@ -129,28 +130,67 @@ body:not(.dark-mode) #chat-session-sidebar { border-right: 1px solid var(--borde
 #sidebar-header {
     padding: 10px;
     flex-shrink: 0;
+    display: flex; /* NEW */
+    gap: 8px; /* NEW */
 }
 
-#new-chat-btn {
-    width: 100%;
+#new-chat-btn, #new-folder-btn { /* MODIFIED */
+    flex-grow: 1; /* NEW */
     padding: 10px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
-    font-size: 1em;
+    font-size: 0.9em; /* MODIFIED */
     font-family: 'Gowun Batang', serif;
     transition: background-color 0.2s;
 }
-body.dark-mode #new-chat-btn { background-color: var(--h2-color-dark); color: var(--bg-color-dark); }
-body:not(.dark-mode) #new-chat-btn { background-color: var(--h2-color-light); color: white; }
-body.dark-mode #new-chat-btn:hover { background-color: #D4B28C; }
-body:not(.dark-mode) #new-chat-btn:hover { background-color: #A88A68; }
+body.dark-mode #new-chat-btn, body.dark-mode #new-folder-btn { background-color: var(--h2-color-dark); color: var(--bg-color-dark); }
+body:not(.dark-mode) #new-chat-btn, body:not(.dark-mode) #new-folder-btn { background-color: var(--h2-color-light); color: white; }
+body.dark-mode #new-chat-btn:hover, body.dark-mode #new-folder-btn:hover { background-color: #D4B28C; }
+body:not(.dark-mode) #new-chat-btn:hover, body:not(.dark-mode) #new-folder-btn:hover { background-color: #A88A68; }
 
 #session-list {
     flex-grow: 1;
     overflow-y: auto;
     padding: 0 10px 10px 10px;
 }
+
+/* [NEW] Folder Styles */
+.folder-container {
+    margin-bottom: 5px;
+}
+.folder-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: bold;
+    user-select: none;
+}
+body.dark-mode .folder-header { color: var(--header-color-dark); }
+body:not(.dark-mode) .folder-header { color: var(--header-color-light); }
+.folder-header:hover {
+    background-color: var(--quote-bg-dark);
+}
+body:not(.dark-mode) .folder-header:hover {
+    background-color: var(--quote-bg-light);
+}
+.folder-toggle-icon {
+    margin-right: 8px;
+    transition: transform 0.2s;
+}
+.folder-container.collapsed .folder-toggle-icon {
+    transform: rotate(-90deg);
+}
+.folder-container.collapsed .folder-content {
+    display: none;
+}
+.folder-content .session-item {
+    padding-left: 25px; /* Indent session items inside folders */
+}
+
+/* Session Item Styles (minor changes) */
 .session-item {
     padding: 12px 10px;
     border-radius: 6px;
@@ -164,6 +204,7 @@ body:not(.dark-mode) #new-chat-btn:hover { background-color: #A88A68; }
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative; /* For context menu positioning */
 }
 body.dark-mode .session-item:hover { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .session-item:hover { background-color: var(--quote-bg-light); }
@@ -179,24 +220,12 @@ body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-li
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.session-item-actions { display: none; } /* Hide for now, can be added later */
+.session-item-actions { display: none; }
 
-
-#chat-main-view {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
+#chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
 #chat-main-view .panel-header { gap: 5px; }
-#chat-session-title {
-    font-size: 1.1em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-#delete-session-btn {
-    display: none; /* Hide until a session is active */
-}
+#chat-session-title { font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#delete-session-btn { display: none; }
 
 #chat-mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; width: 100%; justify-content: center; padding: 8px 0; border-top: 1px solid transparent; }
 body:not(.dark-mode) #chat-mode-selector { border-top-color: var(--border-color-light); }
@@ -211,46 +240,21 @@ body.dark-mode #chat-mode-selector button.active { background-color: var(--h2-co
 
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 
-#chat-welcome-message {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    text-align: center;
-    color: var(--sub-text-color-dark);
-}
+#chat-welcome-message { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; color: var(--sub-text-color-dark); }
 body:not(.dark-mode) #chat-welcome-message { color: var(--sub-text-color-light); }
-#chat-welcome-message h3 {
-    font-family: 'Noto Serif KR', serif;
-    font-size: 1.5em;
-    margin-bottom: 10px;
-    color: var(--h2-color-dark);
-}
+#chat-welcome-message h3 { font-family: 'Noto Serif KR', serif; font-size: 1.5em; margin-bottom: 10px; color: var(--h2-color-dark); }
 body:not(.dark-mode) #chat-welcome-message h3 { color: var(--h2-color-light); }
 
 .chat-message { max-width: 85%; padding: 10px 15px; border-radius: 18px; line-height: 1.6; word-wrap: break-word; position: relative; }
 .chat-message.ai { background-color: var(--chat-ai-bg-dark); align-self: flex-start; border-bottom-left-radius: 4px; }
 body:not(.dark-mode) .chat-message.ai { background-color: var(--chat-ai-bg-light); }
 .chat-message.user { background-color: #8C6D46; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
-.chat-timestamp { font-size: 0.75em; color: var(--sub-text-color-dark); margin-top: 5px; text-align: right; }
+.chat-timestamp { font-size: 0.75em; opacity: 0.7; margin-top: 5px; } /* MODIFIED */
+body:dark-mode .chat-timestamp { color: var(--sub-text-color-dark); }
 body:not(.dark-mode) .chat-timestamp { color: var(--sub-text-color-light); }
-.chat-message.user .chat-timestamp { text-align: left; }
+.chat-message.ai .chat-timestamp { text-align: right; } /* AI timestamp to the right */
+.chat-message.user .chat-timestamp { text-align: left; } /* User timestamp to the left */
 
-/* QUIZ-SPECIFIC STYLES */
-.chat-message.quiz-problem { border: 2px dashed var(--h2-border-dark); background-color: rgba(185, 156, 122, 0.1); position: relative; padding-top: 30px; }
-body:not(.dark-mode) .chat-message.quiz-problem { border-color: var(--h2-border-light); }
-.chat-message.quiz-problem::before { content: '🧠 오늘의 문제'; position: absolute; top: 5px; left: 15px; font-size: 0.8em; font-weight: bold; color: var(--h2-color-dark); }
-body:not(.dark-mode) .chat-message.quiz-problem::before { color: var(--h2-color-light); }
-.chat-message.quiz-solution { border: 1px solid var(--border-color-dark); margin-top: 10px; }
-body:not(.dark-mode) .chat-message.quiz-solution { border-color: var(--border-color-light); }
-.solution-header { font-weight: bold; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border-color-dark); }
-body:not(.dark-mode) .solution-header { border-bottom-color: var(--border-color-light); }
-.solution-header.correct { color: var(--correct-color-dark); }
-body:not(.dark-mode) .solution-header.correct { color: var(--correct-color); }
-.solution-header.incorrect { color: var(--incorrect-color-dark); }
-body:not(.dark-mode) .solution-header.incorrect { color: var(--incorrect-color); }
-/* END QUIZ-SPECIFIC STYLES */
 
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; }
 body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
@@ -258,21 +262,81 @@ body:not(.dark-mode) .chat-input-form { border-top-color: var(--border-color-lig
 #chat-input { flex-grow: 1; border: 1px solid; border-radius: 20px; padding: 10px 15px; resize: none; outline: none; font-family: 'Gowun Batang', serif; font-size: 1em; transition: all 0.3s; }
 body.dark-mode #chat-input { background-color: #2a2a2a; color: var(--text-color-dark); border-color: var(--border-color-dark); }
 body:not(.dark-mode) #chat-input { background-color: #fff; color: var(--text-color-light); border-color: var(--border-color-light); }
-#chat-send-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; transition: color 0.3s; }
-body.dark-mode #chat-send-btn { color: var(--header-color-dark); }
-body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
+
+/* [MODIFIED] Send button styles */
+#chat-send-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; display: flex; align-items: center; justify-content: center; }
+#chat-send-btn svg { transition: transform 0.2s ease-in-out, color 0.3s; }
+body.dark-mode #chat-send-btn svg { color: var(--header-color-dark); }
+body:not(.dark-mode) #chat-send-btn svg { color: var(--header-color-light); }
+#chat-send-btn:hover svg { transform: scale(1.1) rotate(5deg); }
 #chat-input:disabled, #chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+#chat-send-btn:disabled:hover svg { transform: none; }
+
 .loading-indicator { font-style: italic; opacity: 0.7; }
 .send-to-note-btn { background: none; border: 1px solid; border-radius: 10px; padding: 3px 8px; font-size: 0.8em; cursor: pointer; margin-top: 8px; display: block; }
 body:dark-mode .send-to-note-btn { border-color: var(--sub-text-color-dark); color: var(--sub-text-color-dark); }
 body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-light); color: var(--sub-text-color-light); }
 .send-to-note-btn:disabled { cursor: not-allowed; opacity: 0.5; border-color: gray; color: gray; }
 
-/* Notes App Panel Styles */
+/* [NEW] Context Menu Styles */
+#session-context-menu {
+    position: fixed;
+    z-index: 1500;
+    min-width: 180px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px var(--context-menu-shadow);
+    padding: 8px 0;
+    font-size: 0.95em;
+    user-select: none;
+}
+body.dark-mode #session-context-menu { background-color: var(--context-menu-bg-dark); border: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) #session-context-menu { background-color: var(--context-menu-bg-light); border: 1px solid var(--border-color-light); }
+
+.context-menu-item, .submenu-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+body.dark-mode .context-menu-item:hover, body.dark-mode .submenu-item:hover { background-color: var(--strong-bg-dark); }
+body:not(.dark-mode) .context-menu-item:hover, body:not(.dark-mode) .submenu-item:hover { background-color: var(--strong-bg-light); }
+
+.context-menu-separator {
+    height: 1px;
+    margin: 5px 0;
+}
+body.dark-mode .context-menu-separator { background-color: var(--border-color-dark); }
+body:not(.dark-mode) .context-menu-separator { background-color: var(--border-color-light); }
+
+.context-menu-item.danger { color: var(--incorrect-color); }
+body.dark-mode .context-menu-item.danger { color: var(--incorrect-color-dark); }
+
+.submenu-container {
+    position: relative;
+}
+.submenu {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    min-width: 150px;
+    border-radius: 8px;
+    padding: 8px 0;
+    box-shadow: 0 5px 15px var(--context-menu-shadow);
+}
+body.dark-mode .submenu { background-color: var(--context-menu-bg-dark); border: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) .submenu { background-color: var(--context-menu-bg-light); border: 1px solid var(--border-color-light); }
+.submenu-container:hover .submenu {
+    display: block;
+}
+
+
+/* --- Notes App and Other Panels (Unchanged) --- */
 #notes-app-panel { bottom: 100px; left: 100px; width: 400px; height: 600px; padding: 0; }
 .notes-view { display: none; flex-direction: column; height: 100%; }
 .notes-view.active { display: flex; }
-#note-list-view .panel-header .header-button-group { display: flex; gap: 10px; flex-wrap: wrap; } /* Added flex-wrap */
+#note-list-view .panel-header .header-button-group { display: flex; gap: 10px; flex-wrap: wrap; }
 #note-list-view .list-header { padding: 10px 15px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) #note-list-view .list-header { border-bottom-color: var(--border-color-light); }
 #search-input { flex-grow: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
@@ -280,19 +344,9 @@ body:not(.dark-mode) #search-input { border-color: var(--border-color-light); ba
 .notes-btn { padding: 8px 15px; border-radius: 20px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; display: flex; align-items: center; gap: 6px; }
 body:not(.dark-mode) .notes-btn { background-color: var(--h2-color-light); }
 .notes-btn svg { width: 16px; height: 16px; fill: currentColor; }
-
-/* [NEW] System Reset Button Style */
-#system-reset-btn {
-    background-color: var(--incorrect-color);
-}
-#system-reset-btn:hover {
-    background-color: #c9302c; /* A darker red */
-}
-body:not(.dark-mode) #system-reset-btn:hover {
-    background-color: #c9302c;
-}
-
-
+#system-reset-btn { background-color: var(--incorrect-color); }
+#system-reset-btn:hover { background-color: #c9302c; }
+body:not(.dark-mode) #system-reset-btn:hover { background-color: #c9302c; }
 #notes-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
 .note-item { padding: 12px 15px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: background-color 0.2s; position: relative; }
 body:not(.dark-mode) .note-item:hover { background-color: var(--quote-bg-light); }
@@ -327,7 +381,7 @@ body.dark-mode .custom-modal { background-color: var(--container-bg-dark); }
 #modal-confirm-btn, #prompt-save-btn { background-color: #8C6D46; color: white; }
 #modal-cancel-btn, #prompt-cancel-btn { background-color: #888; color: white; }
 
-/* Quiz Modal Styles */
+/* Quiz & Prompt Modals (Unchanged) */
 #quiz-modal-overlay { background: rgba(0,0,0,0.7); }
 .quiz-modal { width: 90%; max-width: 600px; }
 body:not(.dark-mode) .quiz-modal { background-color: var(--bg-color-light); }
@@ -343,7 +397,5 @@ body.dark-mode .quiz-options label:hover { background-color: var(--quote-bg-dark
 #quiz-submit-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; font-weight: bold; }
 body:not(:dark-mode) #quiz-submit-btn { background-color: var(--h2-color-light); }
 #quiz-results { margin-top: 20px; font-weight: bold; font-size: 1.2em; }
-
-/* Prompt Modal */
 #prompt-modal-overlay textarea { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
 body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }
