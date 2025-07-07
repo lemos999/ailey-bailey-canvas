@@ -1,12 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.1 (Chat Session UX Enhancement)
+Version: 9.2 (Critical Bug Fix & Refactor)
 Architect: [Username] & System Architect Ailey
-Description: Implemented major Chat UX enhancements.
-- Fixed the 'New Folder' button to be fully functional by creating a new session within the new folder.
-- Re-architected the session list to group conversations by date (Today, Yesterday, This Week, etc.).
-- Each session item now displays its last updated time.
+Description: Fixed a critical bug where the 'New Folder' button was unresponsive due to an asynchronous race condition. Refactored the button's initialization logic to ensure it only runs after Firebase services are fully available.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -57,7 +54,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // -- Chat Session UI Elements
     const newChatBtn = document.getElementById('new-chat-btn');
-    let newFolderBtn; // Will be created dynamically
     const sessionList = document.getElementById('session-list');
     const chatSessionTitle = document.getElementById('chat-session-title');
     const deleteSessionBtn = document.getElementById('delete-session-btn');
@@ -95,6 +91,48 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- 3. Function Definitions ---
 
+    // [MODIFIED] Moved 'New Folder' button setup into its own function for clarity
+    function setupNewFolderButton() {
+        const sidebarHeader = document.getElementById('sidebar-header');
+        if (!sidebarHeader) return;
+
+        // Prevent duplicate buttons
+        if (document.getElementById('new-folder-btn')) return;
+
+        const newFolderBtn = document.createElement('button');
+        newFolderBtn.id = 'new-folder-btn';
+        newFolderBtn.innerHTML = '새 폴더 📁';
+        newFolderBtn.title = '새 폴더 만들기';
+        
+        newFolderBtn.addEventListener('click', async () => {
+            const newFolderName = prompt('새 폴더 이름을 입력하세요:');
+            if (!newFolderName || newFolderName.trim() === '') return;
+
+            const newSessionTitle = prompt(`'${newFolderName}' 폴더에 생성할 첫 대화의 제목을 입력하세요:`);
+            if (!newSessionTitle || newSessionTitle.trim() === '') return;
+
+            // This check is now valid because setupNewFolderButton is called after DB init
+            if (chatSessionsCollectionRef) {
+                try {
+                    const newSession = {
+                        title: newSessionTitle.trim(),
+                        messages: [],
+                        mode: selectedMode,
+                        folderName: newFolderName.trim(),
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    };
+                    const docRef = await chatSessionsCollectionRef.add(newSession);
+                    selectSession(docRef.id); // Automatically select the new session
+                } catch (error) {
+                    console.error("Error creating new session in new folder:", error);
+                    alert("새 폴더에 대화를 생성하는 데 실패했습니다.");
+                }
+            }
+        });
+        sidebarHeader.appendChild(newFolderBtn);
+    }
+
     async function initializeFirebase() {
         try {
             const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
@@ -120,6 +158,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/notes`);
                 chatSessionsCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatHistories/${canvasId}/sessions`);
                 
+                // [CRITICAL FIX] Setup button AFTER database reference is confirmed to exist
+                setupNewFolderButton();
+
                 listenToNotes();
                 listenToChatSessions();
                 setupSystemInfoWidget();
@@ -137,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
         unsubscribeFromChatSessions = chatSessionsCollectionRef.orderBy("updatedAt", "desc").onSnapshot(snapshot => {
             localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderSessionList(); // [MODIFIED] Switched to new date and folder-based rendering
+            renderSessionList(); 
             if (currentSessionId) {
                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
                 if (currentSessionData) {
@@ -149,7 +190,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }, error => console.error("Chat session listener error:", error));
     }
 
-    // [NEW] Helper function to classify dates for grouping
     function classifyDate(date) {
         if (!date) return '날짜 없음';
         const now = new Date();
@@ -171,7 +211,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return `${targetDate.getFullYear()}년`;
     }
 
-    // [RE-ARCHITECTED] Renders sessions grouped by date, then by folder
     function renderSessionList() {
         if (!sessionList) return;
         sessionList.innerHTML = '';
@@ -192,7 +231,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (indexA !== -1 && indexB !== -1) return indexA - indexB;
             if (indexA !== -1) return -1;
             if (indexB !== -1) return 1;
-            // For month/year keys, sort them reverse chronologically if needed (simple string sort works for now)
             return b.localeCompare(a); 
         });
     
@@ -242,7 +280,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // [MODIFIED] Creates a session item including the last updated time
     function createSessionItem(session) {
         const item = document.createElement('div');
         item.className = 'session-item';
@@ -342,43 +379,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!body || !wrapper) { console.error("Core layout elements not found."); return; }
         updateClock(); setInterval(updateClock, 1000);
         
-        const sidebarHeader = document.getElementById('sidebar-header');
-        if (sidebarHeader) {
-            newFolderBtn = document.createElement('button');
-            newFolderBtn.id = 'new-folder-btn';
-            newFolderBtn.innerHTML = '새 폴더 📁';
-            newFolderBtn.title = '새 폴더 만들기';
-            
-            // [MODIFIED] New Folder button logic
-            newFolderBtn.addEventListener('click', async () => {
-                const newFolderName = prompt('새 폴더 이름을 입력하세요:');
-                if (!newFolderName || newFolderName.trim() === '') return;
-
-                const newSessionTitle = prompt(`'${newFolderName}' 폴더에 생성할 첫 대화의 제목을 입력하세요:`);
-                if (!newSessionTitle || newSessionTitle.trim() === '') return;
-
-                if (chatSessionsCollectionRef) {
-                    try {
-                        const newSession = {
-                            title: newSessionTitle.trim(),
-                            messages: [],
-                            mode: selectedMode,
-                            folderName: newFolderName.trim(),
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        };
-                        const docRef = await chatSessionsCollectionRef.add(newSession);
-                        selectSession(docRef.id); // Automatically select the new session
-                    } catch (error) {
-                        console.error("Error creating new session in new folder:", error);
-                        alert("새 폴더에 대화를 생성하는 데 실패했습니다.");
-                    }
-                }
-            });
-            sidebarHeader.appendChild(newFolderBtn);
-        }
-
         initializeFirebase().then(() => {
+            // Functions that depend on Firebase being ready
             setupNavigator();
             setupChatModeSelector();
             initializeTooltips();
@@ -386,6 +388,7 @@ document.addEventListener('DOMContentLoaded', function () {
             makePanelDraggable(notesAppPanel);
         });
 
+        // Event listeners for static elements can be set up immediately
         document.addEventListener('mouseup', handleTextSelection);
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
