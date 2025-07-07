@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.7 (Local Data Backup & Restore)
+Version: 7.8 (Hotfix for Restore Logic)
 Architect: [Username] & System Architect Ailey
-Description: Implemented local data backup and restore functionality. Users can now export all notes and chat sessions to a local JSON file and restore them, enhancing data safety.
+Description: Patched a critical bug in the data restore functionality. The logic now correctly removes the 'id' field from the data object before writing to Firestore, resolving the write batch conflict.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -340,9 +340,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // --- [Unchanged Notes, Refactored Backup/Restore] ---
+    // --- Data Backup & Restore ---
     
-    // [MODIFIED] Now exports all data, not just notes.
     function exportAllData() {
         if (localNotesCache.length === 0 && localChatSessionsCache.length === 0) {
             showModal("백업할 데이터가 없습니다.", () => {});
@@ -367,14 +366,13 @@ document.addEventListener('DOMContentLoaded', function () {
         URL.revokeObjectURL(url);
     }
     
-    // [NEW] Handles the click on the restore button.
     function handleRestoreClick() {
         if (fileImporter) {
             fileImporter.click();
         }
     }
 
-    // [NEW] Handles the file import and restoration process.
+    // [HOTFIX] Patched the import logic to prevent Firestore write conflicts.
     async function importAllData(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -383,7 +381,6 @@ document.addEventListener('DOMContentLoaded', function () {
         reader.onload = function(e) {
             try {
                 const data = JSON.parse(e.target.result);
-                // Basic validation
                 if (!data.backupVersion || !data.notes || !data.chatSessions) {
                     throw new Error("유효하지 않은 파일 형식입니다.");
                 }
@@ -394,8 +391,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 const confirmationMessage = `파일에서 ${notesCount}개의 메모와 ${sessionsCount}개의 채팅 세션을 발견했습니다. 현재 클라우드 데이터를 이 파일의 내용으로 덮어씁니다. 이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?`;
 
                 showModal(confirmationMessage, async () => {
-                    if (!db) {
-                        console.error("DB not initialized");
+                    if (!db || !notesCollection || !chatSessionsCollectionRef) {
+                        console.error("DB or collections not initialized");
                         updateStatus('복원 실패: DB 연결 오류 ❌', false);
                         return;
                     }
@@ -405,35 +402,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     // Process notes
                     data.notes.forEach(note => {
+                        if (!note.id) return; // Skip if note has no ID
                         const docRef = notesCollection.doc(note.id);
-                        // Firestore Timestamps need to be converted back if they were stringified
-                        const sanitizedNote = { ...note };
-                        if (sanitizedNote.createdAt && typeof sanitizedNote.createdAt === 'string') {
-                            sanitizedNote.createdAt = firebase.firestore.Timestamp.fromDate(new Date(sanitizedNote.createdAt));
+                        const { id, ...dataToWrite } = note; // Exclude 'id' from the object to be written
+
+                        if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') {
+                            dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
                         }
-                        if (sanitizedNote.updatedAt && typeof sanitizedNote.updatedAt === 'string') {
-                            sanitizedNote.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(sanitizedNote.updatedAt));
+                        if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') {
+                            dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
                         }
-                        batch.set(docRef, sanitizedNote);
+                        batch.set(docRef, dataToWrite);
                     });
 
                     // Process chat sessions
                     data.chatSessions.forEach(session => {
+                        if (!session.id) return; // Skip if session has no ID
                         const docRef = chatSessionsCollectionRef.doc(session.id);
-                        const sanitizedSession = { ...session };
-                        if (sanitizedSession.createdAt && typeof sanitizedSession.createdAt === 'string') {
-                           sanitizedSession.createdAt = firebase.firestore.Timestamp.fromDate(new Date(sanitizedSession.createdAt));
+                        const { id, ...dataToWrite } = session; // Exclude 'id' from the object to be written
+
+                        if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') {
+                           dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
                         }
-                        if (sanitizedSession.updatedAt && typeof sanitizedSession.updatedAt === 'string') {
-                           sanitizedSession.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(sanitizedSession.updatedAt));
+                        if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') {
+                           dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
                         }
-                        batch.set(docRef, sanitizedSession);
+                        batch.set(docRef, dataToWrite);
                     });
                     
                     try {
                         await batch.commit();
                         updateStatus('복원 완료 ✓', true);
-                        // The onSnapshot listeners will automatically refresh the UI.
                     } catch (error) {
                         console.error("데이터 복원 실패:", error);
                         updateStatus('복원 실패 ❌', false);
@@ -445,13 +444,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error("File parsing error:", error);
                 showModal(`파일을 읽는 중 오류가 발생했습니다: ${error.message}`, () => {});
             } finally {
-                // Reset the file input so the same file can be selected again
                 event.target.value = null;
             }
         };
         reader.readAsText(file);
     }
     
+    // --- Utilities, Notes, and Unchanged Functions ---
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { const tempTextarea = document.createElement('textarea'); tempTextarea.value = canvasId; tempTextarea.style.position = 'absolute'; tempTextarea.style.left = '-9999px'; document.body.appendChild(tempTextarea); tempTextarea.select(); try { document.execCommand('copy'); copyBtn.textContent = '✅'; } catch (err) { console.error('Copy failed', err); copyBtn.textContent = '❌'; } document.body.removeChild(tempTextarea); setTimeout(() => { copyBtn.textContent = '📋'; }, 1500); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { const keywordChips = document.querySelectorAll('.keyword-chip'); keywordChips.forEach(chip => { const tooltipText = chip.dataset.tooltip; if (tooltipText && chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = tooltipText; } }); const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]'); inlineHighlights.forEach(highlight => { const tooltipText = highlight.dataset.tooltip; if(tooltipText && !highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = tooltipText; highlight.appendChild(tooltipElement); } }); }
@@ -511,9 +510,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
         if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
         if (searchInput) searchInput.addEventListener('input', renderNoteList);
-        // [MODIFIED] Connects the export button to the new all-data export function
         if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportAllData);
-        // [NEW] Add event listeners for the new restore functionality
         if (restoreDataBtn) restoreDataBtn.addEventListener('click', handleRestoreClick);
         if (fileImporter) fileImporter.addEventListener('change', importAllData);
         const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
