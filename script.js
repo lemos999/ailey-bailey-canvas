@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 8.6 (Final - State-Aware UI)
+Version: 9.0 (Independent Data Modules)
 Architect: [Username] & System Architect Ailey
-Description: Implemented a state-aware UI. Critical data management buttons (Backup, Restore, Reset) are now disabled until all required cloud data (notes and chats) is fully loaded, preventing race conditions and corrupted backups.
+Description: Re-architected data management into independent modules. Backup/restore functions for notes and chats are now completely separate, each with its own buttons and logic, to prevent one module's failure from affecting the other.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const autoSaveStatus = document.getElementById('auto-save-status');
     const formatToolbar = document.querySelector('.format-toolbar');
     const linkTopicBtn = document.getElementById('link-topic-btn');
-    const exportNotesBtn = document.getElementById('export-notes-btn');
     const customModal = document.getElementById('custom-modal');
     const modalMessage = document.getElementById('modal-message');
     const modalConfirmBtn = document.getElementById('modal-confirm-btn');
@@ -59,13 +58,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const deleteSessionBtn = document.getElementById('delete-session-btn');
     const chatWelcomeMessage = document.getElementById('chat-welcome-message');
 
-    // -- Backup & Restore UI Elements
-    const restoreDataBtn = document.getElementById('restore-data-btn');
-    const fileImporter = document.getElementById('file-importer');
-
-    // -- System Reset UI Element
+    // -- [RE-ARCHITECTED] Independent Data Management UI Elements
+    const exportNotesBtn = document.getElementById('export-notes-btn');
+    const importNotesBtn = document.getElementById('import-notes-btn');
+    const exportChatsBtn = document.getElementById('export-chats-btn');
+    const importChatsBtn = document.getElementById('import-chats-btn');
     const systemResetBtn = document.getElementById('system-reset-btn');
-
+    const fileImporter = document.getElementById('file-importer');
 
     // --- 2. State Management ---
     const canvasId = document.querySelector('meta[name="canvas-id"]')?.content || 'global_fallback_id';
@@ -77,7 +76,6 @@ document.addEventListener('DOMContentLoaded', function () {
     let unsubscribeFromNotes = null;
     let debounceTimer = null;
     let lastSelectedText = '';
-    // [NEW] Data readiness state
     let isDataReady = { notes: false, chats: false };
 
     // --- CHAT STATE ---
@@ -92,13 +90,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- 3. Function Definitions ---
 
-    // [NEW] Check if all data is loaded and enable critical buttons
     function checkDataReadyAndEnableButtons() {
         if (isDataReady.notes && isDataReady.chats) {
             if (exportNotesBtn) exportNotesBtn.disabled = false;
-            if (restoreDataBtn) restoreDataBtn.disabled = false;
+            if (importNotesBtn) importNotesBtn.disabled = false;
+            if (exportChatsBtn) exportChatsBtn.disabled = false;
+            if (importChatsBtn) importChatsBtn.disabled = false;
             if (systemResetBtn) systemResetBtn.disabled = false;
-            console.log("✅ All cloud data is ready. Critical functions enabled.");
+            console.log("✅ All cloud data is ready. Data management functions enabled.");
         }
     }
 
@@ -143,7 +142,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!chatSessionsCollectionRef) return;
         if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
         unsubscribeFromChatSessions = chatSessionsCollectionRef.onSnapshot(snapshot => {
-            // [MODIFIED] Set readiness flag on first successful load
             if (!isDataReady.chats) {
                 isDataReady.chats = true;
                 checkDataReadyAndEnableButtons();
@@ -152,14 +150,11 @@ document.addEventListener('DOMContentLoaded', function () {
             renderSessionList();
             if (currentSessionId) {
                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                if (currentSessionData) {
-                    renderChatMessages(currentSessionData.messages || []);
-                } else {
-                    handleNewChat();
-                }
+                if (currentSessionData) { renderChatMessages(currentSessionData.messages || []); } else { handleNewChat(); }
             }
         }, error => console.error("Chat session listener error:", error));
     }
+    // ... (rest of chat functions are unchanged, full code provided for completeness) ...
     function renderSessionList() { if (!sessionList) return; sessionList.innerHTML = ''; localChatSessionsCache.forEach(session => { const item = document.createElement('div'); item.className = 'session-item'; item.dataset.sessionId = session.id; if (session.id === currentSessionId) { item.classList.add('active'); } item.innerHTML = `<div class="session-item-title">${session.title || '새 대화'}</div>`; item.addEventListener('click', () => selectSession(session.id)); sessionList.appendChild(item); }); }
     function selectSession(sessionId) { if (!sessionId) return; const sessionData = localChatSessionsCache.find(s => s.id === sessionId); if (!sessionData) return; currentSessionId = sessionId; renderSessionList(); if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; renderChatMessages(sessionData.messages || []); if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block'; if (chatInput) chatInput.disabled = false; if (chatSendBtn) chatSendBtn.disabled = false; chatInput.focus(); }
     function handleNewChat() { currentSessionId = null; renderSessionList(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
@@ -168,143 +163,121 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderChatMessages(messages = []) { if (!chatMessages) return; chatMessages.innerHTML = ''; if (messages.length === 0 && currentSessionId) { } messages.forEach(msg => { const d = document.createElement('div'); d.className = `chat-message ${msg.role}`; let c = msg.content; if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); } else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); } else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); } const cd = document.createElement('div'); cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); d.appendChild(cd); if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; t.textContent = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); } if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); } chatMessages.appendChild(d); }); chatMessages.scrollTop = chatMessages.scrollHeight; }
     function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭 💬' }, { id: 'deep_learning', t: '심화 학습 🧠' }, { id: 'custom', t: '커스텀 ⚙️' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = m.t; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatQuizState = 'idle'; lastQuestion = ''; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
 
-    // --- System Reset Function (Client-Side Filtering) ---
-    async function handleSystemReset() {
-        const message = "정말로 이 캔버스의 모든 메모와 채팅 기록을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 복구할 수 없습니다.";
-        showModal(message, async () => {
-            if (!db || !notesCollection || !chatSessionsCollectionRef) {
-                alert("초기화 실패: DB 연결을 확인해주세요.");
-                return;
-            }
-            updateStatus("시스템 초기화 중...", true);
-            console.log("⚠️ 시스템 초기화를 시작합니다...");
-            
-            try {
-                const deleteBatch = db.batch();
-                
-                const notesSnapshot = await notesCollection.get();
-                let notesCount = 0;
-                notesSnapshot.docs.forEach(doc => {
-                    if (doc.data().canvasId === canvasId) {
-                        deleteBatch.delete(doc.ref);
-                        notesCount++;
-                    }
-                });
-                console.log(`현재 캔버스 메모 ${notesCount}개 삭제 대기 중...`);
+    // --- [RE-ARCHITECTED] Independent Data Management Functions ---
 
-                const chatsSnapshot = await chatSessionsCollectionRef.get();
-                let chatsCount = 0;
-                chatsSnapshot.docs.forEach(doc => {
-                    deleteBatch.delete(doc.ref);
-                    chatsCount++;
-                });
-                console.log(`현재 캔버스 채팅 세션 ${chatsCount}개 삭제 대기 중...`);
+    // Generic file download utility
+    function downloadFile(data, filename) {
+        const str = JSON.stringify(data, null, 2);
+        const blob = new Blob([str], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
 
-                if (notesCount === 0 && chatsCount === 0) {
-                     alert("삭제할 데이터가 없습니다.");
-                     updateStatus("", true);
-                     return;
+    // Generic file import utility
+    function importFromFile(callback) {
+        fileImporter.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    callback(data);
+                } catch (err) {
+                    alert("파일을 읽는 중 오류가 발생했습니다: " + err.message);
                 }
+            };
+            reader.readAsText(file);
+            fileImporter.value = ''; // Reset for same-file selection
+        };
+        fileImporter.click();
+    }
 
-                await deleteBatch.commit();
-                console.log("✅ 시스템 초기화 완료.");
-                alert("✅ 현재 캔버스의 모든 데이터가 성공적으로 삭제되었습니다. 페이지를 새로고침하여 시스템을 다시 시작합니다.");
-                location.reload();
+    // --- NOTES Module ---
+    function exportNotes() {
+        if (localNotesCache.length === 0) return alert("백업할 메모가 없습니다.");
+        const dataToExport = { type: 'AileyCanvasNotes', version: '1.0', data: localNotesCache };
+        downloadFile(dataToExport, `notes-backup-${canvasId.substring(0,8)}.json`);
+    }
 
-            } catch (error) {
-                console.error("❌ 시스템 초기화 실패:", error);
-                alert(`시스템 초기화 중 오류가 발생했습니다: ${error.message}`);
-                updateStatus("초기화 실패 ❌", false);
+    function importNotes() {
+        importFromFile(async (fileData) => {
+            if (fileData.type !== 'AileyCanvasNotes' || !Array.isArray(fileData.data)) {
+                return alert("유효하지 않은 메모 백업 파일입니다.");
             }
+            const confirmationMessage = `현재 캔버스의 모든 메모 ${localNotesCache.length}개를 삭제하고 파일에 있는 ${fileData.data.length}개의 메모로 대체합니다. 계속하시겠습니까?`;
+            showModal(confirmationMessage, async () => {
+                updateStatus("메모 복원 중...", true);
+                const deleteBatch = db.batch();
+                localNotesCache.forEach(note => deleteBatch.delete(notesCollection.doc(note.id)));
+                await deleteBatch.commit();
+                
+                const writePromises = fileData.data.map(note => {
+                    const { id, ...dataToWrite } = note;
+                    dataToWrite.canvasId = canvasId; // Re-ownership
+                    if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
+                    if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
+                    return notesCollection.doc(id).set(dataToWrite);
+                });
+                await Promise.all(writePromises);
+                updateStatus("메모 복원 완료!", true);
+            });
         });
     }
 
-    // --- Data Backup & Restore (Wipe and Write + Client-Side Filtering) ---
-    function exportAllData() { if (localNotesCache.length === 0 && localChatSessionsCache.length === 0) { showModal("백업할 데이터가 없습니다.", () => {}); return; } const dataToExport = { backupVersion: '1.5-state-aware', backupDate: new Date().toISOString(), notes: localNotesCache, chatSessions: localChatSessionsCache }; const str = JSON.stringify(dataToExport, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const date = new Date().toISOString().slice(0, 10); a.download = `ailey-canvas-backup-${date}.json`; a.click(); URL.revokeObjectURL(url); }
-    function handleRestoreClick() { if (fileImporter) { fileImporter.click(); } }
-    
-    async function importAllData(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            try {
-                const data = JSON.parse(e.target.result);
-                if (!data.backupVersion || !data.notes || !data.chatSessions) {
-                    throw new Error("유효하지 않은 파일 형식입니다.");
-                }
-                
-                const confirmationMessage = `이 작업은 현재 캔버스의 모든 데이터를 영구적으로 삭제하고, 파일의 내용으로 완전히 대체합니다. 계속하시겠습니까?`;
-
-                showModal(confirmationMessage, async () => {
-                    if (!db || !notesCollection || !chatSessionsCollectionRef) {
-                        return updateStatus('복원 실패: DB 연결 오류 ❌', false);
-                    }
-                    
-                    updateStatus("기존 데이터 정리 중...", true);
-                    try {
-                        const deleteBatch = db.batch();
-                        const notesToDeleteSnapshot = await notesCollection.get();
-                        notesToDeleteSnapshot.docs.forEach(doc => {
-                            if (doc.data().canvasId === canvasId) { deleteBatch.delete(doc.ref); }
-                        });
-                        
-                        const chatsToDeleteSnapshot = await chatSessionsCollectionRef.get();
-                        chatsToDeleteSnapshot.docs.forEach(doc => deleteBatch.delete(doc.ref));
-                        
-                        await deleteBatch.commit();
-                    } catch(error) {
-                        updateStatus("복원 실패: 기존 데이터 정리 오류 ❌", false);
-                        alert("기존 데이터를 정리하는 데 실패했습니다: " + error.message);
-                        return;
-                    }
-
-                    updateStatus("새 데이터 복원 중...", true);
-                    const notePromises = data.notes.map(note => {
-                        const docRef = notesCollection.doc(note.id);
-                        const { id, ...dataToWrite } = note;
-                        if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
-                        if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
-                        dataToWrite.canvasId = canvasId; 
-                        return docRef.set(dataToWrite).catch(err => Promise.reject({type: 'note', id: note.id, error: err}));
-                    });
-
-                    const chatPromises = data.chatSessions.map(session => {
-                        const docRef = chatSessionsCollectionRef.doc(session.id);
-                        const { id, ...dataToWrite } = session;
-                        if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
-                        if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
-                        if (Array.isArray(dataToWrite.messages)) {
-                            dataToWrite.messages.forEach(message => {
-                                if (message.timestamp && typeof message.timestamp === 'string') message.timestamp = firebase.firestore.Timestamp.fromDate(new Date(message.timestamp));
-                            });
-                        }
-                        return docRef.set(dataToWrite).catch(err => Promise.reject({type: 'chat', id: session.id, error: err}));
-                    });
-                    
-                    const results = await Promise.allSettled([...notePromises, ...chatPromises]);
-                    const successCount = results.filter(r => r.status === 'fulfilled').length;
-                    const failureCount = results.filter(r => r.status === 'rejected').length;
-
-                    if (failureCount > 0) {
-                        console.error("복원 실패 항목:", results.filter(r => r.status === 'rejected').map(r => r.reason));
-                    }
-
-                    const finalMessage = `복원 완료: ${successCount}개 성공, ${failureCount}개 실패. 페이지를 새로고침 합니다.`;
-                    updateStatus(finalMessage, failureCount === 0);
-                    alert(finalMessage + (failureCount > 0 ? "\n자세한 내용은 개발자 콘솔(F12)을 확인하세요." : ""));
-                    location.reload();
-                });
-            } catch (error) {
-                showModal(`파일을 읽는 중 오류가 발생했습니다: ${error.message}`, () => {});
-            } finally {
-                event.target.value = null;
-            }
-        };
-        reader.readAsText(file);
+    // --- CHATS Module ---
+    function exportChats() {
+        if (localChatSessionsCache.length === 0) return alert("백업할 채팅이 없습니다.");
+        const dataToExport = { type: 'AileyCanvasChats', version: '1.0', data: localChatSessionsCache };
+        downloadFile(dataToExport, `chats-backup-${canvasId.substring(0,8)}.json`);
     }
-    
+
+    function importChats() {
+        importFromFile(async (fileData) => {
+            if (fileData.type !== 'AileyCanvasChats' || !Array.isArray(fileData.data)) {
+                return alert("유효하지 않은 채팅 백업 파일입니다.");
+            }
+            const confirmationMessage = `현재 캔버스의 모든 채팅 ${localChatSessionsCache.length}개를 삭제하고 파일에 있는 ${fileData.data.length}개의 채팅으로 대체합니다. 계속하시겠습니까?`;
+            showModal(confirmationMessage, async () => {
+                updateStatus("채팅 복원 중...", true);
+                const deleteBatch = db.batch();
+                localChatSessionsCache.forEach(chat => deleteBatch.delete(chatSessionsCollectionRef.doc(chat.id)));
+                await deleteBatch.commit();
+                
+                const writePromises = fileData.data.map(session => {
+                    const { id, ...dataToWrite } = session;
+                    if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
+                    if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
+                    if (Array.isArray(dataToWrite.messages)) {
+                        dataToWrite.messages.forEach(message => {
+                            if (message.timestamp && typeof message.timestamp === 'string') message.timestamp = firebase.firestore.Timestamp.fromDate(new Date(message.timestamp));
+                        });
+                    }
+                    return chatSessionsCollectionRef.doc(id).set(dataToWrite);
+                });
+                await Promise.all(writePromises);
+                updateStatus("채팅 복원 완료!", true);
+            });
+        });
+    }
+
+    // --- Global Reset ---
+    async function handleSystemReset() {
+        showModal("정말로 이 캔버스의 모든 메모와 채팅 기록을 영구적으로 삭제하시겠습니까?", async () => {
+            updateStatus("시스템 초기화 중...", true);
+            const deleteBatch = db.batch();
+            localNotesCache.forEach(note => deleteBatch.delete(notesCollection.doc(note.id)));
+            localChatSessionsCache.forEach(chat => deleteBatch.delete(chatSessionsCollectionRef.doc(chat.id)));
+            await deleteBatch.commit();
+            alert("초기화가 완료되었습니다. 페이지를 새로고침합니다.");
+            location.reload();
+        });
+    }
+
     // --- Utilities, Notes (with client-side filtering logic) ---
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { const tempTextarea = document.createElement('textarea'); tempTextarea.value = canvasId; tempTextarea.style.position = 'absolute'; tempTextarea.style.left = '-9999px'; document.body.appendChild(tempTextarea); tempTextarea.select(); try { document.execCommand('copy'); copyBtn.textContent = '✅'; } catch (err) { console.error('Copy failed', err); copyBtn.textContent = '❌'; } document.body.removeChild(tempTextarea); setTimeout(() => { copyBtn.textContent = '📋'; }, 1500); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
@@ -365,9 +338,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
         if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
         if (searchInput) searchInput.addEventListener('input', renderNoteList);
-        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportAllData);
-        if (restoreDataBtn) restoreDataBtn.addEventListener('click', handleRestoreClick);
-        if (fileImporter) fileImporter.addEventListener('change', importAllData);
+        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportNotes);
+        if (importNotesBtn) importNotesBtn.addEventListener('click', importNotes);
+        if (exportChatsBtn) exportChatsBtn.addEventListener('click', exportChats);
+        if (importChatsBtn) importChatsBtn.addEventListener('click', importChats);
         if (systemResetBtn) systemResetBtn.addEventListener('click', handleSystemReset);
         const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
         if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
