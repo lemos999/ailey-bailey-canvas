@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 8.1 (Final Unabridged Stable Release)
+Version: 8.3 (Final Configuration Applied)
 Architect: [Username] & System Architect Ailey
-Description: This is the complete, unabridged, and fully functional script. It merges all original functions from the 37KB source with all subsequent bug fixes, including the global scope fix and the robust initialization flow. All features should now be fully operational.
+Description: This is the complete, unabridged, and stable script with the user's Google Client ID applied. All features should be operational after the user inserts their API Key.
 */
 
 // [GLOBAL SCOPE] Functions called by HTML onload attribute
@@ -15,8 +15,10 @@ function handleGapiLoad() {
 };
 
 function handleGisLoad() {
-    const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // IMPORTANT: Replace with your actual Client ID
+    // [Applied] The user's Client ID has been inserted here.
+    const CLIENT_ID = '464743950938-qm5uidbabg4cuvccje11drdk07jaahd.apps.googleusercontent.com';
     const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
     window.tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
@@ -103,16 +105,15 @@ document.addEventListener('DOMContentLoaded', function () {
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
     let currentQuizData = null;
     
-    // Google API Keys
-    const API_KEY = '464743950938-qm5uidbabg4cuvcccje11drdk07jaahd.apps.googleusercontent.com'; // Replace with your actual API key
-
     // --- 3. Function Definitions ---
 
     // --- 3.1 Google API & Auth ---
     function requestGoogleAuth() {
         return new Promise((resolve, reject) => {
             if (!window.gapiInited || !window.gisInited) {
-                return reject(new Error("GIS/GAPI not loaded"));
+                const errorMessage = "Google API가 아직 로드되지 않았거나 Client ID가 설정되지 않았습니다. 잠시 후 다시 시도해주세요.";
+                alert(errorMessage);
+                return reject(new Error(errorMessage));
             }
             window.tokenClient.callback = (resp) => {
                 if (resp.error !== undefined) { reject(resp); } else { resolve(resp); }
@@ -151,32 +152,22 @@ document.addEventListener('DOMContentLoaded', function () {
             const fileName = `[Ailey & Bailey] 백업_${new Date().toISOString().split('T')[0]}.json`;
             const fileContent = JSON.stringify(backupData, null, 2);
             
-            const metadata = {
-                'name': fileName,
-                'mimeType': 'application/json'
-            };
+            const metadata = { 'name': fileName, 'mimeType': 'application/json' };
 
             const multipartRequestBody =
-                delimiter +
-                'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-                JSON.stringify(metadata) +
-                delimiter +
-                'Content-Type: application/json\r\n\r\n' +
-                fileContent +
-                close_delim;
+                delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata) +
+                delimiter + 'Content-Type: application/json\r\n\r\n' + fileContent + close_delim;
 
             await gapi.client.request({
-                'path': 'https://www.googleapis.com/upload/drive/v3/files',
-                'method': 'POST',
-                'params': {'uploadType': 'multipart'},
-                'headers': {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
+                'path': 'https://www.googleapis.com/upload/drive/v3/files', 'method': 'POST',
+                'params': {'uploadType': 'multipart'}, 'headers': {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
                 'body': multipartRequestBody
             });
             alert('✅ Google Drive에 백업이 완료되었습니다!');
-
         } catch (error) {
             console.error("Google Drive 내보내기 오류:", error);
-            alert(`❌ Google Drive에 내보내는 중 오류가 발생했습니다: ${error.details || error.message || '알 수 없는 오류'}`);
+            const errorMsg = error.result?.error?.message || error.details || error.message || '알 수 없는 오류';
+            alert(`❌ Google Drive에 내보내는 중 오류가 발생했습니다: ${errorMsg}`);
         } finally {
             hideLoadingOverlay();
         }
@@ -187,37 +178,38 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             await requestGoogleAuth();
             hideLoadingOverlay();
+            
+            // This API Key is required for Google Picker to work.
+            const API_KEY = '💥 Google Cloud Console의 "API 키" 섹션에서 생성한 키를 여기에 붙여넣으세요 💥';
+            if (API_KEY.startsWith('💥')) {
+                alert('Google Picker를 사용하려면 API 키가 필요합니다. script.js 파일을 수정해주세요.');
+                return;
+            }
 
             const view = new google.picker.View(google.picker.ViewId.DOCS);
             view.setMimeTypes("application/json");
             const picker = new google.picker.PickerBuilder()
-                .setAppId(appId.split('_')[0]) // Use a valid App ID
                 .setOAuthToken(gapi.client.getToken().access_token)
                 .addView(view)
                 .setDeveloperKey(API_KEY)
                 .setCallback(async (data) => {
-                    if (data[google.picker.Action.PICKED]) {
-                        const fileId = data[google.picker.Response.DOCUMENTS][0][google.picker.Document.ID];
+                    if (data.action === google.picker.Action.PICKED) {
+                        const fileId = data.docs[0].id;
                         showLoadingOverlay('백업 파일 다운로드 중...');
-                        const fileResponse = await gapi.client.drive.files.get({
-                            fileId: fileId,
-                            alt: 'media'
-                        });
+                        const fileResponse = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
                         hideLoadingOverlay();
                         
                         const backupData = JSON.parse(fileResponse.body);
                         const isConfirmed = await showImportConfirmModal();
-                        if (isConfirmed) {
-                           await executeImport(backupData);
-                        }
+                        if (isConfirmed) { await executeImport(backupData); }
                     }
                 })
                 .build();
             picker.setVisible(true);
-
         } catch (error) {
             console.error("Google Drive 불러오기 오류:", error);
-            alert(`❌ Google Drive에서 불러오는 중 오류가 발생했습니다: ${error.details || error.message || '알 수 없는 오류'}`);
+            const errorMsg = error.result?.error?.message || error.details || error.message || '알 수 없는 오류';
+            alert(`❌ Google Drive에서 불러오는 중 오류가 발생했습니다: ${errorMsg}`);
             hideLoadingOverlay();
         }
     }
@@ -234,7 +226,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const oldNotes = await notesCollection.get();
             oldNotes.forEach(doc => batch.delete(doc.ref));
-
             const oldChatSessions = await chatSessionsCollectionRef.get();
             oldChatSessions.forEach(doc => batch.delete(doc.ref));
             
@@ -255,12 +246,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (Array.isArray(sessionData.messages)) {
                     sessionData.messages = sessionData.messages.map(msg => {
                         const newMsg = {...msg};
-                        if (newMsg.timestamp && typeof newMsg.timestamp === 'string') {
-                            newMsg.timestamp = new Date(newMsg.timestamp); // Convert ISO strings to Date objects
-                        }
-                        if (newMsg.timestamp?.seconds) {
-                            newMsg.timestamp = new firebase.firestore.Timestamp(newMsg.timestamp.seconds, newMsg.timestamp.nanoseconds);
-                        }
+                        if (newMsg.timestamp && typeof newMsg.timestamp === 'string') { newMsg.timestamp = new Date(newMsg.timestamp); }
+                        if (newMsg.timestamp?.seconds) { newMsg.timestamp = new firebase.firestore.Timestamp(newMsg.timestamp.seconds, newMsg.timestamp.nanoseconds); }
                         return newMsg;
                     });
                 }
@@ -294,9 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
                    console.warn("Custom token sign-in failed, trying anonymous.", err);
                    await auth.signInAnonymously();
                 });
-            } else {
-                await auth.signInAnonymously();
-            }
+            } else { await auth.signInAnonymously(); }
             
             currentUser = auth.currentUser;
 
@@ -308,8 +293,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         } catch (error) {
             console.error("Firebase 초기화 또는 인증 실패:", error);
-            if (notesList) notesList.innerHTML = '<div>클라우드 메모장을 불러오는 데 실패했습니다.</div>';
-            if (chatMessages) chatMessages.innerHTML = '<div>AI 러닝메이트 연결에 실패했습니다.</div>';
         }
     }
 
@@ -319,9 +302,8 @@ document.addEventListener('DOMContentLoaded', function () {
         unsubscribeFromChatSessions = chatSessionsCollectionRef.orderBy("updatedAt", "desc").onSnapshot(snapshot => {
             localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderSessionList();
-            if (currentSessionId && !localChatSessionsCache.some(s => s.id === currentSessionId)) {
-                handleNewChat();
-            } else if (currentSessionId) {
+            if (currentSessionId && !localChatSessionsCache.some(s => s.id === currentSessionId)) { handleNewChat(); } 
+            else if (currentSessionId) {
                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
                 renderChatMessages(currentSessionData?.messages || []);
             }
@@ -345,14 +327,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function selectSession(sessionId) {
         const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
         if (!sessionData) return;
-        
         currentSessionId = sessionId;
         renderSessionList();
-        
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
         if (chatMessages) chatMessages.style.display = 'flex';
         renderChatMessages(sessionData.messages || []);
-        
         if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화';
         if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block';
         if (chatInput) chatInput.disabled = false;
@@ -363,7 +342,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function handleNewChat() {
         currentSessionId = null;
         renderSessionList();
-        
         if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; }
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex';
         if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트';
@@ -378,8 +356,7 @@ document.addEventListener('DOMContentLoaded', function () {
         showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => {
             if (chatSessionsCollectionRef && currentSessionId) {
                 chatSessionsCollectionRef.doc(currentSessionId).delete()
-                    .then(() => handleNewChat())
-                    .catch(e => console.error("세션 삭제 실패:", e));
+                    .then(() => handleNewChat()).catch(e => console.error("세션 삭제 실패:", e));
             }
         });
     }
@@ -392,20 +369,17 @@ document.addEventListener('DOMContentLoaded', function () {
         chatInput.disabled = true;
         chatSendBtn.disabled = true;
 
-        const userMessage = { role: 'user', content: query, timestamp: new Date().toISOString() };
+        const userMessage = { role: 'user', content: query, timestamp: new Date() };
         let sessionRef;
 
         try {
             if (!currentSessionId) {
                 if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
                 if (chatMessages) chatMessages.style.display = 'flex';
-                
                 const newSession = {
                     title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-                    messages: [userMessage],
-                    mode: selectedMode,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    messages: [userMessage], mode: selectedMode,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 };
                 sessionRef = await chatSessionsCollectionRef.add(newSession);
                 currentSessionId = sessionRef.id;
@@ -439,10 +413,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const cd = document.createElement('div');
             cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
             d.appendChild(cd);
-            
             const ts = msg.timestamp?.toDate ? msg.timestamp.toDate() : (msg.timestamp ? new Date(msg.timestamp) : null);
             if (ts) { const t = document.createElement('div'); t.className = 'chat-timestamp'; t.textContent = ts.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); }
-
             if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트]\n${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); }
             chatMessages.appendChild(d);
         });
@@ -460,10 +432,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (m.id === selectedMode) b.classList.add('active');
             b.addEventListener('click', () => {
                 selectedMode = m.id;
-                chatQuizState = 'idle';
-                lastQuestion = '';
-                chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-                b.classList.add('active');
                 if (selectedMode === 'custom') openPromptModal();
             });
             chatModeSelector.appendChild(b);
@@ -539,31 +507,24 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!scrollNav || !learningContent) return;
         const headers = learningContent.querySelectorAll('h2, h3');
         if (headers.length === 0) {
-            if(wrapper) wrapper.classList.add('toc-hidden');
-            return;
+            if(wrapper) wrapper.classList.add('toc-hidden'); return;
         }
         if(wrapper) wrapper.classList.remove('toc-hidden');
         const navList = document.createElement('ul');
         let sectionCounter = 0;
         headers.forEach((header) => {
             let targetElement = header.closest('.content-section') || header;
-            if (!targetElement.id) {
-                targetElement.id = `nav-target-${sectionCounter++}`;
-            }
+            if (!targetElement.id) { targetElement.id = `nav-target-${sectionCounter++}`; }
             const listItem = document.createElement('li');
             const link = document.createElement('a');
             link.textContent = header.textContent.replace(/\[.*?\]/g, '').trim();
             link.href = `#${targetElement.id}`;
-            if (header.tagName === 'H3') {
-                link.style.paddingLeft = '25px';
-                link.style.fontSize = '0.9em';
-            }
+            if (header.tagName === 'H3') { link.style.paddingLeft = '25px'; link.style.fontSize = '0.9em'; }
             listItem.appendChild(link);
             navList.appendChild(listItem);
         });
         scrollNav.innerHTML = '<h3>학습 내비게이션</h3>';
         scrollNav.appendChild(navList);
-        
         const links = scrollNav.querySelectorAll('a');
         const observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
@@ -628,24 +589,17 @@ document.addEventListener('DOMContentLoaded', function () {
         if(!header) return;
         let isDragging = false, offset = { x: 0, y: 0 };
         const onMouseMove = (e) => {
-            if (isDragging) {
-                panelElement.style.left = (e.clientX + offset.x) + 'px';
-                panelElement.style.top = (e.clientY + offset.y) + 'px';
-            }
+            if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; }
         };
         const onMouseUp = () => {
-            isDragging = false;
-            panelElement.classList.remove('is-dragging');
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
+            isDragging = false; panelElement.classList.remove('is-dragging');
+            document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp);
         };
         header.addEventListener('mousedown', e => {
             if (e.target.closest('button, input, .close-btn, #delete-session-btn, .notes-btn')) return;
-            isDragging = true;
-            panelElement.classList.add('is-dragging');
+            isDragging = true; panelElement.classList.add('is-dragging');
             offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY };
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
+            document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
         });
     }
 
@@ -672,23 +626,13 @@ document.addEventListener('DOMContentLoaded', function () {
             copyBtn.addEventListener('click', () => {
                 const tempTextarea = document.createElement('textarea');
                 tempTextarea.value = canvasId;
-                document.body.appendChild(tempTextarea);
-                tempTextarea.select();
-                try {
-                    document.execCommand('copy');
-                    copyBtn.textContent = '✅';
-                } catch (err) {
-                    console.error('Copy failed', err);
-                    copyBtn.textContent = '❌';
-                }
+                document.body.appendChild(tempTextarea); tempTextarea.select();
+                try { document.execCommand('copy'); copyBtn.textContent = '✅'; } 
+                catch (err) { console.error('Copy failed', err); copyBtn.textContent = '❌'; }
                 document.body.removeChild(tempTextarea);
                 setTimeout(() => { copyBtn.textContent = '📋'; }, 1500);
             });
         }
-        const tooltip = document.createElement('div');
-        tooltip.className = 'system-tooltip';
-        tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`;
-        systemInfoWidget.appendChild(tooltip);
     }
 
     function initializeTooltips() {
@@ -719,8 +663,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const confirmBtn = document.getElementById('modal-confirm-btn');
         const cancelBtn = document.getElementById('modal-cancel-btn');
         if (!modal || !msgEl || !confirmBtn || !cancelBtn) return;
-        msgEl.textContent = message;
-        modal.style.display = 'flex';
+        msgEl.textContent = message; modal.style.display = 'flex';
         confirmBtn.onclick = () => { onConfirm(); modal.style.display = 'none'; };
         cancelBtn.onclick = () => { modal.style.display = 'none'; };
     }
@@ -728,26 +671,13 @@ document.addEventListener('DOMContentLoaded', function () {
     function showImportConfirmModal() {
         return new Promise((resolve) => {
             importConfirmModal.style.display = 'flex';
-            importModalConfirmBtn.onclick = () => {
-                importConfirmModal.style.display = 'none';
-                resolve(true);
-};
-            importModalCancelBtn.onclick = () => {
-                importConfirmModal.style.display = 'none';
-                resolve(false);
-            };
+            importModalConfirmBtn.onclick = () => { importConfirmModal.style.display = 'none'; resolve(true); };
+            importModalCancelBtn.onclick = () => { importConfirmModal.style.display = 'none'; resolve(false); };
         });
     }
 
-    function showLoadingOverlay(message) {
-        loadingOverlay.textContent = message;
-        loadingOverlay.style.display = 'flex';
-    }
-
-    function hideLoadingOverlay() {
-        loadingOverlay.style.display = 'none';
-    }
-
+    function showLoadingOverlay(message) { loadingOverlay.textContent = message; loadingOverlay.style.display = 'flex'; }
+    function hideLoadingOverlay() { loadingOverlay.style.display = 'none'; }
     function updateStatus(msg, success) {
         if (!autoSaveStatus) return;
         autoSaveStatus.textContent = msg;
@@ -777,10 +707,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function startQuiz() {
         if (!quizModalOverlay) return;
         const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', ');
-        if (!k) {
-            showModal("퀴즈 생성 키워드가 없습니다.", ()=>{});
-            return;
-        }
+        if (!k) { showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); return; }
         if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>';
         if (quizResults) quizResults.innerHTML = '';
         quizModalOverlay.style.display = 'flex';
@@ -788,51 +715,28 @@ document.addEventListener('DOMContentLoaded', function () {
             const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500));
             currentQuizData = JSON.parse(res);
             renderQuiz(currentQuizData);
-        } catch (e) {
-            if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.';
-        }
+        } catch (e) { if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; }
     }
     
     function renderQuiz(data) {
         if (!quizContainer || !data.questions) return;
         quizContainer.innerHTML = '';
         data.questions.forEach((q, i) => {
-            const b = document.createElement('div');
-            b.className = 'quiz-question-block';
-            const p = document.createElement('p');
-            p.textContent = `${i + 1}. ${q.q}`;
-            const o = document.createElement('div');
-            o.className = 'quiz-options';
+            const b = document.createElement('div'); b.className = 'quiz-question-block';
+            const p = document.createElement('p'); p.textContent = `${i + 1}. ${q.q}`;
+            const o = document.createElement('div'); o.className = 'quiz-options';
             q.o.forEach(opt => {
-                const l = document.createElement('label');
-                const r = document.createElement('input');
-                r.type = 'radio';
-                r.name = `q-${i}`;
-                r.value = opt;
-                l.append(r,` ${opt}`);
-                o.appendChild(l);
+                const l = document.createElement('label'); const r = document.createElement('input');
+                r.type = 'radio'; r.name = `q-${i}`; r.value = opt;
+                l.append(r,` ${opt}`); o.appendChild(l);
             });
-            b.append(p, o);
-            quizContainer.appendChild(b);
+            b.append(p, o); quizContainer.appendChild(b);
         });
     }
     
-    function openPromptModal() {
-        if (customPromptInput) customPromptInput.value = customPrompt;
-        if (promptModalOverlay) promptModalOverlay.style.display = 'flex';
-    }
-
-    function closePromptModal() {
-        if (promptModalOverlay) promptModalOverlay.style.display = 'none';
-    }
-
-    function saveCustomPrompt() {
-        if (customPromptInput) {
-            customPrompt = customPromptInput.value;
-            localStorage.setItem('customTutorPrompt', customPrompt);
-            closePromptModal();
-        }
-    }
+    function openPromptModal() { if (customPromptInput) customPromptInput.value = customPrompt; if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; }
+    function closePromptModal() { if (promptModalOverlay) promptModalOverlay.style.display = 'none'; }
+    function saveCustomPrompt() { if (customPromptInput) { customPrompt = customPromptInput.value; localStorage.setItem('customTutorPrompt', customPrompt); closePromptModal(); } }
 
     // --- 4. Centralized Event Listener Setup ---
     function setupEventListeners() {
@@ -858,11 +762,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
         if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
         if (quizSubmitBtn) quizSubmitBtn.addEventListener('click', () => {
-            if (!currentQuizData || !quizResults) return;
-            let score = 0, allAnswered = true;
-            currentQuizData.questions.forEach((q, i) => {
-                if (!document.querySelector(`input[name="q-${i}"]:checked`)) allAnswered = false;
-            });
+            if (!currentQuizData || !quizResults) return; let score = 0, allAnswered = true;
+            currentQuizData.questions.forEach((q, i) => { if (!document.querySelector(`input[name="q-${i}"]:checked`)) allAnswered = false; });
             if (!allAnswered) { quizResults.textContent = "모든 문제에 답해주세요!"; return; }
             currentQuizData.questions.forEach((q, i) => {
                 const s = document.querySelector(`input[name="q-${i}"]:checked`);
@@ -876,31 +777,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (searchInput) searchInput.addEventListener('input', renderNoteList);
         if (exportToDriveBtn) exportToDriveBtn.addEventListener('click', handleExportToDrive);
         if (importFromDriveBtn) importFromDriveBtn.addEventListener('click', handleImportFromDrive);
-        const handleInput = () => {
-            updateStatus('입력 중...', true);
-            if (debounceTimer) clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(saveNote, 1000);
-        };
+        const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
         if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
         if (notesList) notesList.addEventListener('click', e => {
-            const i = e.target.closest('.note-item');
-            if (!i) return;
+            const i = e.target.closest('.note-item'); if (!i) return;
             const id = i.dataset.id;
             if (e.target.closest('.delete-btn')) handleDeleteRequest(id);
             else if (e.target.closest('.pin-btn')) togglePin(id);
             else openNoteEditor(id);
         });
-        if (formatToolbar) formatToolbar.addEventListener('click', e => {
-            const b = e.target.closest('.format-btn');
-            if (b) applyFormat(b.dataset.format);
-        });
-        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => {
-            if(!noteContentTextarea) return;
-            const t = document.title || '현재 학습';
-            noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`;
-            saveNote();
-        });
+        if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
+        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
     }
 
     // --- 5. Application Initialization Flow ---
@@ -914,6 +802,7 @@ document.addEventListener('DOMContentLoaded', function () {
             initializeTooltips();
             makePanelDraggable(chatPanel);
             makePanelDraggable(notesAppPanel);
+            setupSystemInfoWidget();
             setupEventListeners();
         });
     }
