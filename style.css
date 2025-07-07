@@ -1,9 +1,12 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 8.0 (Chat UX Overhaul)
+Version: 8.1 (Chat UX Enhancement)
 Architect: [Username] & System Architect Ailey
-Description: Major Chat UX improvement. Added styles for foldable chat session folders, a new right-click context menu for session management, and a sleek SVG send icon.
+Description: Added styles for new Chat UI features.
+- Styled date-based group headers (.session-group-header) in the chat list.
+- Styled the last-updated timestamp (.session-item-date) for each chat session.
+- Adjusted flexbox layout to accommodate the new DOM structure of session items.
 */
 
 :root {
@@ -130,17 +133,17 @@ body:not(.dark-mode) #chat-session-sidebar { border-right: 1px solid var(--borde
 #sidebar-header {
     padding: 10px;
     flex-shrink: 0;
-    display: flex; /* NEW */
-    gap: 8px; /* NEW */
+    display: flex;
+    gap: 8px;
 }
 
-#new-chat-btn, #new-folder-btn { /* MODIFIED */
-    flex-grow: 1; /* NEW */
+#new-chat-btn, #new-folder-btn {
+    flex-grow: 1;
     padding: 10px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
-    font-size: 0.9em; /* MODIFIED */
+    font-size: 0.9em;
     font-family: 'Gowun Batang', serif;
     transition: background-color 0.2s;
 }
@@ -155,7 +158,19 @@ body:not(.dark-mode) #new-chat-btn:hover, body:not(.dark-mode) #new-folder-btn:h
     padding: 0 10px 10px 10px;
 }
 
-/* [NEW] Folder Styles */
+/* [NEW] Date Group Header Styles */
+.session-group-header {
+    padding: 15px 5px 5px 5px;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+body.dark-mode .session-group-header { color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .session-group-header { color: var(--sub-text-color-light); }
+
+
+/* [MODIFIED] Folder Styles */
 .folder-container {
     margin-bottom: 5px;
 }
@@ -190,24 +205,28 @@ body:not(.dark-mode) .folder-header:hover {
     padding-left: 25px; /* Indent session items inside folders */
 }
 
-/* Session Item Styles (minor changes) */
+/* [MODIFIED] Session Item Styles */
 .session-item {
-    padding: 12px 10px;
+    padding: 8px 10px; /* Reduced vertical padding */
     border-radius: 6px;
     margin-bottom: 5px;
     cursor: pointer;
     transition: background-color 0.2s;
-    font-size: 0.95em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     position: relative; /* For context menu positioning */
 }
 body.dark-mode .session-item:hover { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .session-item:hover { background-color: var(--quote-bg-light); }
+
+/* [NEW] Wrapper for title and date */
+.session-item-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
 
 .session-item.active {
     font-weight: bold;
@@ -219,7 +238,22 @@ body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-li
     flex-grow: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 0.95em;
+    line-height: 1.4;
 }
+
+/* [NEW] Date style for session items */
+.session-item-date {
+    font-size: 0.8em;
+    flex-shrink: 0;
+    line-height: 1.4;
+    padding-top: 1px; /* Align better with title */
+}
+body.dark-mode .session-item-date { color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .session-item-date { color: var(--sub-text-color-light); }
+body.dark-mode .session-item.active .session-item-date { color: var(--text-color-dark); }
+body:not(.dark-mode) .session-item.active .session-item-date { color: var(--text-color-light); }
+
 .session-item-actions { display: none; }
 
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
@@ -249,11 +283,11 @@ body:not(.dark-mode) #chat-welcome-message h3 { color: var(--h2-color-light); }
 .chat-message.ai { background-color: var(--chat-ai-bg-dark); align-self: flex-start; border-bottom-left-radius: 4px; }
 body:not(.dark-mode) .chat-message.ai { background-color: var(--chat-ai-bg-light); }
 .chat-message.user { background-color: #8C6D46; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
-.chat-timestamp { font-size: 0.75em; opacity: 0.7; margin-top: 5px; } /* MODIFIED */
+.chat-timestamp { font-size: 0.75em; opacity: 0.7; margin-top: 5px; }
 body:dark-mode .chat-timestamp { color: var(--sub-text-color-dark); }
 body:not(.dark-mode) .chat-timestamp { color: var(--sub-text-color-light); }
-.chat-message.ai .chat-timestamp { text-align: right; } /* AI timestamp to the right */
-.chat-message.user .chat-timestamp { text-align: left; } /* User timestamp to the left */
+.chat-message.ai .chat-timestamp { text-align: right; }
+.chat-message.user .chat-timestamp { text-align: left; }
 
 
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; }
@@ -263,7 +297,6 @@ body:not(.dark-mode) .chat-input-form { border-top-color: var(--border-color-lig
 body.dark-mode #chat-input { background-color: #2a2a2a; color: var(--text-color-dark); border-color: var(--border-color-dark); }
 body:not(.dark-mode) #chat-input { background-color: #fff; color: var(--text-color-light); border-color: var(--border-color-light); }
 
-/* [MODIFIED] Send button styles */
 #chat-send-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; display: flex; align-items: center; justify-content: center; }
 #chat-send-btn svg { transition: transform 0.2s ease-in-out, color 0.3s; }
 body.dark-mode #chat-send-btn svg { color: var(--header-color-dark); }
@@ -278,7 +311,6 @@ body:dark-mode .send-to-note-btn { border-color: var(--sub-text-color-dark); col
 body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-light); color: var(--sub-text-color-light); }
 .send-to-note-btn:disabled { cursor: not-allowed; opacity: 0.5; border-color: gray; color: gray; }
 
-/* [NEW] Context Menu Styles */
 #session-context-menu {
     position: fixed;
     z-index: 1500;
