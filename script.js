@@ -1,12 +1,12 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.1 (UX & Bug Fix Release)
+Version: 9.1 (Chat Session UX Enhancement)
 Architect: [Username] & System Architect Ailey
-Description: Implemented key UX improvements and bug fixes.
-- [FIX] The 'New Folder' button now correctly creates a new folder by initializing a new chat session within it.
-- [IMPROVE] The chat session list is now grouped by date (Today, Yesterday, etc.) and each session displays its last updated timestamp for better organization.
-- [FIX] Fixed a bug where keyword tooltips were not appearing on hover. The tooltip initialization logic is now more robust.
+Description: Implemented major Chat UX enhancements.
+- Fixed the 'New Folder' button to be fully functional by creating a new session within the new folder.
+- Re-architected the session list to group conversations by date (Today, Yesterday, This Week, etc.).
+- Each session item now displays its last updated time.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
         unsubscribeFromChatSessions = chatSessionsCollectionRef.orderBy("updatedAt", "desc").onSnapshot(snapshot => {
             localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderSessionList(); // Switched to new date-grouped rendering
+            renderSessionList(); // [MODIFIED] Switched to new date and folder-based rendering
             if (currentSessionId) {
                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
                 if (currentSessionData) {
@@ -148,82 +148,78 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }, error => console.error("Chat session listener error:", error));
     }
-    
-    // [MODIFIED] Now groups sessions by date
-    function renderSessionList() {
-        if (!sessionList) return;
-        sessionList.innerHTML = '';
-    
+
+    // [NEW] Helper function to classify dates for grouping
+    function classifyDate(date) {
+        if (!date) return '날짜 없음';
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(startOfWeek.getDate() - today.getDay());
+
+        const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+        if (targetDate.getTime() === today.getTime()) return '오늘';
+        if (targetDate.getTime() === yesterday.getTime()) return '어제';
+        if (targetDate >= startOfWeek) return '이번 주';
+        
+        const lastYear = new Date(now.getFullYear() - 1, 0, 1);
+        if (targetDate >= lastYear) return `${targetDate.getMonth() + 1}월`;
+
+        return `${targetDate.getFullYear()}년`;
+    }
+
+    // [RE-ARCHITECTED] Renders sessions grouped by date, then by folder
+    function renderSessionList() {
+        if (!sessionList) return;
+        sessionList.innerHTML = '';
     
-        const groups = {
-            today: [],
-            yesterday: [],
-            thisWeek: [],
-            older: [],
-        };
-    
-        const sessionsByFolder = {};
-    
-        // First, group all sessions by their folder name
+        const groupedByDate = {};
         localChatSessionsCache.forEach(session => {
-            const folderName = session.folderName || 'Uncategorized';
-            if (!sessionsByFolder[folderName]) {
-                sessionsByFolder[folderName] = [];
+            const dateKey = classifyDate(session.updatedAt?.toDate());
+            if (!groupedByDate[dateKey]) {
+                groupedByDate[dateKey] = [];
             }
-            sessionsByFolder[folderName].push(session);
+            groupedByDate[dateKey].push(session);
         });
     
-        const renderGroup = (title, sessions) => {
-            if (sessions.length > 0) {
-                const header = document.createElement('div');
-                header.className = 'session-group-header';
-                header.textContent = title;
-                folderContent.appendChild(header);
-                sessions.forEach(session => folderContent.appendChild(createSessionItem(session)));
-            }
-        };
+        const dateOrder = ['오늘', '어제', '이번 주'];
+        const sortedDateKeys = Object.keys(groupedByDate).sort((a, b) => {
+            const indexA = dateOrder.indexOf(a);
+            const indexB = dateOrder.indexOf(b);
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            if (indexA !== -1) return -1;
+            if (indexB !== -1) return 1;
+            // For month/year keys, sort them reverse chronologically if needed (simple string sort works for now)
+            return b.localeCompare(a); 
+        });
     
-        // Process and render each folder
-        const folderNames = Object.keys(sessionsByFolder).sort();
-        // Ensure "Uncategorized" comes last
-        if(folderNames.includes('Uncategorized')) {
-            folderNames.splice(folderNames.indexOf('Uncategorized'), 1);
-            folderNames.push('Uncategorized');
-        }
-
-        folderNames.forEach(folderName => {
-            const folderSessions = sessionsByFolder[folderName];
-            let folderContainer, folderContent;
+        sortedDateKeys.forEach(dateKey => {
+            const dateHeader = document.createElement('div');
+            dateHeader.className = 'session-date-header';
+            dateHeader.textContent = dateKey;
+            sessionList.appendChild(dateHeader);
     
-            // Group sessions within the folder by date
-            const dateGroups = { today: [], yesterday: [], thisWeek: [], older: [] };
-            folderSessions.forEach(session => {
-                const updatedAt = session.updatedAt?.toDate();
-                if (!updatedAt) {
-                    dateGroups.older.push(session);
-                    return;
+            const sessionsInDateGroup = groupedByDate[dateKey];
+            const folders = {};
+            const uncategorized = [];
+    
+            sessionsInDateGroup.forEach(session => {
+                const folderName = session.folderName || 'Uncategorized';
+                if (folderName === 'Uncategorized') {
+                    uncategorized.push(session);
+                } else {
+                    if (!folders[folderName]) folders[folderName] = [];
+                    folders[folderName].push(session);
                 }
-                const sessionDate = new Date(updatedAt.getFullYear(), updatedAt.getMonth(), updatedAt.getDate());
-                if (sessionDate.getTime() === today.getTime()) dateGroups.today.push(session);
-                else if (sessionDate.getTime() === yesterday.getTime()) dateGroups.yesterday.push(session);
-                else if (sessionDate > sevenDaysAgo) dateGroups.thisWeek.push(session);
-                else dateGroups.older.push(session);
             });
-
-            if (folderName === 'Uncategorized') {
-                folderContent = document.createDocumentFragment();
-            } else {
-                folderContainer = document.createElement('div');
+    
+            Object.keys(folders).sort().forEach(folderName => {
+                const folderContainer = document.createElement('div');
                 folderContainer.className = 'folder-container';
-                if (folderCollapseState[folderName]) {
-                    folderContainer.classList.add('collapsed');
-                }
+                if (folderCollapseState[folderName]) folderContainer.classList.add('collapsed');
     
                 const folderHeader = document.createElement('div');
                 folderHeader.className = 'folder-header';
@@ -232,27 +228,21 @@ document.addEventListener('DOMContentLoaded', function () {
                     folderCollapseState[folderName] = !folderCollapseState[folderName];
                     folderContainer.classList.toggle('collapsed');
                 };
-                folderContainer.appendChild(folderHeader);
     
-                folderContent = document.createElement('div');
+                const folderContent = document.createElement('div');
                 folderContent.className = 'folder-content';
+                folders[folderName].forEach(session => folderContent.appendChild(createSessionItem(session)));
+    
+                folderContainer.appendChild(folderHeader);
                 folderContainer.appendChild(folderContent);
-            }
-            
-            renderGroup('오늘', dateGroups.today);
-            renderGroup('어제', dateGroups.yesterday);
-            renderGroup('최근 7일', dateGroups.thisWeek);
-            renderGroup('이전', dateGroups.older);
-
-            if(folderContainer) {
                 sessionList.appendChild(folderContainer);
-            } else {
-                sessionList.appendChild(folderContent);
-            }
+            });
+    
+            uncategorized.forEach(session => sessionList.appendChild(createSessionItem(session)));
         });
     }
 
-    // [MODIFIED] Creates a session item with a date
+    // [MODIFIED] Creates a session item including the last updated time
     function createSessionItem(session) {
         const item = document.createElement('div');
         item.className = 'session-item';
@@ -260,29 +250,24 @@ document.addEventListener('DOMContentLoaded', function () {
         if (session.id === currentSessionId) {
             item.classList.add('active');
         }
-    
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'session-item-details';
+        
         const titleDiv = document.createElement('div');
         titleDiv.className = 'session-item-title';
         titleDiv.textContent = session.title || '새 대화';
-    
+        
         const dateDiv = document.createElement('div');
         dateDiv.className = 'session-item-date';
-        const updatedAt = session.updatedAt?.toDate();
-        if (updatedAt) {
-            const now = new Date();
-            if (updatedAt.toDateString() === now.toDateString()) {
-                dateDiv.textContent = updatedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-            } else {
-                dateDiv.textContent = updatedAt.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-            }
+        if (session.updatedAt?.toDate) {
+            dateDiv.textContent = session.updatedAt.toDate().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true });
         }
-    
-        const contentWrapper = document.createElement('div');
-        contentWrapper.className = 'session-item-content';
-        contentWrapper.appendChild(titleDiv);
-        contentWrapper.appendChild(dateDiv);
-    
-        item.appendChild(contentWrapper);
+
+        detailsDiv.appendChild(titleDiv);
+        detailsDiv.appendChild(dateDiv);
+        item.appendChild(detailsDiv);
+
         item.addEventListener('click', () => selectSession(session.id));
         item.addEventListener('contextmenu', (e) => showContextMenu(e, session));
         return item;
@@ -291,30 +276,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function selectSession(sessionId) { if (!sessionId) return; const sessionData = localChatSessionsCache.find(s => s.id === sessionId); if (!sessionData) return; currentSessionId = sessionId; renderSessionList(); if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; renderChatMessages(sessionData.messages || []); if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block'; if (chatInput) chatInput.disabled = false; if (chatSendBtn) chatSendBtn.disabled = false; chatInput.focus(); }
     function handleNewChat() { currentSessionId = null; renderSessionList(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
     
-    // [NEW] Handles creating a new chat within a new folder
-    async function handleNewFolder() {
-        if (!chatSessionsCollectionRef) return;
-        const folderName = prompt('새 폴더 이름을 입력하세요:');
-        if (folderName && folderName.trim() !== '') {
-            try {
-                const newSession = {
-                    title: '새 대화',
-                    messages: [],
-                    mode: selectedMode,
-                    folderName: folderName.trim(),
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                };
-                const sessionRef = await chatSessionsCollectionRef.add(newSession);
-                // Automatically select the newly created session
-                selectSession(sessionRef.id);
-            } catch (e) {
-                console.error("새 폴더/세션 생성 실패:", e);
-                alert("폴더를 만드는 데 실패했습니다.");
-            }
-        }
-    }
-
     function handleDeleteSession(sessionIdToDelete) {
         if (!sessionIdToDelete) return;
         const session = localChatSessionsCache.find(s => s.id === sessionIdToDelete);
@@ -352,33 +313,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- Utilities and Unchanged Functions ---
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { const tempTextarea = document.createElement('textarea'); tempTextarea.value = canvasId; tempTextarea.style.position = 'absolute'; tempTextarea.style.left = '-9999px'; document.body.appendChild(tempTextarea); tempTextarea.select(); try { document.execCommand('copy'); copyBtn.textContent = '✅'; } catch (err) { console.error('Copy failed', err); copyBtn.textContent = '❌'; } document.body.removeChild(tempTextarea); setTimeout(() => { copyBtn.textContent = '📋'; }, 1500); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
-    
-    // [MODIFIED] Robust tooltip initialization for all types
-    function initializeTooltips() {
-        const createTooltip = (element, text) => {
-            if (text) {
-                element.classList.add('has-tooltip');
-                // Avoid duplicating tooltips
-                if (!element.querySelector('.tooltip')) {
-                    const tooltipElement = document.createElement('span');
-                    tooltipElement.className = 'tooltip';
-                    tooltipElement.textContent = text;
-                    element.appendChild(tooltipElement);
-                }
-            }
-        };
-    
-        // Process keyword chips
-        document.querySelectorAll('.keyword-chip[data-tooltip]').forEach(chip => {
-            createTooltip(chip, chip.dataset.tooltip);
-        });
-    
-        // Process inline strong elements with tooltips
-        document.querySelectorAll('.content-section strong[data-tooltip]').forEach(highlight => {
-            createTooltip(highlight, highlight.dataset.tooltip);
-        });
-    }
-
+    function initializeTooltips() { const keywordChips = document.querySelectorAll('.keyword-chip'); keywordChips.forEach(chip => { const tooltipText = chip.dataset.tooltip; if (tooltipText && chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = tooltipText; } }); const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]'); inlineHighlights.forEach(highlight => { const tooltipText = highlight.dataset.tooltip; if(tooltipText && !highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = tooltipText; highlight.appendChild(tooltipElement); } }); }
     function makePanelDraggable(panelElement) { if(!panelElement) return; const header = panelElement.querySelector('.panel-header'); if(!header) return; let isDragging = false, offset = { x: 0, y: 0 }; const onMouseMove = (e) => { if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; } }; const onMouseUp = () => { isDragging = false; panelElement.classList.remove('is-dragging'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }; header.addEventListener('mousedown', e => { if (e.target.closest('button, input, .close-btn, #delete-session-btn, #chat-mode-selector')) return; isDragging = true; panelElement.classList.add('is-dragging'); offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); }); }
     function togglePanel(panelElement, forceShow = null) { if (!panelElement) return; const show = forceShow !== null ? forceShow : panelElement.style.display !== 'flex'; panelElement.style.display = show ? 'flex' : 'none'; }
     function setupNavigator() { const scrollNav = document.getElementById('scroll-nav'); if (!scrollNav || !learningContent) return; const headers = learningContent.querySelectorAll('h2, #section-4 h3, #section-5 h3, #section-6 h3'); if (headers.length === 0) { scrollNav.style.display = 'none'; if(wrapper) wrapper.classList.add('toc-hidden'); return; } scrollNav.style.display = 'block'; if(wrapper) wrapper.classList.remove('toc-hidden'); const navList = document.createElement('ul'); headers.forEach((header, index) => { let targetElement = header.closest('.content-section'); if (targetElement && !targetElement.id) { targetElement.id = `nav-target-${index}`; } if (targetElement) { const listItem = document.createElement('li'); const link = document.createElement('a'); let navText = header.textContent.trim().replace(/\[|\]|🤓|⏳|📖/g, '').trim(); const maxLen = 25; if (navText.length > maxLen) { navText = navText.substring(0, maxLen - 3) + '...'; } if (header.tagName === 'H3') { link.style.paddingLeft = '25px'; link.style.fontSize = '0.9em'; } link.textContent = navText; link.href = `#${targetElement.id}`; listItem.appendChild(link); navList.appendChild(listItem); } }); scrollNav.innerHTML = '<h3>학습 내비게이션</h3>'; scrollNav.appendChild(navList); const links = scrollNav.querySelectorAll('a'); const observer = new IntersectionObserver(entries => { entries.forEach(entry => { const id = entry.target.getAttribute('id'); const navLink = scrollNav.querySelector(`a[href="#${id}"]`); if (navLink && entry.isIntersecting && entry.intersectionRatio > 0.5) { links.forEach(l => l.classList.remove('active')); navLink.classList.add('active'); } }); }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 }); headers.forEach(header => { const target = header.closest('.content-section'); if (target) observer.observe(target); }); }
@@ -413,8 +348,33 @@ document.addEventListener('DOMContentLoaded', function () {
             newFolderBtn.id = 'new-folder-btn';
             newFolderBtn.innerHTML = '새 폴더 📁';
             newFolderBtn.title = '새 폴더 만들기';
-            // [MODIFIED] Attaches the new folder creation logic
-            newFolderBtn.addEventListener('click', handleNewFolder);
+            
+            // [MODIFIED] New Folder button logic
+            newFolderBtn.addEventListener('click', async () => {
+                const newFolderName = prompt('새 폴더 이름을 입력하세요:');
+                if (!newFolderName || newFolderName.trim() === '') return;
+
+                const newSessionTitle = prompt(`'${newFolderName}' 폴더에 생성할 첫 대화의 제목을 입력하세요:`);
+                if (!newSessionTitle || newSessionTitle.trim() === '') return;
+
+                if (chatSessionsCollectionRef) {
+                    try {
+                        const newSession = {
+                            title: newSessionTitle.trim(),
+                            messages: [],
+                            mode: selectedMode,
+                            folderName: newFolderName.trim(),
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        };
+                        const docRef = await chatSessionsCollectionRef.add(newSession);
+                        selectSession(docRef.id); // Automatically select the new session
+                    } catch (error) {
+                        console.error("Error creating new session in new folder:", error);
+                        alert("새 폴더에 대화를 생성하는 데 실패했습니다.");
+                    }
+                }
+            });
             sidebarHeader.appendChild(newFolderBtn);
         }
 
