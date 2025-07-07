@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.7 (Global Chat & Instant Activation)
+Version: 7.7 (Global Chat)
 Architect: [Username] & System Architect Ailey
-Description: Re-architected chat data storage to be global (user-based) instead of canvas-specific. Implemented instant chat activation logic to automatically load the last session or a new chat when the panel is opened, improving UX.
+Description: Implemented global chat session management. Decoupled chat data from the Canvas ID to ensure conversation history persists across all learning pages, making the chat a truly independent feature.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
 
-    // -- Chat Session UI Elements
+    // -- [NEW] Chat Session UI Elements
     const newChatBtn = document.getElementById('new-chat-btn');
     const sessionList = document.getElementById('session-list');
     const chatSessionTitle = document.getElementById('chat-session-title');
@@ -106,11 +106,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (currentUser) {
                 notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/notes`);
-                // [CRITICAL ARCHITECTURE CHANGE] Point to a global 'chatSessions' collection, independent of canvasId.
+                // [CRITICAL ARCHITECTURE CHANGE] Point to the global 'chatSessions' collection, independent of canvasId.
                 chatSessionsCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatSessions`);
                 
                 listenToNotes();
-                listenToChatSessions();
+                listenToChatSessions(); // Changed from listenToChatHistory
                 setupSystemInfoWidget();
             }
         } catch (error) {
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- [REFINED] Chat Session Management ---
+    // --- [NEW & REFINED] Chat Session Management ---
     
     function listenToChatSessions() {
         if (!chatSessionsCollectionRef) return;
@@ -128,20 +128,14 @@ document.addEventListener('DOMContentLoaded', function () {
         unsubscribeFromChatSessions = chatSessionsCollectionRef.orderBy("updatedAt", "desc").onSnapshot(snapshot => {
             localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderSessionList();
-            
-            // If a session is currently selected, refresh its content in real-time
+            // If a session is currently selected, refresh its content
             if (currentSessionId) {
                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
                 if (currentSessionData) {
                     renderChatMessages(currentSessionData.messages || []);
                 } else {
-                    // The active session was deleted by another client. Reset view.
-                    currentSessionId = null; // Clear the invalid ID
-                    if (localChatSessionsCache.length > 0) {
-                        selectSession(localChatSessionsCache[0].id); // Select the newest one
-                    } else {
-                        handleNewChat(); // Or start a new chat if all were deleted
-                    }
+                    // The selected session was deleted, so reset the view
+                    handleNewChat();
                 }
             }
         }, error => console.error("Chat session listener error:", error));
@@ -172,18 +166,14 @@ document.addEventListener('DOMContentLoaded', function () {
         renderSessionList(); // Re-render to update the 'active' class
         
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-        if (chatMessages) {
-            chatMessages.style.display = 'flex';
-            renderChatMessages(sessionData.messages || []);
-        }
+        if (chatMessages) chatMessages.style.display = 'flex';
+        renderChatMessages(sessionData.messages || []);
         
         if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화';
         if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block';
-        if (chatInput) {
-            chatInput.disabled = false;
-            chatInput.focus();
-        }
+        if (chatInput) chatInput.disabled = false;
         if (chatSendBtn) chatSendBtn.disabled = false;
+        chatInput.focus();
     }
     
     function handleNewChat() {
@@ -192,16 +182,15 @@ document.addEventListener('DOMContentLoaded', function () {
         
         if (chatMessages) {
              chatMessages.innerHTML = '';
-             chatMessages.style.display = 'flex'; // KEY CHANGE: Make chat area visible
+             chatMessages.style.display = 'none';
         }
-        if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; // KEY CHANGE: Hide welcome message
+        if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex';
         
-        if (chatSessionTitle) chatSessionTitle.textContent = '새 대화'; // New default title
+        if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트';
         if (deleteSessionBtn) deleteSessionBtn.style.display = 'none';
         if (chatInput) {
             chatInput.disabled = false;
             chatInput.value = '';
-            chatInput.focus(); // Set focus immediately
         }
         if (chatSendBtn) chatSendBtn.disabled = false;
     }
@@ -211,18 +200,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const sessionToDelete = localChatSessionsCache.find(s => s.id === currentSessionId);
         showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => {
             if (chatSessionsCollectionRef && currentSessionId) {
-                const idToDelete = currentSessionId;
-                currentSessionId = null; // Deselect immediately for better UX
-                
-                chatSessionsCollectionRef.doc(idToDelete).delete()
+                chatSessionsCollectionRef.doc(currentSessionId).delete()
                     .then(() => {
                         console.log("Session deleted successfully");
-                        // After deletion, select the newest available chat or start a new one
-                        if (localChatSessionsCache.length > 0) {
-                            selectSession(localChatSessionsCache[0].id);
-                        } else {
-                            handleNewChat();
-                        }
+                        handleNewChat(); // Reset view after deletion
                     })
                     .catch(e => console.error("세션 삭제 실패:", e));
             }
@@ -271,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else { // This is an existing session
                 sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                messages = [...(currentSessionData?.messages || []), userMessage];
+                messages = [...(currentSessionData.messages || []), userMessage];
                 await sessionRef.update({ 
                     messages: messages,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -289,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] }));
             // Note: A more robust implementation might trim the history to fit token limits.
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=YOUR_API_KEY_HERE`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: apiMessages })
@@ -312,12 +293,10 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (e) {
             console.error("Chat send error:", e);
             const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date().toISOString() };
-            if (sessionRef && currentSessionId) {
+            if (sessionRef) {
                  const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                 const errorMessages = [...(currentSessionData?.messages || [userMessage]), errorMessage];
+                 const errorMessages = [...(currentSessionData.messages || []), errorMessage];
                  await sessionRef.update({ messages: errorMessages });
-            } else if (sessionRef) { // New session failed after creation
-                await sessionRef.update({ messages: [userMessage, errorMessage] });
             }
         } finally {
             chatInput.disabled = false;
@@ -331,6 +310,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderChatMessages(messages = []) {
         if (!chatMessages) return;
         chatMessages.innerHTML = '';
+        if (messages.length === 0 && currentSessionId) {
+             // Session exists but has no messages, maybe show a mini-prompt?
+        }
         messages.forEach(msg => {
             const d = document.createElement('div');
             d.className = `chat-message ${msg.role}`;
@@ -350,6 +332,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function setupChatModeSelector() {
         if (!chatModeSelector) return;
+        // This selector's role is now to set the mode for NEW chats.
+        // It could be disabled when a chat is active, or its selection could fork a new chat.
+        // For now, it just sets a global variable.
         chatModeSelector.innerHTML = '';
         const modes = [{ id: 'ailey_coaching', t: '기본 코칭 💬' }, { id: 'deep_learning', t: '심화 학습 🧠' }, { id: 'custom', t: '커스텀 ⚙️' }];
         modes.forEach(m => {
@@ -416,28 +401,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
         if (themeToggle) themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); themeToggle.textContent = body.classList.contains('dark-mode') ? '☀️' : '🌙'; });
         if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); systemInfoWidget?.classList.toggle('tucked'); });
-        
-        // [KEY CHANGE] Instant Chat Activation Logic
-        if (chatToggleBtn) {
-            chatToggleBtn.addEventListener('click', () => {
-                const isHidden = !chatPanel || chatPanel.style.display !== 'flex';
-                togglePanel(chatPanel, isHidden);
-                
-                // When opening the panel, decide what to show.
-                if (isHidden) {
-                    if (localChatSessionsCache && localChatSessionsCache.length > 0) {
-                        // If no session is currently active, select the most recent one.
-                        if (!currentSessionId) {
-                           selectSession(localChatSessionsCache[0].id);
-                        }
-                    } else {
-                        // No chat sessions exist for this user yet. Start a new one.
-                        handleNewChat();
-                    }
-                }
-            });
-        }
-
+        if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
         if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => togglePanel(notesAppPanel));
         if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
