@@ -3,7 +3,7 @@
 File: style.css
 Version: 7.2 (Chat Session UI Layout)
 Architect: [Username] & System Architect Ailey
-Description: Implemented styles for the new chat session management UI, including a two-column layout for the chat panel (session list and main view), and styles for session items.
+Description: Implemented styles for the new chat session management UI, including a two-column layout for the chat panel (session list and main view), and styles for session items. (No changes for v7.7)
 */
 
 :root {
@@ -272,12 +272,12 @@ body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-ligh
 #notes-app-panel { bottom: 100px; left: 100px; width: 400px; height: 600px; padding: 0; }
 .notes-view { display: none; flex-direction: column; height: 100%; }
 .notes-view.active { display: flex; }
-#note-list-view .panel-header .header-button-group { display: flex; gap: 10px; }
+#note-list-view .panel-header .header-button-group { display: flex; gap: 10px; align-items: center; } /* Added align-items */
 #note-list-view .list-header { padding: 10px 15px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) #note-list-view .list-header { border-bottom-color: var(--border-color-light); }
 #search-input { flex-grow: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
 body:not(.dark-mode) #search-input { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
-.notes-btn { padding: 8px 15px; border-radius: 20px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; display: flex; align-items: center; gap: 6px; }
+.notes-btn { padding: 8px 15px; border-radius: 20px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; display: flex; align-items: center; gap: 6px; font-family: 'Gowun Batang', serif; white-space: nowrap; } /* Added font-family and nowrap */
 body:not(.dark-mode) .notes-btn { background-color: var(--h2-color-light); }
 .notes-btn svg { width: 16px; height: 16px; fill: currentColor; }
 #notes-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
