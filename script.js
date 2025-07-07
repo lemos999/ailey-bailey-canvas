@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.8 (Hotfix for Restore Logic)
+Version: 7.9 (Hotfix for Nested Timestamps)
 Architect: [Username] & System Architect Ailey
-Description: Patched a critical bug in the data restore functionality. The logic now correctly removes the 'id' field from the data object before writing to Firestore, resolving the write batch conflict.
+Description: Patched a critical bug in data restore. The logic now recursively converts nested timestamps within chat messages, ensuring full data type compatibility with Firestore and preventing system instability after a failed restore.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -52,14 +52,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
 
-    // -- [NEW] Chat Session UI Elements
+    // -- Chat Session UI Elements
     const newChatBtn = document.getElementById('new-chat-btn');
     const sessionList = document.getElementById('session-list');
     const chatSessionTitle = document.getElementById('chat-session-title');
     const deleteSessionBtn = document.getElementById('delete-session-btn');
     const chatWelcomeMessage = document.getElementById('chat-welcome-message');
 
-    // -- [NEW] Backup & Restore UI Elements
+    // -- Backup & Restore UI Elements
     const restoreDataBtn = document.getElementById('restore-data-btn');
     const fileImporter = document.getElementById('file-importer');
 
@@ -75,11 +75,11 @@ document.addEventListener('DOMContentLoaded', function () {
     let debounceTimer = null;
     let lastSelectedText = '';
 
-    // --- [RE-ARCHITECTED] CHAT STATE ---
+    // --- CHAT STATE ---
     let localChatSessionsCache = [];
     let currentSessionId = null;
     let unsubscribeFromChatSessions = null;
-    let selectedMode = 'ailey_coaching'; // Default for new chats
+    let selectedMode = 'ailey_coaching';
     let chatQuizState = 'idle';
     let lastQuestion = '';
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- [NEW & REFINED] Chat Session Management ---
+    // --- Chat Session Management ---
     
     function listenToChatSessions() {
         if (!chatSessionsCollectionRef) return;
@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // [HOTFIX] Patched the import logic to prevent Firestore write conflicts.
+    // [HOTFIX 2] Patched to handle nested timestamps in chat messages.
     async function importAllData(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -402,9 +402,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     // Process notes
                     data.notes.forEach(note => {
-                        if (!note.id) return; // Skip if note has no ID
+                        if (!note.id) return;
                         const docRef = notesCollection.doc(note.id);
-                        const { id, ...dataToWrite } = note; // Exclude 'id' from the object to be written
+                        const { id, ...dataToWrite } = note; 
 
                         if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') {
                             dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
@@ -417,9 +417,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     // Process chat sessions
                     data.chatSessions.forEach(session => {
-                        if (!session.id) return; // Skip if session has no ID
+                        if (!session.id) return;
                         const docRef = chatSessionsCollectionRef.doc(session.id);
-                        const { id, ...dataToWrite } = session; // Exclude 'id' from the object to be written
+                        const { id, ...dataToWrite } = session;
 
                         if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') {
                            dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
@@ -427,6 +427,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') {
                            dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
                         }
+                        
+                        // [CRITICAL FIX] Convert nested timestamps within the messages array
+                        if (Array.isArray(dataToWrite.messages)) {
+                            dataToWrite.messages.forEach(message => {
+                                if (message.timestamp && typeof message.timestamp === 'string') {
+                                    message.timestamp = firebase.firestore.Timestamp.fromDate(new Date(message.timestamp));
+                                }
+                            });
+                        }
+
                         batch.set(docRef, dataToWrite);
                     });
                     
