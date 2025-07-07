@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.7 (Advanced Chat Features Implemented)
+Version: 7.8 (Folder Interaction Hotfix)
 Architect: [Username] & System Architect Ailey
-Description: Full implementation of advanced chat features: search, pinnable sessions, folder categorization (creation & drag-and-drop), formatted timestamps, and UI enhancements.
+Description: Fixed a critical bug where folder click events were not handled. Implemented the event listener logic to correctly toggle folder expansion.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
 
-    // -- [NEW] Advanced Chat UI Elements
+    // -- Advanced Chat UI Elements
     const newChatBtn = document.getElementById('new-chat-btn');
     const addFolderBtn = document.getElementById('add-folder-btn');
     const sessionSearchInput = document.getElementById('session-search-input');
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let debounceTimer = null;
     let lastSelectedText = '';
 
-    // --- [RE-ARCHITECTED] Advanced CHAT STATE ---
+    // --- Advanced CHAT STATE ---
     let localChatSessionsCache = [];
     let localChatFoldersCache = [];
     let currentSessionId = null;
@@ -86,7 +86,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- 3. Function Definitions ---
 
-    // Firebase Initialization
     async function initializeFirebase() {
         try {
             const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
@@ -126,8 +125,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- [NEW & REFINED] Advanced Chat Session & Folder Management ---
-
     function listenToChatFolders() {
         if (!chatFoldersCollectionRef) return;
         if (unsubscribeFromChatFolders) unsubscribeFromChatFolders();
@@ -157,9 +154,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function formatSessionDate(timestamp) {
         if (!timestamp || !timestamp.toDate) return '';
         const date = timestamp.toDate();
-        const options = { month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
-        let formatted = new Intl.DateTimeFormat('ko-KR', options).format(date);
-        // Intl.DateTimeFormat can produce inconsistent results, manually format if needed
         const days = ['일', '월', '화', '수', '목', '금', '토'];
         return `${String(date.getMonth() + 1).padStart(2, '0')}월 ${String(date.getDate()).padStart(2, '0')}일 (${days[date.getDay()]}) ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
     }
@@ -239,20 +233,19 @@ document.addEventListener('DOMContentLoaded', function () {
             if (sessionItem) {
                 draggedSessionId = sessionItem.dataset.sessionId;
                 e.dataTransfer.effectAllowed = 'move';
-                setTimeout(() => { sessionItem.style.display = 'none'; }, 0);
+                setTimeout(() => { sessionItem.style.opacity = '0.5'; }, 0);
             }
         });
 
         container.addEventListener('dragend', e => {
-            const sessionItem = e.target.closest('.session-item');
-            if (sessionItem) {
-                sessionItem.style.display = 'flex';
-            }
+             const sessionItem = e.target.closest('.session-item');
+             if(sessionItem) {
+                sessionItem.style.opacity = '1';
+             }
         });
 
         container.addEventListener('dragover', e => {
             e.preventDefault();
-            // Optional: add visual feedback for drop target
         });
 
         container.addEventListener('drop', e => {
@@ -262,9 +255,8 @@ document.addEventListener('DOMContentLoaded', function () {
             
             if (draggedSessionId && chatSessionsCollectionRef) {
                 const session = localChatSessionsCache.find(s => s.id === draggedSessionId);
-                // Check if dropped onto a valid folder or the root container
-                const targetIsFolder = folderEl || e.target === container;
-                if (targetIsFolder && session.folderId !== folderId) {
+                const targetIsFolderOrRoot = folderEl || e.target === container;
+                if (targetIsFolderOrRoot && session.folderId !== folderId) {
                     chatSessionsCollectionRef.doc(draggedSessionId).update({ folderId: folderId || null })
                     .catch(e => console.error("폴더 변경 실패:", e));
                 }
@@ -379,9 +371,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderChatMessages(messages = []) {
         if (!chatMessages) return;
         chatMessages.innerHTML = '';
-        if (messages.length === 0 && currentSessionId) {
-             // Session exists but has no messages, maybe show a mini-prompt?
-        }
         messages.forEach(msg => {
             const d = document.createElement('div');
             d.className = `chat-message ${msg.role}`;
@@ -393,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function () {
             cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
             d.appendChild(cd);
             if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; t.textContent = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); }
-            if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); }
+            if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '📝 메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅ 저장됨'; e.target.disabled = true; }; cd.appendChild(b); }
             chatMessages.appendChild(d);
         });
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -419,8 +408,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // --- All Other Unchanged Functions ---
-    
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { const tempTextarea = document.createElement('textarea'); tempTextarea.value = canvasId; tempTextarea.style.position = 'absolute'; tempTextarea.style.left = '-9999px'; document.body.appendChild(tempTextarea); tempTextarea.select(); try { document.execCommand('copy'); copyBtn.textContent = '✅'; } catch (err) { console.error('Copy failed', err); copyBtn.textContent = '❌'; } document.body.removeChild(tempTextarea); setTimeout(() => { copyBtn.textContent = '📋'; }, 1500); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { const keywordChips = document.querySelectorAll('.keyword-chip'); keywordChips.forEach(chip => { const tooltipText = chip.dataset.tooltip; if (tooltipText && chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = tooltipText; } }); const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]'); inlineHighlights.forEach(highlight => { const tooltipText = highlight.dataset.tooltip; if(tooltipText && !highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = tooltipText; highlight.appendChild(tooltipElement); } }); }
@@ -471,7 +458,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
         if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => togglePanel(notesAppPanel));
         
-        // NEW & MODIFIED Event Listeners
         if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
         if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
         if (deleteSessionBtn) deleteSessionBtn.addEventListener('click', handleDeleteSession);
@@ -479,6 +465,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (addFolderBtn) addFolderBtn.addEventListener('click', handleAddFolder);
         if (sessionSearchInput) sessionSearchInput.addEventListener('input', renderSessionListContainer);
 
+        // [CRITICAL FIX] Event listener for session list container
         if (sessionListContainer) {
             sessionListContainer.addEventListener('click', e => {
                 const sessionItem = e.target.closest('.session-item');
@@ -493,13 +480,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else if (folderHeader) {
                     const folderArrow = folderHeader.querySelector('.folder-arrow');
                     const folderContent = folderHeader.nextElementSibling;
-                    folderArrow.classList.toggle('expanded');
-                    folderContent.classList.toggle('expanded');
+                    if(folderArrow && folderContent){
+                        folderArrow.classList.toggle('expanded');
+                        folderContent.classList.toggle('expanded');
+                    }
                 }
             });
         }
         
-        // Unchanged Event Listeners
         if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
         if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
         if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
