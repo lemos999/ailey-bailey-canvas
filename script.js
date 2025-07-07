@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.9 (Hotfix for Nested Timestamps)
+Version: 7.6 (Chat Session Management)
 Architect: [Username] & System Architect Ailey
-Description: Patched a critical bug in data restore. The logic now recursively converts nested timestamps within chat messages, ensuring full data type compatibility with Firestore and preventing system instability after a failed restore.
+Description: Implemented full-stack chat session management. Re-architected Firestore data structure to support multiple chat sessions per canvas. Added logic to create, select, and delete chat sessions, with AI now remembering conversation context within each session.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const autoSaveStatus = document.getElementById('auto-save-status');
     const formatToolbar = document.querySelector('.format-toolbar');
     const linkTopicBtn = document.getElementById('link-topic-btn');
-    const exportNotesBtn = document.getElementById('export-notes-btn'); // This will now be the full backup button
+    const exportNotesBtn = document.getElementById('export-notes-btn');
     const customModal = document.getElementById('custom-modal');
     const modalMessage = document.getElementById('modal-message');
     const modalConfirmBtn = document.getElementById('modal-confirm-btn');
@@ -52,17 +52,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
 
-    // -- Chat Session UI Elements
+    // -- [NEW] Chat Session UI Elements
     const newChatBtn = document.getElementById('new-chat-btn');
     const sessionList = document.getElementById('session-list');
     const chatSessionTitle = document.getElementById('chat-session-title');
     const deleteSessionBtn = document.getElementById('delete-session-btn');
     const chatWelcomeMessage = document.getElementById('chat-welcome-message');
-
-    // -- Backup & Restore UI Elements
-    const restoreDataBtn = document.getElementById('restore-data-btn');
-    const fileImporter = document.getElementById('file-importer');
-
 
     // --- 2. State Management ---
     const canvasId = document.querySelector('meta[name="canvas-id"]')?.content || 'global_fallback_id';
@@ -75,11 +70,11 @@ document.addEventListener('DOMContentLoaded', function () {
     let debounceTimer = null;
     let lastSelectedText = '';
 
-    // --- CHAT STATE ---
+    // --- [RE-ARCHITECTED] CHAT STATE ---
     let localChatSessionsCache = [];
     let currentSessionId = null;
     let unsubscribeFromChatSessions = null;
-    let selectedMode = 'ailey_coaching';
+    let selectedMode = 'ailey_coaching'; // Default for new chats
     let chatQuizState = 'idle';
     let lastQuestion = '';
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
@@ -111,10 +106,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (currentUser) {
                 notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/notes`);
+                // [CRITICAL ARCHITECTURE CHANGE] Point to the 'sessions' subcollection
                 chatSessionsCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatHistories/${canvasId}/sessions`);
                 
                 listenToNotes();
-                listenToChatSessions();
+                listenToChatSessions(); // Changed from listenToChatHistory
                 setupSystemInfoWidget();
             }
         } catch (error) {
@@ -124,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- Chat Session Management ---
+    // --- [NEW & REFINED] Chat Session Management ---
     
     function listenToChatSessions() {
         if (!chatSessionsCollectionRef) return;
@@ -132,11 +128,13 @@ document.addEventListener('DOMContentLoaded', function () {
         unsubscribeFromChatSessions = chatSessionsCollectionRef.orderBy("updatedAt", "desc").onSnapshot(snapshot => {
             localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderSessionList();
+            // If a session is currently selected, refresh its content
             if (currentSessionId) {
                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
                 if (currentSessionData) {
                     renderChatMessages(currentSessionData.messages || []);
                 } else {
+                    // The selected session was deleted, so reset the view
                     handleNewChat();
                 }
             }
@@ -165,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!sessionData) return;
         
         currentSessionId = sessionId;
-        renderSessionList(); 
+        renderSessionList(); // Re-render to update the 'active' class
         
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
         if (chatMessages) chatMessages.style.display = 'flex';
@@ -180,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
     
     function handleNewChat() {
         currentSessionId = null;
-        renderSessionList();
+        renderSessionList(); // Clears active class
         
         if (chatMessages) {
              chatMessages.innerHTML = '';
@@ -205,11 +203,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 chatSessionsCollectionRef.doc(currentSessionId).delete()
                     .then(() => {
                         console.log("Session deleted successfully");
-                        handleNewChat();
+                        handleNewChat(); // Reset view after deletion
                     })
                     .catch(e => console.error("세션 삭제 실패:", e));
             }
         });
+    }
+
+    function generateTutorPrompt(mode, query) {
+        const tone = "너는 지금부터 친한 친구에게 말하는 것처럼, 반드시 친근한 반말(informal Korean)으로만 대화해야 해. '안녕하세요' 같은 존댓말은 절대 사용하면 안 돼.";
+        let p = "";
+        switch (mode) {
+            case 'ailey_coaching': p = `[M-CHAT-AILEY] 모드. 질문:"${query}"`; break;
+            case 'deep_learning': p = chatQuizState === 'idle' ? `[M-CHAT-QUIZ] Phase 1. 주제:"${query}"` : `[M-CHAT-QUIZ] Phase 2. 문제:"${lastQuestion}", 답변:"${query}"`; break;
+            case 'custom': p = `[M-CHAT-CUSTOM] 모드. 프롬프트:"${customPrompt}", 질문:"${query}"`; break;
+        }
+        return `${p}\n\n${tone}`;
     }
 
     async function handleChatSend() {
@@ -225,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let messages = [];
 
         try {
-            if (!currentSessionId) { 
+            if (!currentSessionId) { // This is a new chat session
                 if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
                 if (chatMessages) chatMessages.style.display = 'flex';
                 
@@ -240,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 currentSessionId = sessionRef.id;
                 messages = newSession.messages;
                 renderSessionList();
-            } else { 
+            } else { // This is an existing session
                 sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
                 messages = [...(currentSessionData.messages || []), userMessage];
@@ -260,6 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] }));
+            // Note: A more robust implementation might trim the history to fit token limits.
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -285,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date().toISOString() };
             if (sessionRef) {
                  const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                 const errorMessages = [...(currentSessionData?.messages || []), errorMessage];
+                 const errorMessages = [...(currentSessionData.messages || []), errorMessage];
                  await sessionRef.update({ messages: errorMessages });
             }
         } finally {
@@ -301,6 +311,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!chatMessages) return;
         chatMessages.innerHTML = '';
         if (messages.length === 0 && currentSessionId) {
+             // Session exists but has no messages, maybe show a mini-prompt?
         }
         messages.forEach(msg => {
             const d = document.createElement('div');
@@ -321,6 +332,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function setupChatModeSelector() {
         if (!chatModeSelector) return;
+        // This selector's role is now to set the mode for NEW chats.
+        // It could be disabled when a chat is active, or its selection could fork a new chat.
+        // For now, it just sets a global variable.
         chatModeSelector.innerHTML = '';
         const modes = [{ id: 'ailey_coaching', t: '기본 코칭 💬' }, { id: 'deep_learning', t: '심화 학습 🧠' }, { id: 'custom', t: '커스텀 ⚙️' }];
         modes.forEach(m => {
@@ -340,127 +354,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // --- Data Backup & Restore ---
+    // --- [Unchanged] Notes, UI & Utilities ---
     
-    function exportAllData() {
-        if (localNotesCache.length === 0 && localChatSessionsCache.length === 0) {
-            showModal("백업할 데이터가 없습니다.", () => {});
-            return;
-        }
-
-        const dataToExport = {
-            backupVersion: '1.0',
-            backupDate: new Date().toISOString(),
-            notes: localNotesCache,
-            chatSessions: localChatSessionsCache
-        };
-
-        const str = JSON.stringify(dataToExport, null, 2);
-        const blob = new Blob([str], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const date = new Date().toISOString().slice(0, 10);
-        a.download = `ailey-canvas-backup-${date}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-    
-    function handleRestoreClick() {
-        if (fileImporter) {
-            fileImporter.click();
-        }
-    }
-
-    // [HOTFIX 2] Patched to handle nested timestamps in chat messages.
-    async function importAllData(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = JSON.parse(e.target.result);
-                if (!data.backupVersion || !data.notes || !data.chatSessions) {
-                    throw new Error("유효하지 않은 파일 형식입니다.");
-                }
-
-                const notesCount = data.notes.length;
-                const sessionsCount = data.chatSessions.length;
-                
-                const confirmationMessage = `파일에서 ${notesCount}개의 메모와 ${sessionsCount}개의 채팅 세션을 발견했습니다. 현재 클라우드 데이터를 이 파일의 내용으로 덮어씁니다. 이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?`;
-
-                showModal(confirmationMessage, async () => {
-                    if (!db || !notesCollection || !chatSessionsCollectionRef) {
-                        console.error("DB or collections not initialized");
-                        updateStatus('복원 실패: DB 연결 오류 ❌', false);
-                        return;
-                    }
-                    updateStatus('복원 중...', true);
-
-                    const batch = db.batch();
-
-                    // Process notes
-                    data.notes.forEach(note => {
-                        if (!note.id) return;
-                        const docRef = notesCollection.doc(note.id);
-                        const { id, ...dataToWrite } = note; 
-
-                        if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') {
-                            dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
-                        }
-                        if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') {
-                            dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
-                        }
-                        batch.set(docRef, dataToWrite);
-                    });
-
-                    // Process chat sessions
-                    data.chatSessions.forEach(session => {
-                        if (!session.id) return;
-                        const docRef = chatSessionsCollectionRef.doc(session.id);
-                        const { id, ...dataToWrite } = session;
-
-                        if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') {
-                           dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
-                        }
-                        if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') {
-                           dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
-                        }
-                        
-                        // [CRITICAL FIX] Convert nested timestamps within the messages array
-                        if (Array.isArray(dataToWrite.messages)) {
-                            dataToWrite.messages.forEach(message => {
-                                if (message.timestamp && typeof message.timestamp === 'string') {
-                                    message.timestamp = firebase.firestore.Timestamp.fromDate(new Date(message.timestamp));
-                                }
-                            });
-                        }
-
-                        batch.set(docRef, dataToWrite);
-                    });
-                    
-                    try {
-                        await batch.commit();
-                        updateStatus('복원 완료 ✓', true);
-                    } catch (error) {
-                        console.error("데이터 복원 실패:", error);
-                        updateStatus('복원 실패 ❌', false);
-                        showModal(`데이터 복원 중 오류가 발생했습니다: ${error.message}`, () => {});
-                    }
-                });
-
-            } catch (error) {
-                console.error("File parsing error:", error);
-                showModal(`파일을 읽는 중 오류가 발생했습니다: ${error.message}`, () => {});
-            } finally {
-                event.target.value = null;
-            }
-        };
-        reader.readAsText(file);
-    }
-    
-    // --- Utilities, Notes, and Unchanged Functions ---
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { const tempTextarea = document.createElement('textarea'); tempTextarea.value = canvasId; tempTextarea.style.position = 'absolute'; tempTextarea.style.left = '-9999px'; document.body.appendChild(tempTextarea); tempTextarea.select(); try { document.execCommand('copy'); copyBtn.textContent = '✅'; } catch (err) { console.error('Copy failed', err); copyBtn.textContent = '❌'; } document.body.removeChild(tempTextarea); setTimeout(() => { copyBtn.textContent = '📋'; }, 1500); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { const keywordChips = document.querySelectorAll('.keyword-chip'); keywordChips.forEach(chip => { const tooltipText = chip.dataset.tooltip; if (tooltipText && chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = tooltipText; } }); const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]'); inlineHighlights.forEach(highlight => { const tooltipText = highlight.dataset.tooltip; if(tooltipText && !highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = tooltipText; highlight.appendChild(tooltipElement); } }); }
@@ -480,9 +375,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function saveNote() { if (debounceTimer) clearTimeout(debounceTimer); if (!currentNoteId || !notesCollection) return; const data = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; notesCollection.doc(currentNoteId).update(data).then(() => updateStatus('저장됨 ✓', true)).catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); }); }
     function handleDeleteRequest(id) { showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => { if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e)); }); }
     async function togglePin(id) { if (!notesCollection) return; const note = localNotesCache.find(n => n.id === id); if (note) await notesCollection.doc(id).update({ isPinned: !note.isPinned }); }
+    function exportNotes() { const str = JSON.stringify(localNotesCache, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'my-notes.json'; a.click(); URL.revokeObjectURL(url); }
     function switchView(view) { if (view === 'editor') { if(noteListView) noteListView.classList.remove('active'); if(noteEditorView) noteEditorView.classList.add('active'); } else { if(noteEditorView) noteEditorView.classList.remove('active'); if(noteListView) noteListView.classList.add('active'); currentNoteId = null; } }
     function openNoteEditor(id) { const note = localNotesCache.find(n => n.id === id); if (note && noteTitleInput && noteContentTextarea) { currentNoteId = id; noteTitleInput.value = note.title || ''; noteContentTextarea.value = note.content || ''; switchView('editor'); } }
-    function updateStatus(msg, success) { if (!autoSaveStatus) return; autoSaveStatus.textContent = msg; autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral'; setTimeout(() => { autoSaveStatus.textContent = ''; }, 3000); }
+    function updateStatus(msg, success) { if (!autoSaveStatus) return; autoSaveStatus.textContent = msg; autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral'; setTimeout(() => { autoSaveStatus.textContent = ''; }, 2000); }
     function applyFormat(fmt) { if (!noteContentTextarea) return; const s = noteContentTextarea.selectionStart, e = noteContentTextarea.selectionEnd, t = noteContentTextarea.value.substring(s, e); const m = fmt === 'bold' ? '**' : (fmt === 'italic' ? '*' : '`'); noteContentTextarea.value = `${noteContentTextarea.value.substring(0,s)}${m}${t}${m}${noteContentTextarea.value.substring(e)}`; noteContentTextarea.focus(); }
     async function startQuiz() { if (!quizModalOverlay) return; const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', '); if (!k) { showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); return; } if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>'; if (quizResults) quizResults.innerHTML = ''; quizModalOverlay.style.display = 'flex'; try { const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); currentQuizData = JSON.parse(res); renderQuiz(currentQuizData); } catch (e) { if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; } }
     function renderQuiz(data) { if (!quizContainer || !data.questions) return; quizContainer.innerHTML = ''; data.questions.forEach((q, i) => { const b = document.createElement('div'); b.className = 'quiz-question-block'; const p = document.createElement('p'); p.textContent = `${i + 1}. ${q.q}`; const o = document.createElement('div'); o.className = 'quiz-options'; q.o.forEach(opt => { const l = document.createElement('label'); const r = document.createElement('input'); r.type = 'radio'; r.name = `q-${i}`; r.value = opt; l.append(r,` ${opt}`); o.appendChild(l); }); b.append(p, o); quizContainer.appendChild(b); }); }
@@ -520,9 +416,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
         if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
         if (searchInput) searchInput.addEventListener('input', renderNoteList);
-        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportAllData);
-        if (restoreDataBtn) restoreDataBtn.addEventListener('click', handleRestoreClick);
-        if (fileImporter) fileImporter.addEventListener('change', importAllData);
+        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportNotes);
         const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
         if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
