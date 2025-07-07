@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 7.2 (Chat Session UI Layout)
+Version: 7.3 (Advanced Chat UI Styling)
 Architect: [Username] & System Architect Ailey
-Description: Implemented styles for the new chat session management UI, including a two-column layout for the chat panel (session list and main view), and styles for session items.
+Description: Implemented comprehensive styles for advanced chat features: session search bar, collapsible folders, pin buttons with active states, and a new SVG send button icon.
 */
 
 :root {
@@ -106,98 +106,52 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 .panel-header .close-btn { cursor: pointer; font-size: 20px; }
 
 
-/* --- [REFINED] CHAT STYLES for SESSION MANAGEMENT --- */
-#chat-panel {
-    bottom: 100px;
-    right: 100px;
-    height: 600px; /* Increased height */
-    width: 700px; /* Increased width */
-    flex-direction: row; /* Key change for side-by-side layout */
-    overflow: hidden; /* Prevent resize from breaking layout */
-}
+/* --- [REFINED] CHAT STYLES for ADVANCED SESSION MANAGEMENT --- */
+#chat-panel { bottom: 100px; right: 100px; height: 600px; width: 700px; flex-direction: row; overflow: hidden; }
 
-#chat-session-sidebar {
-    width: 200px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    transition: border-color 0.3s;
-}
+#chat-session-sidebar { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; transition: border-color 0.3s; }
 body.dark-mode #chat-session-sidebar { border-right: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) #chat-session-sidebar { border-right: 1px solid var(--border-color-light); }
 
-#sidebar-header {
-    padding: 10px;
-    flex-shrink: 0;
-}
+#sidebar-header { padding: 10px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+#sidebar-top-actions { display: flex; gap: 8px; }
+#new-chat-btn, #add-folder-btn { flex-grow: 1; padding: 8px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9em; font-family: 'Gowun Batang', serif; transition: background-color 0.2s; }
+#add-folder-btn { flex-grow: 0; padding: 8px 12px; }
+body.dark-mode #new-chat-btn, body.dark-mode #add-folder-btn { background-color: var(--h2-color-dark); color: var(--bg-color-dark); }
+body:not(.dark-mode) #new-chat-btn, body:not(.dark-mode) #add-folder-btn { background-color: var(--h2-color-light); color: white; }
+#session-search-input { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; box-sizing: border-box; }
+body.dark-mode #session-search-input { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) #session-search-input { background-color: var(--quote-bg-light); border-color: var(--border-color-light); color: var(--text-color-light); }
 
-#new-chat-btn {
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 1em;
-    font-family: 'Gowun Batang', serif;
-    transition: background-color 0.2s;
-}
-body.dark-mode #new-chat-btn { background-color: var(--h2-color-dark); color: var(--bg-color-dark); }
-body:not(.dark-mode) #new-chat-btn { background-color: var(--h2-color-light); color: white; }
-body.dark-mode #new-chat-btn:hover { background-color: #D4B28C; }
-body:not(.dark-mode) #new-chat-btn:hover { background-color: #A88A68; }
+#session-list-container { flex-grow: 1; overflow-y: auto; padding: 0 10px 10px 10px; }
+.chat-folder .folder-header { display: flex; align-items: center; padding: 10px 5px; cursor: pointer; border-radius: 4px; }
+body.dark-mode .chat-folder .folder-header:hover { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .chat-folder .folder-header:hover { background-color: var(--quote-bg-light); }
+.folder-arrow { transition: transform 0.2s ease-in-out; }
+.folder-arrow.expanded { transform: rotate(90deg); }
+.folder-name { font-weight: bold; margin-left: 5px; }
+.folder-content { padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
+.folder-content.expanded { max-height: 1000px; /* Large enough value */ }
 
-#session-list {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 0 10px 10px 10px;
-}
-.session-item {
-    padding: 12px 10px;
-    border-radius: 6px;
-    margin-bottom: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    font-size: 0.95em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+.session-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; margin-top: 5px; cursor: pointer; position: relative; transition: background-color 0.2s; }
 body.dark-mode .session-item:hover { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .session-item:hover { background-color: var(--quote-bg-light); }
-
-.session-item.active {
-    font-weight: bold;
-}
+.session-item.active { font-weight: bold; }
 body.dark-mode .session-item.active { background-color: var(--strong-bg-dark); color: var(--header-color-dark); }
 body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-light); color: var(--h2-color-light); }
+.session-item.pinned { border-left: 3px solid var(--pin-color); }
+.session-item-main { flex-grow: 1; overflow: hidden; }
+.session-item-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-item-date { font-size: 0.8em; opacity: 0.7; margin-top: 2px; }
+.session-item-actions { display: flex; align-items: center; margin-left: 5px; }
+.pin-session-btn { background: none; border: none; cursor: pointer; font-size: 1.1em; padding: 5px; border-radius: 50%; opacity: 0.6; }
+.session-item:hover .pin-session-btn { opacity: 1; }
+.pin-session-btn.pinned { opacity: 1; color: var(--pin-color); }
 
-.session-item-title {
-    flex-grow: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.session-item-actions { display: none; } /* Hide for now, can be added later */
-
-
-#chat-main-view {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
+#chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
 #chat-main-view .panel-header { gap: 5px; }
-#chat-session-title {
-    font-size: 1.1em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-#delete-session-btn {
-    display: none; /* Hide until a session is active */
-}
-
+#chat-session-title { font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#delete-session-btn { display: none; }
 #chat-mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; width: 100%; justify-content: center; padding: 8px 0; border-top: 1px solid transparent; }
 body:not(.dark-mode) #chat-mode-selector { border-top-color: var(--border-color-light); }
 body.dark-mode #chat-mode-selector { border-top-color: var(--border-color-dark); }
@@ -210,23 +164,9 @@ body.dark-mode #chat-mode-selector button:hover { background-color: #555; }
 body.dark-mode #chat-mode-selector button.active { background-color: var(--h2-color-dark); color: var(--bg-color-dark); border-color: var(--h2-color-dark); font-weight: bold; }
 
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-
-#chat-welcome-message {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    text-align: center;
-    color: var(--sub-text-color-dark);
-}
+#chat-welcome-message { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; color: var(--sub-text-color-dark); }
 body:not(.dark-mode) #chat-welcome-message { color: var(--sub-text-color-light); }
-#chat-welcome-message h3 {
-    font-family: 'Noto Serif KR', serif;
-    font-size: 1.5em;
-    margin-bottom: 10px;
-    color: var(--h2-color-dark);
-}
+#chat-welcome-message h3 { font-family: 'Noto Serif KR', serif; font-size: 1.5em; margin-bottom: 10px; color: var(--h2-color-dark); }
 body:not(.dark-mode) #chat-welcome-message h3 { color: var(--h2-color-light); }
 
 .chat-message { max-width: 85%; padding: 10px 15px; border-radius: 18px; line-height: 1.6; word-wrap: break-word; position: relative; }
@@ -258,7 +198,9 @@ body:not(.dark-mode) .chat-input-form { border-top-color: var(--border-color-lig
 #chat-input { flex-grow: 1; border: 1px solid; border-radius: 20px; padding: 10px 15px; resize: none; outline: none; font-family: 'Gowun Batang', serif; font-size: 1em; transition: all 0.3s; }
 body.dark-mode #chat-input { background-color: #2a2a2a; color: var(--text-color-dark); border-color: var(--border-color-dark); }
 body:not(.dark-mode) #chat-input { background-color: #fff; color: var(--text-color-light); border-color: var(--border-color-light); }
-#chat-send-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; transition: color 0.3s; }
+#chat-send-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; display: flex; align-items: center; justify-content: center; transition: color 0.3s; }
+#chat-send-btn svg { transition: transform 0.2s; }
+#chat-send-btn:hover svg { transform: scale(1.1); }
 body.dark-mode #chat-send-btn { color: var(--header-color-dark); }
 body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
 #chat-input:disabled, #chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
