@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentQuizData = null;
     
     // Google API Keys
-    const API_KEY = 'YOUR_GOOGLE_API_KEY'; // Replace with your actual API key
+    const API_KEY = '464743950938-qm5uidbabg4cuvcccje11drdk07jaahd.apps.googleusercontent.com'; // Replace with your actual API key
 
     // --- 3. Function Definitions ---
 
