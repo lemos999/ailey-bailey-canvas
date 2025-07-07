@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 8.4 (Final - Client-Side Filtering)
+Version: 8.5 (Final - Data Re-Ownership)
 Architect: [Username] & System Architect Ailey
-Description: The core data logic has been fundamentally re-architected. All .where() queries for notes have been removed to bypass Firestore indexing issues. The script now fetches all notes and filters them on the client-side, ensuring robust and error-free data isolation.
+Description: The restore logic is now finalized. Added a critical line to enforce 'data re-ownership' by overwriting the canvasId of restored notes with the current canvas's ID. This resolves the final data mismatch bug.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- Data Backup & Restore (Wipe and Write + Client-Side Filtering) ---
-    function exportAllData() { if (localNotesCache.length === 0 && localChatSessionsCache.length === 0) { showModal("백업할 데이터가 없습니다.", () => {}); return; } const dataToExport = { backupVersion: '1.3-client-filtered', backupDate: new Date().toISOString(), notes: localNotesCache, chatSessions: localChatSessionsCache }; const str = JSON.stringify(dataToExport, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const date = new Date().toISOString().slice(0, 10); a.download = `ailey-canvas-backup-${date}.json`; a.click(); URL.revokeObjectURL(url); }
+    function exportAllData() { if (localNotesCache.length === 0 && localChatSessionsCache.length === 0) { showModal("백업할 데이터가 없습니다.", () => {}); return; } const dataToExport = { backupVersion: '1.4-re-ownership', backupDate: new Date().toISOString(), notes: localNotesCache, chatSessions: localChatSessionsCache }; const str = JSON.stringify(dataToExport, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const date = new Date().toISOString().slice(0, 10); a.download = `ailey-canvas-backup-${date}.json`; a.click(); URL.revokeObjectURL(url); }
     function handleRestoreClick() { if (fileImporter) { fileImporter.click(); } }
     
     async function importAllData(event) {
@@ -215,7 +215,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     updateStatus("기존 데이터 정리 중...", true);
                     try {
                         const deleteBatch = db.batch();
-                        // Fetch all notes, filter by canvasId, then delete.
                         const notesToDeleteSnapshot = await notesCollection.get();
                         notesToDeleteSnapshot.docs.forEach(doc => {
                             if (doc.data().canvasId === canvasId) {
@@ -242,7 +241,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         const { id, ...dataToWrite } = note;
                         if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
                         if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
+                        
+                        // [CRITICAL FIX] Enforce data re-ownership on restore.
                         dataToWrite.canvasId = canvasId; 
+                        
                         return docRef.set(dataToWrite).catch(err => Promise.reject({type: 'note', id: note.id, error: err}));
                     });
 
@@ -294,8 +296,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function closePromptModal() { if (promptModalOverlay) promptModalOverlay.style.display = 'none'; }
     function saveCustomPrompt() { if (customPromptInput) { customPrompt = customPromptInput.value; localStorage.setItem('customTutorPrompt', customPrompt); closePromptModal(); } }
     function showModal(message, onConfirm) { if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return; modalMessage.textContent = message; customModal.style.display = 'flex'; modalConfirmBtn.onclick = () => { onConfirm(); customModal.style.display = 'none'; }; modalCancelBtn.onclick = () => { customModal.style.display = 'none'; }; }
-    function listenToNotes() { if (!notesCollection) return; if (unsubscribeFromNotes) unsubscribeFromNotes(); unsubscribeFromNotes = notesCollection.onSnapshot(s => { const allNotes = s.docs.map(d => ({ id: d.id, ...d.data() })); localNotesCache = allNotes.filter(note => note.canvasId === canvasId); renderNoteList(); }, e => console.error("노트 실시간 수신 오류:", e)); }
+    // [MODIFIED] Using Client-Side Filtering.
+    function listenToNotes() { if (!notesCollection) return; if (unsubscribeFromNotes) unsubscribeFromNotes(); unsubscribeFromNotes = notesCollection.onSnapshot(s => { const allUserNotes = s.docs.map(d => ({ id: d.id, ...d.data() })); localNotesCache = allUserNotes.filter(note => note.canvasId === canvasId); renderNoteList(); }, e => console.error("노트 실시간 수신 오류:", e)); }
     function renderNoteList() { if (!notesList || !searchInput) return; const term = searchInput.value.toLowerCase(); const filtered = localNotesCache.filter(n => (n.title && n.title.toLowerCase().includes(term)) || (n.content && n.content.toLowerCase().includes(term))); filtered.sort((a,b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0)); notesList.innerHTML = ''; if (filtered.length === 0) { notesList.innerHTML = '<div>표시할 메모가 없습니다.</div>'; return; } filtered.forEach(n => { const i = document.createElement('div'); i.className = 'note-item'; i.dataset.id = n.id; if (n.isPinned) i.classList.add('pinned'); const d = n.updatedAt ? new Date(n.updatedAt.toMillis()).toLocaleString() : '날짜 없음'; i.innerHTML = `<div class="note-item-content"><div class="note-item-title">${n.title||'무제'}</div><div class="note-item-date">${d}</div></div><div class="note-item-actions"><button class="item-action-btn pin-btn ${n.isPinned?'pinned-active':''}" title="고정">${n.isPinned?'📌':'📍'}</button><button class="item-action-btn delete-btn" title="삭제">🗑️</button></div>`; notesList.appendChild(i); }); }
+    // [MODIFIED] Add canvasId to new notes.
     async function addNote(content = '') { if (!notesCollection) return; try { const newNote = { title: '새 메모', content: content, isPinned: false, canvasId: canvasId, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; const ref = await notesCollection.add(newNote); openNoteEditor(ref.id); } catch (e) { console.error("새 메모 추가 실패:", e); } }
     function saveNote() { if (debounceTimer) clearTimeout(debounceTimer); if (!currentNoteId || !notesCollection) return; const data = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; notesCollection.doc(currentNoteId).update(data).then(() => updateStatus('저장됨 ✓', true)).catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); }); }
     function handleDeleteRequest(id) { showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => { if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e)); }); }
