@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 8.5 (Final - Data Re-Ownership)
+Version: 8.6 (Final - State-Aware UI)
 Architect: [Username] & System Architect Ailey
-Description: The restore logic is now finalized. Added a critical line to enforce 'data re-ownership' by overwriting the canvasId of restored notes with the current canvas's ID. This resolves the final data mismatch bug.
+Description: Implemented a state-aware UI. Critical data management buttons (Backup, Restore, Reset) are now disabled until all required cloud data (notes and chats) is fully loaded, preventing race conditions and corrupted backups.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -77,6 +77,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let unsubscribeFromNotes = null;
     let debounceTimer = null;
     let lastSelectedText = '';
+    // [NEW] Data readiness state
+    let isDataReady = { notes: false, chats: false };
 
     // --- CHAT STATE ---
     let localChatSessionsCache = [];
@@ -89,6 +91,16 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentQuizData = null;
 
     // --- 3. Function Definitions ---
+
+    // [NEW] Check if all data is loaded and enable critical buttons
+    function checkDataReadyAndEnableButtons() {
+        if (isDataReady.notes && isDataReady.chats) {
+            if (exportNotesBtn) exportNotesBtn.disabled = false;
+            if (restoreDataBtn) restoreDataBtn.disabled = false;
+            if (systemResetBtn) systemResetBtn.disabled = false;
+            console.log("✅ All cloud data is ready. Critical functions enabled.");
+        }
+    }
 
     async function initializeFirebase() {
         try {
@@ -127,7 +139,27 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- Chat Session Management ---
-    function listenToChatSessions() { if (!chatSessionsCollectionRef) return; if (unsubscribeFromChatSessions) unsubscribeFromChatSessions(); unsubscribeFromChatSessions = chatSessionsCollectionRef.orderBy("updatedAt", "desc").onSnapshot(snapshot => { localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); renderSessionList(); if (currentSessionId) { const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); if (currentSessionData) { renderChatMessages(currentSessionData.messages || []); } else { handleNewChat(); } } }, error => console.error("Chat session listener error:", error)); }
+    function listenToChatSessions() {
+        if (!chatSessionsCollectionRef) return;
+        if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
+        unsubscribeFromChatSessions = chatSessionsCollectionRef.onSnapshot(snapshot => {
+            // [MODIFIED] Set readiness flag on first successful load
+            if (!isDataReady.chats) {
+                isDataReady.chats = true;
+                checkDataReadyAndEnableButtons();
+            }
+            localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderSessionList();
+            if (currentSessionId) {
+                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+                if (currentSessionData) {
+                    renderChatMessages(currentSessionData.messages || []);
+                } else {
+                    handleNewChat();
+                }
+            }
+        }, error => console.error("Chat session listener error:", error));
+    }
     function renderSessionList() { if (!sessionList) return; sessionList.innerHTML = ''; localChatSessionsCache.forEach(session => { const item = document.createElement('div'); item.className = 'session-item'; item.dataset.sessionId = session.id; if (session.id === currentSessionId) { item.classList.add('active'); } item.innerHTML = `<div class="session-item-title">${session.title || '새 대화'}</div>`; item.addEventListener('click', () => selectSession(session.id)); sessionList.appendChild(item); }); }
     function selectSession(sessionId) { if (!sessionId) return; const sessionData = localChatSessionsCache.find(s => s.id === sessionId); if (!sessionData) return; currentSessionId = sessionId; renderSessionList(); if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; renderChatMessages(sessionData.messages || []); if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block'; if (chatInput) chatInput.disabled = false; if (chatSendBtn) chatSendBtn.disabled = false; chatInput.focus(); }
     function handleNewChat() { currentSessionId = null; renderSessionList(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
@@ -150,7 +182,6 @@ document.addEventListener('DOMContentLoaded', function () {
             try {
                 const deleteBatch = db.batch();
                 
-                // Fetch ALL notes, then filter client-side to find ones to delete.
                 const notesSnapshot = await notesCollection.get();
                 let notesCount = 0;
                 notesSnapshot.docs.forEach(doc => {
@@ -189,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- Data Backup & Restore (Wipe and Write + Client-Side Filtering) ---
-    function exportAllData() { if (localNotesCache.length === 0 && localChatSessionsCache.length === 0) { showModal("백업할 데이터가 없습니다.", () => {}); return; } const dataToExport = { backupVersion: '1.4-re-ownership', backupDate: new Date().toISOString(), notes: localNotesCache, chatSessions: localChatSessionsCache }; const str = JSON.stringify(dataToExport, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const date = new Date().toISOString().slice(0, 10); a.download = `ailey-canvas-backup-${date}.json`; a.click(); URL.revokeObjectURL(url); }
+    function exportAllData() { if (localNotesCache.length === 0 && localChatSessionsCache.length === 0) { showModal("백업할 데이터가 없습니다.", () => {}); return; } const dataToExport = { backupVersion: '1.5-state-aware', backupDate: new Date().toISOString(), notes: localNotesCache, chatSessions: localChatSessionsCache }; const str = JSON.stringify(dataToExport, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const date = new Date().toISOString().slice(0, 10); a.download = `ailey-canvas-backup-${date}.json`; a.click(); URL.revokeObjectURL(url); }
     function handleRestoreClick() { if (fileImporter) { fileImporter.click(); } }
     
     async function importAllData(event) {
@@ -211,40 +242,31 @@ document.addEventListener('DOMContentLoaded', function () {
                         return updateStatus('복원 실패: DB 연결 오류 ❌', false);
                     }
                     
-                    // --- 1. WIPE PHASE (Client-Side Filtering) ---
                     updateStatus("기존 데이터 정리 중...", true);
                     try {
                         const deleteBatch = db.batch();
                         const notesToDeleteSnapshot = await notesCollection.get();
                         notesToDeleteSnapshot.docs.forEach(doc => {
-                            if (doc.data().canvasId === canvasId) {
-                                deleteBatch.delete(doc.ref);
-                            }
+                            if (doc.data().canvasId === canvasId) { deleteBatch.delete(doc.ref); }
                         });
                         
                         const chatsToDeleteSnapshot = await chatSessionsCollectionRef.get();
                         chatsToDeleteSnapshot.docs.forEach(doc => deleteBatch.delete(doc.ref));
                         
                         await deleteBatch.commit();
-                        console.log("✅ 기존 캔버스 데이터가 성공적으로 삭제되었습니다.");
                     } catch(error) {
-                        console.error("❌ 기존 데이터 삭제 실패:", error);
                         updateStatus("복원 실패: 기존 데이터 정리 오류 ❌", false);
-                        alert("기존 데이터를 정리하는 데 실패했습니다. 콘솔을 확인해주세요.");
+                        alert("기존 데이터를 정리하는 데 실패했습니다: " + error.message);
                         return;
                     }
 
-                    // --- 2. WRITE PHASE ---
                     updateStatus("새 데이터 복원 중...", true);
                     const notePromises = data.notes.map(note => {
                         const docRef = notesCollection.doc(note.id);
                         const { id, ...dataToWrite } = note;
                         if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt));
                         if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt));
-                        
-                        // [CRITICAL FIX] Enforce data re-ownership on restore.
                         dataToWrite.canvasId = canvasId; 
-                        
                         return docRef.set(dataToWrite).catch(err => Promise.reject({type: 'note', id: note.id, error: err}));
                     });
 
@@ -269,9 +291,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         console.error("복원 실패 항목:", results.filter(r => r.status === 'rejected').map(r => r.reason));
                     }
 
-                    const finalMessage = `복원 완료: ${successCount}개 성공, ${failureCount}개 실패.`;
+                    const finalMessage = `복원 완료: ${successCount}개 성공, ${failureCount}개 실패. 페이지를 새로고침 합니다.`;
                     updateStatus(finalMessage, failureCount === 0);
                     alert(finalMessage + (failureCount > 0 ? "\n자세한 내용은 개발자 콘솔(F12)을 확인하세요." : ""));
+                    location.reload();
                 });
             } catch (error) {
                 showModal(`파일을 읽는 중 오류가 발생했습니다: ${error.message}`, () => {});
@@ -282,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
         reader.readAsText(file);
     }
     
-    // --- Utilities, Notes (with canvasId logic) ---
+    // --- Utilities, Notes (with client-side filtering logic) ---
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { const tempTextarea = document.createElement('textarea'); tempTextarea.value = canvasId; tempTextarea.style.position = 'absolute'; tempTextarea.style.left = '-9999px'; document.body.appendChild(tempTextarea); tempTextarea.select(); try { document.execCommand('copy'); copyBtn.textContent = '✅'; } catch (err) { console.error('Copy failed', err); copyBtn.textContent = '❌'; } document.body.removeChild(tempTextarea); setTimeout(() => { copyBtn.textContent = '📋'; }, 1500); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { const keywordChips = document.querySelectorAll('.keyword-chip'); keywordChips.forEach(chip => { const tooltipText = chip.dataset.tooltip; if (tooltipText && chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = tooltipText; } }); const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]'); inlineHighlights.forEach(highlight => { const tooltipText = highlight.dataset.tooltip; if(tooltipText && !highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = tooltipText; highlight.appendChild(tooltipElement); } }); }
@@ -296,10 +319,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function closePromptModal() { if (promptModalOverlay) promptModalOverlay.style.display = 'none'; }
     function saveCustomPrompt() { if (customPromptInput) { customPrompt = customPromptInput.value; localStorage.setItem('customTutorPrompt', customPrompt); closePromptModal(); } }
     function showModal(message, onConfirm) { if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return; modalMessage.textContent = message; customModal.style.display = 'flex'; modalConfirmBtn.onclick = () => { onConfirm(); customModal.style.display = 'none'; }; modalCancelBtn.onclick = () => { customModal.style.display = 'none'; }; }
-    // [MODIFIED] Using Client-Side Filtering.
-    function listenToNotes() { if (!notesCollection) return; if (unsubscribeFromNotes) unsubscribeFromNotes(); unsubscribeFromNotes = notesCollection.onSnapshot(s => { const allUserNotes = s.docs.map(d => ({ id: d.id, ...d.data() })); localNotesCache = allUserNotes.filter(note => note.canvasId === canvasId); renderNoteList(); }, e => console.error("노트 실시간 수신 오류:", e)); }
+    function listenToNotes() { if (!notesCollection) return; if (unsubscribeFromNotes) unsubscribeFromNotes(); unsubscribeFromNotes = notesCollection.onSnapshot(s => { const allUserNotes = s.docs.map(d => ({ id: d.id, ...d.data() })); localNotesCache = allUserNotes.filter(note => note.canvasId === canvasId); if (!isDataReady.notes) { isDataReady.notes = true; checkDataReadyAndEnableButtons(); } renderNoteList(); }, e => console.error("노트 실시간 수신 오류:", e)); }
     function renderNoteList() { if (!notesList || !searchInput) return; const term = searchInput.value.toLowerCase(); const filtered = localNotesCache.filter(n => (n.title && n.title.toLowerCase().includes(term)) || (n.content && n.content.toLowerCase().includes(term))); filtered.sort((a,b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0)); notesList.innerHTML = ''; if (filtered.length === 0) { notesList.innerHTML = '<div>표시할 메모가 없습니다.</div>'; return; } filtered.forEach(n => { const i = document.createElement('div'); i.className = 'note-item'; i.dataset.id = n.id; if (n.isPinned) i.classList.add('pinned'); const d = n.updatedAt ? new Date(n.updatedAt.toMillis()).toLocaleString() : '날짜 없음'; i.innerHTML = `<div class="note-item-content"><div class="note-item-title">${n.title||'무제'}</div><div class="note-item-date">${d}</div></div><div class="note-item-actions"><button class="item-action-btn pin-btn ${n.isPinned?'pinned-active':''}" title="고정">${n.isPinned?'📌':'📍'}</button><button class="item-action-btn delete-btn" title="삭제">🗑️</button></div>`; notesList.appendChild(i); }); }
-    // [MODIFIED] Add canvasId to new notes.
     async function addNote(content = '') { if (!notesCollection) return; try { const newNote = { title: '새 메모', content: content, isPinned: false, canvasId: canvasId, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; const ref = await notesCollection.add(newNote); openNoteEditor(ref.id); } catch (e) { console.error("새 메모 추가 실패:", e); } }
     function saveNote() { if (debounceTimer) clearTimeout(debounceTimer); if (!currentNoteId || !notesCollection) return; const data = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; notesCollection.doc(currentNoteId).update(data).then(() => updateStatus('저장됨 ✓', true)).catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); }); }
     function handleDeleteRequest(id) { showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => { if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e)); }); }
