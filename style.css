@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 7.2 (Chat Session UI Layout)
+Version: 7.8 (Google Drive Integration UI)
 Architect: [Username] & System Architect Ailey
-Description: Implemented styles for the new chat session management UI, including a two-column layout for the chat panel (session list and main view), and styles for session items.
+Description: Added styles for a panel-specific loading overlay to provide user feedback during Google Drive synchronization. The new import/export buttons reuse existing .notes-btn styles for consistency.
 */
 
 :root {
@@ -269,7 +269,7 @@ body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-ligh
 .send-to-note-btn:disabled { cursor: not-allowed; opacity: 0.5; border-color: gray; color: gray; }
 
 /* Notes App Panel Styles */
-#notes-app-panel { bottom: 100px; left: 100px; width: 400px; height: 600px; padding: 0; }
+#notes-app-panel { bottom: 100px; left: 100px; width: 400px; height: 600px; padding: 0; position:relative; /* For loading overlay */ }
 .notes-view { display: none; flex-direction: column; height: 100%; }
 .notes-view.active { display: flex; }
 #note-list-view .panel-header .header-button-group { display: flex; gap: 10px; }
@@ -334,3 +334,42 @@ body:not(:dark-mode) #quiz-submit-btn { background-color: var(--h2-color-light);
 /* Prompt Modal */
 #prompt-modal-overlay textarea { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
 body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }
+
+/* --- [NEW] Google Drive Integration Styles --- */
+.panel-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+    display: none; /* Toggled by JS */
+    flex-direction: column; /* To stack spinner and text */
+    justify-content: center;
+    align-items: center;
+    z-index: 1500;
+    color: white;
+    font-size: 1.1em;
+    text-align: center;
+    border-radius: 10px; /* To match the panel */
+    gap: 15px;
+}
+
+.loader {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--h2-color-dark);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+body:not(.dark-mode) .loader {
+    border-top-color: var(--h2-color-light);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
