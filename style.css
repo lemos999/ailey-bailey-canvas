@@ -1,12 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 8.1 (Chat UX Enhancement)
+Version: 8.1 (Chat Session UX Enhancement)
 Architect: [Username] & System Architect Ailey
-Description: Added styles for new Chat UI features.
-- Styled date-based group headers (.session-group-header) in the chat list.
-- Styled the last-updated timestamp (.session-item-date) for each chat session.
-- Adjusted flexbox layout to accommodate the new DOM structure of session items.
+Description: Enhanced Chat UX by adding date-based grouping for sessions, displaying the last updated time for each session, and fixing the new folder creation flow.
 */
 
 :root {
@@ -158,19 +155,21 @@ body:not(.dark-mode) #new-chat-btn:hover, body:not(.dark-mode) #new-folder-btn:h
     padding: 0 10px 10px 10px;
 }
 
-/* [NEW] Date Group Header Styles */
-.session-group-header {
+/* [NEW] Date Header Styles */
+.session-date-header {
     padding: 15px 5px 5px 5px;
     font-size: 0.8em;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    border-bottom: 1px solid;
+    margin-bottom: 8px;
 }
-body.dark-mode .session-group-header { color: var(--sub-text-color-dark); }
-body:not(.dark-mode) .session-group-header { color: var(--sub-text-color-light); }
+body.dark-mode .session-date-header { color: var(--sub-text-color-dark); border-bottom-color: var(--border-color-dark); }
+body:not(.dark-mode) .session-date-header { color: var(--sub-text-color-light); border-bottom-color: var(--border-color-light); }
 
 
-/* [MODIFIED] Folder Styles */
+/* [NEW] Folder Styles */
 .folder-container {
     margin-bottom: 5px;
 }
@@ -207,26 +206,18 @@ body:not(.dark-mode) .folder-header:hover {
 
 /* [MODIFIED] Session Item Styles */
 .session-item {
-    padding: 8px 10px; /* Reduced vertical padding */
+    padding: 8px 10px; /* Reduced padding */
     border-radius: 6px;
     margin-bottom: 5px;
     cursor: pointer;
     transition: background-color 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    position: relative; /* For context menu positioning */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
 }
 body.dark-mode .session-item:hover { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .session-item:hover { background-color: var(--quote-bg-light); }
-
-/* [NEW] Wrapper for title and date */
-.session-item-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 10px;
-}
 
 .session-item.active {
     font-weight: bold;
@@ -234,27 +225,24 @@ body:not(.dark-mode) .session-item:hover { background-color: var(--quote-bg-ligh
 body.dark-mode .session-item.active { background-color: var(--strong-bg-dark); color: var(--header-color-dark); }
 body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-light); color: var(--h2-color-light); }
 
-.session-item-title {
+/* [NEW] Session Item Details Container */
+.session-item-details {
     flex-grow: 1;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 0.95em;
-    line-height: 1.4;
+    white-space: nowrap;
 }
-
-/* [NEW] Date style for session items */
+.session-item-title {
+    display: block; /* Ensure title and date are on separate lines */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.95em;
+}
 .session-item-date {
     font-size: 0.8em;
-    flex-shrink: 0;
-    line-height: 1.4;
-    padding-top: 1px; /* Align better with title */
+    opacity: 0.7;
 }
-body.dark-mode .session-item-date { color: var(--sub-text-color-dark); }
-body:not(.dark-mode) .session-item-date { color: var(--sub-text-color-light); }
-body.dark-mode .session-item.active .session-item-date { color: var(--text-color-dark); }
-body:not(.dark-mode) .session-item.active .session-item-date { color: var(--text-color-light); }
 
-.session-item-actions { display: none; }
 
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
 #chat-main-view .panel-header { gap: 5px; }
@@ -311,6 +299,7 @@ body:dark-mode .send-to-note-btn { border-color: var(--sub-text-color-dark); col
 body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-light); color: var(--sub-text-color-light); }
 .send-to-note-btn:disabled { cursor: not-allowed; opacity: 0.5; border-color: gray; color: gray; }
 
+/* [NEW] Context Menu Styles */
 #session-context-menu {
     position: fixed;
     z-index: 1500;
