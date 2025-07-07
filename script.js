@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 7.6 (Chat Session Management)
+Version: 8.0 (System Reset Functionality)
 Architect: [Username] & System Architect Ailey
-Description: Implemented full-stack chat session management. Re-architected Firestore data structure to support multiple chat sessions per canvas. Added logic to create, select, and delete chat sessions, with AI now remembering conversation context within each session.
+Description: Implemented a critical system reset feature. Users can now wipe all canvas-specific data (notes and chats) from the cloud via a UI button, allowing recovery from data corruption within the preview environment.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -52,29 +52,37 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
 
-    // -- [NEW] Chat Session UI Elements
+    // -- Chat Session UI Elements
     const newChatBtn = document.getElementById('new-chat-btn');
     const sessionList = document.getElementById('session-list');
     const chatSessionTitle = document.getElementById('chat-session-title');
     const deleteSessionBtn = document.getElementById('delete-session-btn');
     const chatWelcomeMessage = document.getElementById('chat-welcome-message');
 
+    // -- Backup & Restore UI Elements
+    const restoreDataBtn = document.getElementById('restore-data-btn');
+    const fileImporter = document.getElementById('file-importer');
+
+    // -- [NEW] System Reset UI Element
+    const systemResetBtn = document.getElementById('system-reset-btn');
+
+
     // --- 2. State Management ---
     const canvasId = document.querySelector('meta[name="canvas-id"]')?.content || 'global_fallback_id';
     let db, notesCollection, chatSessionsCollectionRef;
     let currentUser = null;
-    const appId = 'AileyBailey_Global_Space'; // Simplified App ID
+    const appId = 'AileyBailey_Global_Space';
     let localNotesCache = [];
     let currentNoteId = null;
     let unsubscribeFromNotes = null;
     let debounceTimer = null;
     let lastSelectedText = '';
 
-    // --- [RE-ARCHITECTED] CHAT STATE ---
+    // --- CHAT STATE ---
     let localChatSessionsCache = [];
     let currentSessionId = null;
     let unsubscribeFromChatSessions = null;
-    let selectedMode = 'ailey_coaching'; // Default for new chats
+    let selectedMode = 'ailey_coaching';
     let chatQuizState = 'idle';
     let lastQuestion = '';
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
@@ -82,7 +90,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- 3. Function Definitions ---
 
-    // Firebase Initialization
     async function initializeFirebase() {
         try {
             const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
@@ -106,11 +113,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (currentUser) {
                 notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/notes`);
-                // [CRITICAL ARCHITECTURE CHANGE] Point to the 'sessions' subcollection
                 chatSessionsCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatHistories/${canvasId}/sessions`);
                 
                 listenToNotes();
-                listenToChatSessions(); // Changed from listenToChatHistory
+                listenToChatSessions();
                 setupSystemInfoWidget();
             }
         } catch (error) {
@@ -120,242 +126,93 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- [NEW & REFINED] Chat Session Management ---
-    
+    // --- Chat Session Management ---
     function listenToChatSessions() {
         if (!chatSessionsCollectionRef) return;
         if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
         unsubscribeFromChatSessions = chatSessionsCollectionRef.orderBy("updatedAt", "desc").onSnapshot(snapshot => {
             localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderSessionList();
-            // If a session is currently selected, refresh its content
             if (currentSessionId) {
                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
                 if (currentSessionData) {
                     renderChatMessages(currentSessionData.messages || []);
                 } else {
-                    // The selected session was deleted, so reset the view
                     handleNewChat();
                 }
             }
         }, error => console.error("Chat session listener error:", error));
     }
+    // ... (rest of chat functions are unchanged) ...
+    function renderSessionList() { if (!sessionList) return; sessionList.innerHTML = ''; localChatSessionsCache.forEach(session => { const item = document.createElement('div'); item.className = 'session-item'; item.dataset.sessionId = session.id; if (session.id === currentSessionId) { item.classList.add('active'); } item.innerHTML = `<div class="session-item-title">${session.title || '새 대화'}</div>`; item.addEventListener('click', () => selectSession(session.id)); sessionList.appendChild(item); }); }
+    function selectSession(sessionId) { if (!sessionId) return; const sessionData = localChatSessionsCache.find(s => s.id === sessionId); if (!sessionData) return; currentSessionId = sessionId; renderSessionList(); if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; renderChatMessages(sessionData.messages || []); if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block'; if (chatInput) chatInput.disabled = false; if (chatSendBtn) chatSendBtn.disabled = false; chatInput.focus(); }
+    function handleNewChat() { currentSessionId = null; renderSessionList(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
+    function handleDeleteSession() { if (!currentSessionId) return; const sessionToDelete = localChatSessionsCache.find(s => s.id === currentSessionId); showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => { if (chatSessionsCollectionRef && currentSessionId) { chatSessionsCollectionRef.doc(currentSessionId).delete().then(() => { console.log("Session deleted successfully"); handleNewChat(); }).catch(e => console.error("세션 삭제 실패:", e)); } }); }
+    async function handleChatSend() { if (!chatInput || chatInput.disabled) return; const query = chatInput.value.trim(); if (!query) return; chatInput.disabled = true; chatSendBtn.disabled = true; const userMessage = { role: 'user', content: query, timestamp: new Date().toISOString() }; let sessionRef; let messages = []; try { if (!currentSessionId) { if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; const newSession = { title: query.substring(0, 40) + (query.length > 40 ? '...' : ''), messages: [userMessage], mode: selectedMode, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), }; sessionRef = await chatSessionsCollectionRef.add(newSession); currentSessionId = sessionRef.id; messages = newSession.messages; renderSessionList(); } else { sessionRef = chatSessionsCollectionRef.doc(currentSessionId); const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); messages = [...(currentSessionData.messages || []), userMessage]; await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } renderChatMessages(messages); const loadingDiv = document.createElement('div'); loadingDiv.className = 'chat-message ai'; loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>'; if (chatMessages) { chatMessages.appendChild(loadingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; } const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] })); const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: apiMessages }) }); if (!res.ok) throw new Error(`${res.status}`); const result = await res.json(); let aiRes = "답변 생성 중 오류... 😥"; if (result.candidates?.[0].content.parts[0]) { aiRes = result.candidates[0].content.parts[0].text; } const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date().toISOString() }; messages.push(aiMessage); await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { console.error("Chat send error:", e); const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date().toISOString() }; if (sessionRef) { const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); const errorMessages = [...(currentSessionData?.messages || []), errorMessage]; await sessionRef.update({ messages: errorMessages }); } } finally { chatInput.disabled = false; chatSendBtn.disabled = false; chatInput.value = ''; chatInput.style.height = 'auto'; chatInput.focus(); } }
+    function renderChatMessages(messages = []) { if (!chatMessages) return; chatMessages.innerHTML = ''; if (messages.length === 0 && currentSessionId) { } messages.forEach(msg => { const d = document.createElement('div'); d.className = `chat-message ${msg.role}`; let c = msg.content; if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); } else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); } else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); } const cd = document.createElement('div'); cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); d.appendChild(cd); if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; t.textContent = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); } if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); } chatMessages.appendChild(d); }); chatMessages.scrollTop = chatMessages.scrollHeight; }
+    function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭 💬' }, { id: 'deep_learning', t: '심화 학습 🧠' }, { id: 'custom', t: '커스텀 ⚙️' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = m.t; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatQuizState = 'idle'; lastQuestion = ''; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
 
-    function renderSessionList() {
-        if (!sessionList) return;
-        sessionList.innerHTML = '';
-        localChatSessionsCache.forEach(session => {
-            const item = document.createElement('div');
-            item.className = 'session-item';
-            item.dataset.sessionId = session.id;
-            if (session.id === currentSessionId) {
-                item.classList.add('active');
+    // --- [NEW] System Reset Function ---
+    async function handleSystemReset() {
+        const message = "정말로 이 캔버스의 모든 메모와 채팅 기록을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 복구할 수 없습니다.";
+        showModal(message, async () => {
+            if (!db || !notesCollection || !chatSessionsCollectionRef) {
+                alert("초기화 실패: DB 연결을 확인해주세요.");
+                return;
             }
-            item.innerHTML = `<div class="session-item-title">${session.title || '새 대화'}</div>`;
-            item.addEventListener('click', () => selectSession(session.id));
-            sessionList.appendChild(item);
-        });
-    }
-    
-    function selectSession(sessionId) {
-        if (!sessionId) return;
-        const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
-        if (!sessionData) return;
-        
-        currentSessionId = sessionId;
-        renderSessionList(); // Re-render to update the 'active' class
-        
-        if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-        if (chatMessages) chatMessages.style.display = 'flex';
-        renderChatMessages(sessionData.messages || []);
-        
-        if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화';
-        if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block';
-        if (chatInput) chatInput.disabled = false;
-        if (chatSendBtn) chatSendBtn.disabled = false;
-        chatInput.focus();
-    }
-    
-    function handleNewChat() {
-        currentSessionId = null;
-        renderSessionList(); // Clears active class
-        
-        if (chatMessages) {
-             chatMessages.innerHTML = '';
-             chatMessages.style.display = 'none';
-        }
-        if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex';
-        
-        if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트';
-        if (deleteSessionBtn) deleteSessionBtn.style.display = 'none';
-        if (chatInput) {
-            chatInput.disabled = false;
-            chatInput.value = '';
-        }
-        if (chatSendBtn) chatSendBtn.disabled = false;
-    }
+            
+            updateStatus("시스템 초기화 중...", true);
+            console.log("⚠️ 시스템 초기화를 시작합니다...");
 
-    function handleDeleteSession() {
-        if (!currentSessionId) return;
-        const sessionToDelete = localChatSessionsCache.find(s => s.id === currentSessionId);
-        showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => {
-            if (chatSessionsCollectionRef && currentSessionId) {
-                chatSessionsCollectionRef.doc(currentSessionId).delete()
-                    .then(() => {
-                        console.log("Session deleted successfully");
-                        handleNewChat(); // Reset view after deletion
-                    })
-                    .catch(e => console.error("세션 삭제 실패:", e));
-            }
-        });
-    }
+            const batch = db.batch();
 
-    function generateTutorPrompt(mode, query) {
-        const tone = "너는 지금부터 친한 친구에게 말하는 것처럼, 반드시 친근한 반말(informal Korean)으로만 대화해야 해. '안녕하세요' 같은 존댓말은 절대 사용하면 안 돼.";
-        let p = "";
-        switch (mode) {
-            case 'ailey_coaching': p = `[M-CHAT-AILEY] 모드. 질문:"${query}"`; break;
-            case 'deep_learning': p = chatQuizState === 'idle' ? `[M-CHAT-QUIZ] Phase 1. 주제:"${query}"` : `[M-CHAT-QUIZ] Phase 2. 문제:"${lastQuestion}", 답변:"${query}"`; break;
-            case 'custom': p = `[M-CHAT-CUSTOM] 모드. 프롬프트:"${customPrompt}", 질문:"${query}"`; break;
-        }
-        return `${p}\n\n${tone}`;
-    }
-
-    async function handleChatSend() {
-        if (!chatInput || chatInput.disabled) return;
-        const query = chatInput.value.trim();
-        if (!query) return;
-
-        chatInput.disabled = true;
-        chatSendBtn.disabled = true;
-
-        const userMessage = { role: 'user', content: query, timestamp: new Date().toISOString() };
-        let sessionRef;
-        let messages = [];
-
-        try {
-            if (!currentSessionId) { // This is a new chat session
-                if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-                if (chatMessages) chatMessages.style.display = 'flex';
-                
-                const newSession = {
-                    title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-                    messages: [userMessage],
-                    mode: selectedMode,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                };
-                sessionRef = await chatSessionsCollectionRef.add(newSession);
-                currentSessionId = sessionRef.id;
-                messages = newSession.messages;
-                renderSessionList();
-            } else { // This is an existing session
-                sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
-                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                messages = [...(currentSessionData.messages || []), userMessage];
-                await sessionRef.update({ 
-                    messages: messages,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            try {
+                // Get all notes and add delete operations to batch
+                const notesSnapshot = await notesCollection.get();
+                let notesCount = 0;
+                notesSnapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                    notesCount++;
                 });
-            }
-            renderChatMessages(messages);
-            
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'chat-message ai';
-            loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>';
-            if (chatMessages) {
-                chatMessages.appendChild(loadingDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
+                console.log(`메모 ${notesCount}개 삭제 대기 중...`);
 
-            const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] }));
-            // Note: A more robust implementation might trim the history to fit token limits.
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: apiMessages })
-            });
+                // Get all chat sessions and add delete operations to batch
+                const chatsSnapshot = await chatSessionsCollectionRef.get();
+                let chatsCount = 0;
+                chatsSnapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                    chatsCount++;
+                });
+                console.log(`채팅 세션 ${chatsCount}개 삭제 대기 중...`);
 
-            if (!res.ok) throw new Error(`${res.status}`);
-            const result = await res.json();
-            let aiRes = "답변 생성 중 오류... 😥";
-            if (result.candidates?.[0].content.parts[0]) {
-                aiRes = result.candidates[0].content.parts[0].text;
+                if (notesCount === 0 && chatsCount === 0) {
+                     alert("삭제할 데이터가 없습니다.");
+                     updateStatus("", true);
+                     return;
+                }
+
+                await batch.commit();
+
+                console.log("✅ 시스템 초기화 완료.");
+                alert("✅ 모든 데이터가 성공적으로 삭제되었습니다. 페이지를 새로고침하여 시스템을 다시 시작합니다.");
+                location.reload();
+
+            } catch (error) {
+                console.error("❌ 시스템 초기화 실패:", error);
+                alert(`시스템 초기화 중 오류가 발생했습니다: ${error.message}`);
+                updateStatus("초기화 실패 ❌", false);
             }
-            
-            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date().toISOString() };
-            messages.push(aiMessage);
-            await sessionRef.update({ 
-                messages: messages,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-             });
-
-        } catch (e) {
-            console.error("Chat send error:", e);
-            const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date().toISOString() };
-            if (sessionRef) {
-                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                 const errorMessages = [...(currentSessionData.messages || []), errorMessage];
-                 await sessionRef.update({ messages: errorMessages });
-            }
-        } finally {
-            chatInput.disabled = false;
-            chatSendBtn.disabled = false;
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
-            chatInput.focus();
-        }
-    }
-    
-    function renderChatMessages(messages = []) {
-        if (!chatMessages) return;
-        chatMessages.innerHTML = '';
-        if (messages.length === 0 && currentSessionId) {
-             // Session exists but has no messages, maybe show a mini-prompt?
-        }
-        messages.forEach(msg => {
-            const d = document.createElement('div');
-            d.className = `chat-message ${msg.role}`;
-            let c = msg.content;
-            if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); }
-            else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); }
-            else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); }
-            const cd = document.createElement('div');
-            cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-            d.appendChild(cd);
-            if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; t.textContent = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); }
-            if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); }
-            chatMessages.appendChild(d);
-        });
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function setupChatModeSelector() {
-        if (!chatModeSelector) return;
-        // This selector's role is now to set the mode for NEW chats.
-        // It could be disabled when a chat is active, or its selection could fork a new chat.
-        // For now, it just sets a global variable.
-        chatModeSelector.innerHTML = '';
-        const modes = [{ id: 'ailey_coaching', t: '기본 코칭 💬' }, { id: 'deep_learning', t: '심화 학습 🧠' }, { id: 'custom', t: '커스텀 ⚙️' }];
-        modes.forEach(m => {
-            const b = document.createElement('button');
-            b.dataset.mode = m.id;
-            b.innerHTML = m.t;
-            if (m.id === selectedMode) b.classList.add('active');
-            b.addEventListener('click', () => {
-                selectedMode = m.id;
-                chatQuizState = 'idle';
-                lastQuestion = '';
-                chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-                b.classList.add('active');
-                if (selectedMode === 'custom') openPromptModal();
-            });
-            chatModeSelector.appendChild(b);
         });
     }
 
-    // --- [Unchanged] Notes, UI & Utilities ---
+
+    // --- Data Backup & Restore ---
+    function exportAllData() { if (localNotesCache.length === 0 && localChatSessionsCache.length === 0) { showModal("백업할 데이터가 없습니다.", () => {}); return; } const dataToExport = { backupVersion: '1.0', backupDate: new Date().toISOString(), notes: localNotesCache, chatSessions: localChatSessionsCache }; const str = JSON.stringify(dataToExport, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; const date = new Date().toISOString().slice(0, 10); a.download = `ailey-canvas-backup-${date}.json`; a.click(); URL.revokeObjectURL(url); }
+    function handleRestoreClick() { if (fileImporter) { fileImporter.click(); } }
+    async function importAllData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const data = JSON.parse(e.target.result); if (!data.backupVersion || !data.notes || !data.chatSessions) { throw new Error("유효하지 않은 파일 형식입니다."); } const notesCount = data.notes.length; const sessionsCount = data.chatSessions.length; const confirmationMessage = `파일에서 ${notesCount}개의 메모와 ${sessionsCount}개의 채팅 세션을 발견했습니다. 현재 클라우드 데이터를 이 파일의 내용으로 덮어씁니다. 이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?`; showModal(confirmationMessage, async () => { if (!db || !notesCollection || !chatSessionsCollectionRef) { console.error("DB or collections not initialized"); updateStatus('복원 실패: DB 연결 오류 ❌', false); return; } updateStatus('복원 중...', true); const batch = db.batch(); data.notes.forEach(note => { if (!note.id) return; const docRef = notesCollection.doc(note.id); const { id, ...dataToWrite } = note; if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') { dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt)); } if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') { dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt)); } batch.set(docRef, dataToWrite); }); data.chatSessions.forEach(session => { if (!session.id) return; const docRef = chatSessionsCollectionRef.doc(session.id); const { id, ...dataToWrite } = session; if (dataToWrite.createdAt && typeof dataToWrite.createdAt === 'string') { dataToWrite.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.createdAt)); } if (dataToWrite.updatedAt && typeof dataToWrite.updatedAt === 'string') { dataToWrite.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToWrite.updatedAt)); } if (Array.isArray(dataToWrite.messages)) { dataToWrite.messages.forEach(message => { if (message.timestamp && typeof message.timestamp === 'string') { message.timestamp = firebase.firestore.Timestamp.fromDate(new Date(message.timestamp)); } }); } batch.set(docRef, dataToWrite); }); try { await batch.commit(); updateStatus('복원 완료 ✓', true); } catch (error) { console.error("데이터 복원 실패:", error); updateStatus('복원 실패 ❌', false); showModal(`데이터 복원 중 오류가 발생했습니다: ${error.message}`, () => {}); } }); } catch (error) { console.error("File parsing error:", error); showModal(`파일을 읽는 중 오류가 발생했습니다: ${error.message}`, () => {}); } finally { event.target.value = null; } }; reader.readAsText(file); }
     
+    // --- Utilities, Notes, and Unchanged Functions ---
+    // ... (rest of functions are unchanged) ...
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { const tempTextarea = document.createElement('textarea'); tempTextarea.value = canvasId; tempTextarea.style.position = 'absolute'; tempTextarea.style.left = '-9999px'; document.body.appendChild(tempTextarea); tempTextarea.select(); try { document.execCommand('copy'); copyBtn.textContent = '✅'; } catch (err) { console.error('Copy failed', err); copyBtn.textContent = '❌'; } document.body.removeChild(tempTextarea); setTimeout(() => { copyBtn.textContent = '📋'; }, 1500); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { const keywordChips = document.querySelectorAll('.keyword-chip'); keywordChips.forEach(chip => { const tooltipText = chip.dataset.tooltip; if (tooltipText && chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = tooltipText; } }); const inlineHighlights = document.querySelectorAll('.content-section strong[data-tooltip]'); inlineHighlights.forEach(highlight => { const tooltipText = highlight.dataset.tooltip; if(tooltipText && !highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = tooltipText; highlight.appendChild(tooltipElement); } }); }
@@ -375,10 +232,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function saveNote() { if (debounceTimer) clearTimeout(debounceTimer); if (!currentNoteId || !notesCollection) return; const data = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; notesCollection.doc(currentNoteId).update(data).then(() => updateStatus('저장됨 ✓', true)).catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); }); }
     function handleDeleteRequest(id) { showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => { if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e)); }); }
     async function togglePin(id) { if (!notesCollection) return; const note = localNotesCache.find(n => n.id === id); if (note) await notesCollection.doc(id).update({ isPinned: !note.isPinned }); }
-    function exportNotes() { const str = JSON.stringify(localNotesCache, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'my-notes.json'; a.click(); URL.revokeObjectURL(url); }
     function switchView(view) { if (view === 'editor') { if(noteListView) noteListView.classList.remove('active'); if(noteEditorView) noteEditorView.classList.add('active'); } else { if(noteEditorView) noteEditorView.classList.remove('active'); if(noteListView) noteListView.classList.add('active'); currentNoteId = null; } }
     function openNoteEditor(id) { const note = localNotesCache.find(n => n.id === id); if (note && noteTitleInput && noteContentTextarea) { currentNoteId = id; noteTitleInput.value = note.title || ''; noteContentTextarea.value = note.content || ''; switchView('editor'); } }
-    function updateStatus(msg, success) { if (!autoSaveStatus) return; autoSaveStatus.textContent = msg; autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral'; setTimeout(() => { autoSaveStatus.textContent = ''; }, 2000); }
+    function updateStatus(msg, success) { if (!autoSaveStatus) return; autoSaveStatus.textContent = msg; autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral'; setTimeout(() => { autoSaveStatus.textContent = ''; }, 3000); }
     function applyFormat(fmt) { if (!noteContentTextarea) return; const s = noteContentTextarea.selectionStart, e = noteContentTextarea.selectionEnd, t = noteContentTextarea.value.substring(s, e); const m = fmt === 'bold' ? '**' : (fmt === 'italic' ? '*' : '`'); noteContentTextarea.value = `${noteContentTextarea.value.substring(0,s)}${m}${t}${m}${noteContentTextarea.value.substring(e)}`; noteContentTextarea.focus(); }
     async function startQuiz() { if (!quizModalOverlay) return; const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', '); if (!k) { showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); return; } if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>'; if (quizResults) quizResults.innerHTML = ''; quizModalOverlay.style.display = 'flex'; try { const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); currentQuizData = JSON.parse(res); renderQuiz(currentQuizData); } catch (e) { if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; } }
     function renderQuiz(data) { if (!quizContainer || !data.questions) return; quizContainer.innerHTML = ''; data.questions.forEach((q, i) => { const b = document.createElement('div'); b.className = 'quiz-question-block'; const p = document.createElement('p'); p.textContent = `${i + 1}. ${q.q}`; const o = document.createElement('div'); o.className = 'quiz-options'; q.o.forEach(opt => { const l = document.createElement('label'); const r = document.createElement('input'); r.type = 'radio'; r.name = `q-${i}`; r.value = opt; l.append(r,` ${opt}`); o.appendChild(l); }); b.append(p, o); quizContainer.appendChild(b); }); }
@@ -416,7 +272,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
         if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
         if (searchInput) searchInput.addEventListener('input', renderNoteList);
-        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportNotes);
+        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportAllData);
+        if (restoreDataBtn) restoreDataBtn.addEventListener('click', handleRestoreClick);
+        if (fileImporter) fileImporter.addEventListener('change', importAllData);
+        // [NEW] Add event listener for the system reset button
+        if (systemResetBtn) systemResetBtn.addEventListener('click', handleSystemReset);
         const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
         if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
