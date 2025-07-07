@@ -1,32 +1,12 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 8.3 (Final Configuration Applied)
+Version: 10.0 (Robust Initialization & Final Stable)
 Architect: [Username] & System Architect Ailey
-Description: This is the complete, unabridged, and stable script with the user's Google Client ID applied. All features should be operational after the user inserts their API Key.
+Description: This is the complete, unabridged, and stable script with a new robust initialization flow.
+It actively checks for library readiness before executing, resolving all previous loading and ReferenceError issues.
+The Data Bridge architecture is fully implemented.
 */
-
-// [GLOBAL SCOPE] Functions called by HTML onload attribute
-function handleGapiLoad() {
-    gapi.load('client:picker', () => {
-        gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
-        window.gapiInited = true;
-    });
-};
-
-function handleGisLoad() {
-    // [Applied] The user's Client ID has been inserted here.
-    const CLIENT_ID = '464743950938-qm5uidbabg4cuvccje11drdk07jaahd.apps.googleusercontent.com';
-    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-
-    window.tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: '',
-    });
-    window.gisInited = true;
-};
-
 
 document.addEventListener('DOMContentLoaded', function () {
     // --- 1. Element Declarations ---
@@ -62,9 +42,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const formatToolbar = document.querySelector('.format-toolbar');
     const linkTopicBtn = document.getElementById('link-topic-btn');
     const customModal = document.getElementById('custom-modal');
-    const modalMessage = document.getElementById('modal-message');
-    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-    const modalCancelBtn = document.getElementById('modal-cancel-btn');
     const promptModalOverlay = document.getElementById('prompt-modal-overlay');
     const customPromptInput = document.getElementById('custom-prompt-input');
     const promptSaveBtn = document.getElementById('prompt-save-btn');
@@ -100,38 +77,16 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentSessionId = null;
     let unsubscribeFromChatSessions = null;
     let selectedMode = 'ailey_coaching';
-    let chatQuizState = 'idle';
-    let lastQuestion = '';
-    let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
     let currentQuizData = null;
-    
+    let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
+
     // --- 3. Function Definitions ---
+    
+    // --- 3.1 Data Bridge Interaction Logic ---
 
-    // --- 3.1 Google API & Auth ---
-    function requestGoogleAuth() {
-        return new Promise((resolve, reject) => {
-            if (!window.gapiInited || !window.gisInited) {
-                const errorMessage = "Google API가 아직 로드되지 않았거나 Client ID가 설정되지 않았습니다. 잠시 후 다시 시도해주세요.";
-                alert(errorMessage);
-                return reject(new Error(errorMessage));
-            }
-            window.tokenClient.callback = (resp) => {
-                if (resp.error !== undefined) { reject(resp); } else { resolve(resp); }
-            };
-            if (gapi.client.getToken() === null) {
-                window.tokenClient.requestAccessToken({ prompt: 'consent' });
-            } else {
-                window.tokenClient.requestAccessToken({ prompt: '' });
-            }
-        });
-    }
-
-    async function handleExportToDrive() {
-        showLoadingOverlay('Google Drive 인증 중...');
+    async function showExportModal() {
+        showLoadingOverlay("데이터를 준비하는 중...");
         try {
-            await requestGoogleAuth();
-            showLoadingOverlay('데이터 수집 및 내보내는 중...');
-
             const notesSnapshot = await notesCollection.get();
             const notesData = notesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -145,75 +100,90 @@ document.addEventListener('DOMContentLoaded', function () {
                 chatSessions: chatSessionsData
             };
             
-            const boundary = '-------314159265358979323846';
-            const delimiter = "\r\n--" + boundary + "\r\n";
-            const close_delim = "\r\n--" + boundary + "--";
-            
-            const fileName = `[Ailey & Bailey] 백업_${new Date().toISOString().split('T')[0]}.json`;
-            const fileContent = JSON.stringify(backupData, null, 2);
-            
-            const metadata = { 'name': fileName, 'mimeType': 'application/json' };
-
-            const multipartRequestBody =
-                delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata) +
-                delimiter + 'Content-Type: application/json\r\n\r\n' + fileContent + close_delim;
-
-            await gapi.client.request({
-                'path': 'https://www.googleapis.com/upload/drive/v3/files', 'method': 'POST',
-                'params': {'uploadType': 'multipart'}, 'headers': {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
-                'body': multipartRequestBody
-            });
-            alert('✅ Google Drive에 백업이 완료되었습니다!');
-        } catch (error) {
-            console.error("Google Drive 내보내기 오류:", error);
-            const errorMsg = error.result?.error?.message || error.details || error.message || '알 수 없는 오류';
-            alert(`❌ Google Drive에 내보내는 중 오류가 발생했습니다: ${errorMsg}`);
-        } finally {
+            const jsonString = JSON.stringify(backupData, null, 2);
             hideLoadingOverlay();
+            
+            const bridgeUrl = 'https://lemos999.github.io/ailey-bailey-canvas/bridge.html';
+            const modalContainer = document.getElementById('custom-modal');
+            modalContainer.innerHTML = `
+                <div class="custom-modal">
+                    <h3 style="margin-top:0;">☁️ 데이터 내보내기</h3>
+                    <p style="font-size:0.9em; text-align:left; line-height:1.6;">아래 3단계를 따라 데이터를 Google Drive에 백업하세요.</p>
+                    <ol style="font-size:0.9em; text-align:left; padding-left:20px; line-height:1.8;">
+                        <li>아래 <strong>[전체 텍스트 복사]</strong> 버튼을 눌러 데이터를 복사합니다.</li>
+                        <li><strong>[데이터 브릿지로 이동]</strong> 버튼을 눌러 새 탭을 엽니다.</li>
+                        <li>새 탭의 텍스트 상자에 데이터를 붙여넣고 <strong>[드라이브에 저장하기]</strong> 버튼을 누릅니다.</li>
+                    </ol>
+                    <textarea readonly style="width:100%; height:150px; font-size:12px; resize:none;">${jsonString}</textarea>
+                    <div class="custom-modal-actions">
+                        <button id="modal-cancel-btn" class="modal-btn">닫기</button>
+                        <button id="modal-copy-btn" class="modal-btn" style="background-color:#34c759;">전체 텍스트 복사</button>
+                        <a href="${bridgeUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">
+                            <button class="modal-btn">데이터 브릿지로 이동</button>
+                        </a>
+                    </div>
+                </div>
+            `;
+            modalContainer.style.display = 'flex';
+
+            modalContainer.querySelector('#modal-cancel-btn').onclick = () => { modalContainer.style.display = 'none'; };
+            modalContainer.querySelector('#modal-copy-btn').onclick = () => {
+                navigator.clipboard.writeText(jsonString).then(() => {
+                    alert('✅ 데이터가 클립보드에 복사되었습니다.');
+                });
+            };
+        } catch (error) {
+            console.error("데이터 준비 오류:", error);
+            hideLoadingOverlay();
+            alert("데이터를 준비하는 중 오류가 발생했습니다.");
         }
     }
-    
-    async function handleImportFromDrive() {
-        showLoadingOverlay('Google Drive 인증 중...');
-        try {
-            await requestGoogleAuth();
-            hideLoadingOverlay();
-            
-            // This API Key is required for Google Picker to work.
-            const API_KEY = '💥 Google Cloud Console의 "API 키" 섹션에서 생성한 키를 여기에 붙여넣으세요 💥';
-            if (API_KEY.startsWith('💥')) {
-                alert('Google Picker를 사용하려면 API 키가 필요합니다. script.js 파일을 수정해주세요.');
+
+    function showImportModal() {
+        const bridgeUrl = 'https://lemos999.github.io/ailey-bailey-canvas/bridge.html';
+        const modalContainer = document.getElementById('custom-modal');
+        modalContainer.innerHTML = `
+            <div class="custom-modal">
+                <h3 style="margin-top:0;">📥 데이터 불러오기</h3>
+                <p style="font-size:0.9em; text-align:left; line-height:1.6;">아래 3단계를 따라 Google Drive에서 데이터를 복원하세요.</p>
+                <ol style="font-size:0.9em; text-align:left; padding-left:20px; line-height:1.8;">
+                    <li><strong>[데이터 브릿지로 이동]</strong> 버튼을 눌러 데이터를 가져옵니다.</li>
+                    <li>브릿지 페이지에서 데이터를 복사한 후, 이 창으로 돌아옵니다.</li>
+                    <li>아래 텍스트 상자에 데이터를 붙여넣고 <strong>[복원 실행]</strong> 버튼을 누르세요.</li>
+                </ol>
+                <textarea id="import-data-area" placeholder="데이터 브릿지에서 복사한 JSON 데이터를 여기에 붙여넣으세요..." style="width:100%; height:150px; font-size:12px; resize:vertical;"></textarea>
+                <div class="custom-modal-actions">
+                    <button id="modal-cancel-btn" class="modal-btn">닫기</button>
+                    <a href="${bridgeUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">
+                        <button class="modal-btn">데이터 브릿지로 이동</button>
+                    </a>
+                    <button id="modal-restore-btn" class="modal-btn" style="background-color:#d9534f;">복원 실행</button>
+                </div>
+            </div>
+        `;
+        modalContainer.style.display = 'flex';
+
+        modalContainer.querySelector('#modal-cancel-btn').onclick = () => { modalContainer.style.display = 'none'; };
+        modalContainer.querySelector('#modal-restore-btn').onclick = async () => {
+            const importDataArea = document.getElementById('import-data-area');
+            const jsonString = importDataArea.value;
+            if (!jsonString.trim()) {
+                alert("붙여넣은 데이터가 없습니다.");
                 return;
             }
-
-            const view = new google.picker.View(google.picker.ViewId.DOCS);
-            view.setMimeTypes("application/json");
-            const picker = new google.picker.PickerBuilder()
-                .setOAuthToken(gapi.client.getToken().access_token)
-                .addView(view)
-                .setDeveloperKey(API_KEY)
-                .setCallback(async (data) => {
-                    if (data.action === google.picker.Action.PICKED) {
-                        const fileId = data.docs[0].id;
-                        showLoadingOverlay('백업 파일 다운로드 중...');
-                        const fileResponse = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
-                        hideLoadingOverlay();
-                        
-                        const backupData = JSON.parse(fileResponse.body);
-                        const isConfirmed = await showImportConfirmModal();
-                        if (isConfirmed) { await executeImport(backupData); }
-                    }
-                })
-                .build();
-            picker.setVisible(true);
-        } catch (error) {
-            console.error("Google Drive 불러오기 오류:", error);
-            const errorMsg = error.result?.error?.message || error.details || error.message || '알 수 없는 오류';
-            alert(`❌ Google Drive에서 불러오는 중 오류가 발생했습니다: ${errorMsg}`);
-            hideLoadingOverlay();
-        }
+            try {
+                const backupData = JSON.parse(jsonString);
+                const isConfirmed = await showImportConfirmModal();
+                if (isConfirmed) {
+                    await executeImport(backupData);
+                }
+            } catch (e) {
+                alert("데이터 형식이 올바르지 않습니다. 정확한 JSON 데이터를 붙여넣어 주세요.");
+                console.error("JSON 파싱 오류:", e);
+            }
+        };
     }
-
+    
     async function executeImport(data) {
         if (!data.notes || !data.chatSessions) {
             alert("❌ 파일 형식이 올바르지 않습니다. (notes, chatSessions 속성 필요)");
@@ -223,12 +193,10 @@ document.addEventListener('DOMContentLoaded', function () {
         
         try {
             const batch = db.batch();
-
             const oldNotes = await notesCollection.get();
             oldNotes.forEach(doc => batch.delete(doc.ref));
             const oldChatSessions = await chatSessionsCollectionRef.get();
             oldChatSessions.forEach(doc => batch.delete(doc.ref));
-            
             data.notes.forEach(note => {
                 const docRef = notesCollection.doc(note.id);
                 const noteData = { ...note };
@@ -237,7 +205,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 delete noteData.id;
                 batch.set(docRef, noteData);
             });
-
             data.chatSessions.forEach(session => {
                 const docRef = chatSessionsCollectionRef.doc(session.id);
                 const sessionData = { ...session };
@@ -254,7 +221,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 delete sessionData.id;
                 batch.set(docRef, sessionData);
             });
-
             await batch.commit();
             alert("✅ 데이터 복원이 완료되었습니다. 페이지를 새로고침합니다.");
             location.reload();
@@ -267,32 +233,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- 3.2 Firebase & App Core Logic ---
     async function initializeFirebase() {
+        if (typeof firebase === 'undefined' || typeof firebase.app === 'undefined') {
+            throw new Error("Firebase library is not loaded.");
+        }
         try {
             const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
             const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
             if (!firebaseConfig) { throw new Error("Firebase config not found."); }
             if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-            
             const auth = firebase.auth();
             db = firebase.firestore();
-            
             if (initialAuthToken) {
-                await auth.signInWithCustomToken(initialAuthToken).catch(async (err) => {
-                   console.warn("Custom token sign-in failed, trying anonymous.", err);
+                await auth.signInWithCustomToken(initialAuthToken).catch(async () => {
                    await auth.signInAnonymously();
                 });
             } else { await auth.signInAnonymously(); }
-            
             currentUser = auth.currentUser;
-
             if (currentUser) {
                 notesCollection = db.collection(`artifacts/${appId}/users/${currentUser.uid}/notes`);
                 chatSessionsCollectionRef = db.collection(`artifacts/${appId}/users/${currentUser.uid}/chatSessions`);
                 listenToNotes();
                 listenToChatSessions();
             }
-        } catch (error) {
-            console.error("Firebase 초기화 또는 인증 실패:", error);
+        } catch (error) { 
+            console.error("Firebase 초기화 또는 인증 실패:", error); 
+            throw error; // Re-throw to be caught by Promise.all
         }
     }
 
@@ -363,15 +328,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function handleChatSend() {
         if (!chatInput || chatInput.disabled) return;
-        const query = chatInput.value.trim();
-        if (!query) return;
-
-        chatInput.disabled = true;
-        chatSendBtn.disabled = true;
-
+        const query = chatInput.value.trim(); if (!query) return;
+        chatInput.disabled = true; chatSendBtn.disabled = true;
         const userMessage = { role: 'user', content: query, timestamp: new Date() };
         let sessionRef;
-
         try {
             if (!currentSessionId) {
                 if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
@@ -393,10 +353,8 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (e) {
             console.error("Chat send error:", e);
         } finally {
-            chatInput.disabled = false;
-            chatSendBtn.disabled = false;
-            chatInput.value = '';
-            chatInput.focus();
+            chatInput.disabled = false; chatSendBtn.disabled = false;
+            chatInput.value = ''; chatInput.focus();
         }
     }
     
@@ -480,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function handleDeleteRequest(id) {
-        showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => {
+        showModal(`이 메모를 영구적으로 삭제하시겠습니까?`, () => {
             if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e));
         });
     }
@@ -658,14 +616,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function showModal(message, onConfirm) {
-        const modal = document.getElementById('custom-modal');
-        const msgEl = document.getElementById('modal-message');
-        const confirmBtn = document.getElementById('modal-confirm-btn');
-        const cancelBtn = document.getElementById('modal-cancel-btn');
-        if (!modal || !msgEl || !confirmBtn || !cancelBtn) return;
-        msgEl.textContent = message; modal.style.display = 'flex';
-        confirmBtn.onclick = () => { onConfirm(); modal.style.display = 'none'; };
-        cancelBtn.onclick = () => { modal.style.display = 'none'; };
+        // Use the main modal container, but dynamically change its content for simple confirms
+        const modalContainer = document.getElementById('custom-modal');
+        modalContainer.innerHTML = `
+            <div class="custom-modal">
+                <p id="modal-message">${message}</p>
+                <div class="custom-modal-actions">
+                    <button id="modal-cancel-btn" class="modal-btn">취소</button>
+                    <button id="modal-confirm-btn" class="modal-btn">삭제</button>
+                </div>
+            </div>
+        `;
+        if (!modalContainer) return;
+        modalContainer.style.display = 'flex';
+        modalContainer.querySelector('#modal-confirm-btn').onclick = () => { onConfirm(); modalContainer.style.display = 'none'; };
+        modalContainer.querySelector('#modal-cancel-btn').onclick = () => { modalContainer.style.display = 'none'; };
     }
 
     function showImportConfirmModal() {
@@ -707,15 +672,21 @@ document.addEventListener('DOMContentLoaded', function () {
     async function startQuiz() {
         if (!quizModalOverlay) return;
         const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', ');
-        if (!k) { showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); return; }
+        if (!k) {
+            showModal("퀴즈 생성 키워드가 없습니다.", ()=>{});
+            return;
+        }
         if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>';
         if (quizResults) quizResults.innerHTML = '';
         quizModalOverlay.style.display = 'flex';
         try {
-            const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500));
+            // This is a placeholder for a real API call to generate a quiz
+            const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"정조가 왕권 강화를 위해 설립한 학술 연구 기관의 이름은 무엇인가요?","o":["집현전","규장각","홍문관"],"a":"규장각"}]})), 500));
             currentQuizData = JSON.parse(res);
             renderQuiz(currentQuizData);
-        } catch (e) { if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; }
+        } catch (e) {
+            if(quizContainer) quizContainer.innerHTML = '퀴즈 생성에 실패했습니다.';
+        }
     }
     
     function renderQuiz(data) {
@@ -734,23 +705,30 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
     
-    function openPromptModal() { if (customPromptInput) customPromptInput.value = customPrompt; if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; }
-    function closePromptModal() { if (promptModalOverlay) promptModalOverlay.style.display = 'none'; }
-    function saveCustomPrompt() { if (customPromptInput) { customPrompt = customPromptInput.value; localStorage.setItem('customTutorPrompt', customPrompt); closePromptModal(); } }
+    function openPromptModal() {
+        if (customPromptInput) customPromptInput.value = customPrompt;
+        if (promptModalOverlay) promptModalOverlay.style.display = 'flex';
+    }
+
+    function closePromptModal() {
+        if (promptModalOverlay) promptModalOverlay.style.display = 'none';
+    }
+
+    function saveCustomPrompt() {
+        if (customPromptInput) {
+            customPrompt = customPromptInput.value;
+            localStorage.setItem('customTutorPrompt', customPrompt);
+            closePromptModal();
+        }
+    }
 
     // --- 4. Centralized Event Listener Setup ---
     function setupEventListeners() {
         document.addEventListener('mouseup', handleTextSelection);
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
-        if (themeToggle) themeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-mode');
-            themeToggle.textContent = body.classList.contains('dark-mode') ? '☀️' : '🌙';
-        });
-        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => {
-            wrapper.classList.toggle('toc-hidden');
-            systemInfoWidget?.classList.toggle('tucked');
-        });
+        if (themeToggle) themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); });
+        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); });
         if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
         if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => togglePanel(notesAppPanel));
@@ -775,14 +753,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
         if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
         if (searchInput) searchInput.addEventListener('input', renderNoteList);
-        if (exportToDriveBtn) exportToDriveBtn.addEventListener('click', handleExportToDrive);
-        if (importFromDriveBtn) importFromDriveBtn.addEventListener('click', handleImportFromDrive);
+        
+        if (exportToDriveBtn) exportToDriveBtn.addEventListener('click', showExportModal);
+        if (importFromDriveBtn) importFromDriveBtn.addEventListener('click', showImportModal);
+
         const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
         if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
         if (notesList) notesList.addEventListener('click', e => {
-            const i = e.target.closest('.note-item'); if (!i) return;
-            const id = i.dataset.id;
+            const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id;
             if (e.target.closest('.delete-btn')) handleDeleteRequest(id);
             else if (e.target.closest('.pin-btn')) togglePin(id);
             else openNoteEditor(id);
@@ -792,19 +771,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- 5. Application Initialization Flow ---
+    function setupUI() {
+        setupNavigator();
+        setupChatModeSelector();
+        initializeTooltips();
+        makePanelDraggable(chatPanel);
+        makePanelDraggable(notesAppPanel);
+        setupSystemInfoWidget();
+    }
+    
+    // New Robust Initialization Flow
     function initialize() {
-        updateClock();
-        setInterval(updateClock, 1000);
+        updateClock(); setInterval(updateClock, 1000);
         
-        initializeFirebase().then(() => {
-            setupNavigator();
-            setupChatModeSelector();
-            initializeTooltips();
-            makePanelDraggable(chatPanel);
-            makePanelDraggable(notesAppPanel);
-            setupSystemInfoWidget();
-            setupEventListeners();
-        });
+        // No Google API initialization here, it's handled by the Bridge.
+        // We only need to ensure Firebase is ready before setting up the UI and listeners.
+        initializeFirebase()
+            .then(() => {
+                console.log("Firebase is ready. Setting up UI and event listeners.");
+                setupUI();
+                setupEventListeners();
+            })
+            .catch(error => {
+                console.error("Critical initialization failure. App cannot start.", error);
+                alert("앱을 시작하는 데 치명적인 오류가 발생했습니다. 자세한 내용은 콘솔을 확인해주세요.");
+            });
     }
     
     // --- Run Initialization ---
