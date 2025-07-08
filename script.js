@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.4 (Advanced Sidebar & Session Context Menu)
+Version: 9.5 (Gemini Model Selector)
 Architect: [Username] & System Architect Ailey
-Description: Major sidebar UX overhaul. Projects are now grouped at the top. Sessions are grouped below projects by date. Added a powerful right-click context menu for sessions (rename, move, pin, delete, view info). Implemented drag-and-drop functionality to move sessions out of projects.
+Description: Added a dropdown menu in the chat panel header allowing users to select the Gemini API model (2.5 Flash or 2.0 Flash). The selection is saved to localStorage and dynamically used in API calls.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const deleteSessionBtn = document.getElementById('delete-session-btn');
     const chatWelcomeMessage = document.getElementById('chat-welcome-message');
     const searchSessionsInput = document.getElementById('search-sessions-input');
-    const llmModelSelectorContainer = document.getElementById('llm-model-selector-container');
+    const chatModelSelectorContainer = document.getElementById('chat-model-selector-container'); // [ADDED]
 
     // -- Backup & Restore UI Elements
     const restoreDataBtn = document.getElementById('restore-data-btn');
@@ -88,12 +88,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let unsubscribeFromChatSessions = null;
     let unsubscribeFromProjects = null;
     let selectedMode = 'ailey_coaching';
+    let selectedApiModel = localStorage.getItem('selectedApiModel') || 'gemini-2.5-flash-preview-04-17'; // [ADDED]
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
-    const MODELS = {
-        '2.5-flash': { id: 'gemini-2.5-flash-preview-04-17', name: 'Flash 2.5', desc: '가장 빠르고 최신 버전 (기본값)' },
-        '2.0-pro': { id: 'gemini-pro', name: 'Pro 2.0', desc: '안정적인 버전' }
-    };
-    let selectedModelId = localStorage.getItem('selectedLLM') || '2.5-flash';
     let currentQuizData = null;
     let currentOpenContextMenu = null;
     let newlyCreatedProjectId = null;
@@ -367,6 +363,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const searchTerm = searchSessionsInput.value.toLowerCase();
         sessionListContainer.innerHTML = ''; // Clear previous content
     
+        // Filter projects and sessions based on search
+        const filteredProjects = localProjectsCache.filter(p => p.name?.toLowerCase().includes(searchTerm));
+        const filteredSessions = localChatSessionsCache.filter(s => (s.title || '새 대화').toLowerCase().includes(searchTerm));
+    
         const fragment = document.createDocumentFragment();
     
         // --- 1. Render Projects Group ---
@@ -571,39 +571,47 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) { console.error("Error toggling pin status:", error); }
     }
 
-    async function handleChatSend() { if (!chatInput || chatInput.disabled) return; const query = chatInput.value.trim(); if (!query) return; chatInput.disabled = true; chatSendBtn.disabled = true; const userMessage = { role: 'user', content: query, timestamp: new Date() }; let sessionRef; let messages = []; let newSessionProjectId = null; try { document.querySelector('.project-header.active-drop-target')?.dataset.projectId; if (!currentSessionId) { const activeProject = document.querySelector('.project-header.active-drop-target'); newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null; if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; const newSession = { title: query.substring(0, 40) + (query.length > 40 ? '...' : ''), messages: [userMessage], mode: selectedMode, projectId: newSessionProjectId, isPinned: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; sessionRef = await chatSessionsCollectionRef.add(newSession); currentSessionId = sessionRef.id; messages = newSession.messages; } else { sessionRef = chatSessionsCollectionRef.doc(currentSessionId); const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); messages = [...(currentSessionData.messages || []), userMessage]; await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } renderChatMessages(messages); const loadingDiv = document.createElement('div'); loadingDiv.className = 'chat-message ai'; loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>'; if (chatMessages) { chatMessages.appendChild(loadingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; } const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] })); const modelEndpoint = MODELS[selectedModelId]?.id || MODELS['2.5-flash'].id; const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: apiMessages }) }); if (!res.ok) throw new Error(`${res.status}`); const result = await res.json(); let aiRes = "답변 생성 중 오류... 😥"; if (result.candidates?.[0].content.parts[0]) { aiRes = result.candidates[0].content.parts[0].text; } const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() }; messages.push(aiMessage); await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { console.error("Chat send error:", e); const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() }; if (sessionRef) { const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); const errorMessages = [...(currentSessionData?.messages || []), errorMessage]; await sessionRef.update({ messages: errorMessages }); } } finally { chatInput.disabled = false; chatSendBtn.disabled = false; chatInput.value = ''; chatInput.style.height = 'auto'; chatInput.focus(); } }
+    async function handleChatSend() { if (!chatInput || chatInput.disabled) return; const query = chatInput.value.trim(); if (!query) return; chatInput.disabled = true; chatSendBtn.disabled = true; const userMessage = { role: 'user', content: query, timestamp: new Date() }; let sessionRef; let messages = []; let newSessionProjectId = null; try { document.querySelector('.project-header.active-drop-target')?.dataset.projectId; if (!currentSessionId) { const activeProject = document.querySelector('.project-header.active-drop-target'); newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null; if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; const newSession = { title: query.substring(0, 40) + (query.length > 40 ? '...' : ''), messages: [userMessage], mode: selectedMode, projectId: newSessionProjectId, isPinned: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; sessionRef = await chatSessionsCollectionRef.add(newSession); currentSessionId = sessionRef.id; messages = newSession.messages; } else { sessionRef = chatSessionsCollectionRef.doc(currentSessionId); const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); messages = [...(currentSessionData.messages || []), userMessage]; await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } renderChatMessages(messages); const loadingDiv = document.createElement('div'); loadingDiv.className = 'chat-message ai'; loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>'; if (chatMessages) { chatMessages.appendChild(loadingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; } const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] })); const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedApiModel}:generateContent?key=`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: apiMessages }) }); if (!res.ok) throw new Error(`${res.status}`); const result = await res.json(); let aiRes = "답변 생성 중 오류... 😥"; if (result.candidates?.[0].content.parts[0]) { aiRes = result.candidates[0].content.parts[0].text; } const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() }; messages.push(aiMessage); await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { console.error("Chat send error:", e); const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() }; if (sessionRef) { const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); const errorMessages = [...(currentSessionData?.messages || []), errorMessage]; await sessionRef.update({ messages: errorMessages }); } } finally { chatInput.disabled = false; chatSendBtn.disabled = false; chatInput.value = ''; chatInput.style.height = 'auto'; chatInput.focus(); } }
     function renderChatMessages(messages = []) { if (!chatMessages) return; chatMessages.innerHTML = ''; if (messages.length === 0 && currentSessionId) { } messages.forEach(msg => { const d = document.createElement('div'); d.className = `chat-message ${msg.role}`; let c = msg.content; if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); } else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); } else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); } const cd = document.createElement('div'); cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); d.appendChild(cd); if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; const timestampDate = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp); t.textContent = timestampDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); } if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); } chatMessages.appendChild(d); }); chatMessages.scrollTop = chatMessages.scrollHeight; }
     function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, { id: 'deep_learning', t: '심화 학습', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,14A4,4 0 0,1 8,10H10A2,2 0 0,0 12,12A2,2 0 0,0 14,10H16A4,4 0 0,1 12,14M7.5,15.6C8.8,17.2 10.3,18 12,18C13.7,18 15.2,17.2 16.5,15.6C15.2,14.8 13.7,14 12,14C10.3,14 8.8,14.8 7.5,15.6Z" /></svg>' }, { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = `${m.i}<span>${m.t}</span>`; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
 
-    // --- [NEW] LLM Model Selector Functions ---
-    function renderModelSelector() {
-        if (!llmModelSelectorContainer) return;
-        llmModelSelectorContainer.innerHTML = `
-            <div class="llm-selector-display">
-                <span class="model-name">${MODELS[selectedModelId]?.name}</span>
-                <span class="dropdown-arrow">▼</span>
-            </div>
-            <div class="llm-selector-options">
-                ${Object.entries(MODELS).map(([key, model]) => `
-                    <div class="llm-selector-option ${key === selectedModelId ? 'selected' : ''}" data-model-id="${key}">
-                        <div class="model-title">${model.name}</div>
-                        <div class="model-desc">${model.desc}</div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+    // [ADDED] New function to set up the API model selector
+    function setupModelSelector() {
+        if (!chatModelSelectorContainer) return;
+        
+        chatModelSelectorContainer.innerHTML = ''; // Clear previous content
+
+        const label = document.createElement('label');
+        label.htmlFor = 'api-model-select';
+        label.textContent = 'Model:';
+
+        const select = document.createElement('select');
+        select.id = 'api-model-select';
+
+        const models = [
+            { name: 'Gemini 2.5 Flash (기본)', value: 'gemini-2.5-flash-preview-04-17' },
+            { name: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash' }
+        ];
+
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.value;
+            option.textContent = model.name;
+            if (model.value === selectedApiModel) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+        select.addEventListener('change', (e) => {
+            selectedApiModel = e.target.value;
+            localStorage.setItem('selectedApiModel', selectedApiModel);
+        });
+
+        chatModelSelectorContainer.appendChild(label);
+        chatModelSelectorContainer.appendChild(select);
     }
 
-    function updateSelectedModelDisplay() {
-        if (!llmModelSelectorContainer) return;
-        const nameElement = llmModelSelectorContainer.querySelector('.model-name');
-        if (nameElement) {
-            nameElement.textContent = MODELS[selectedModelId]?.name;
-        }
-        llmModelSelectorContainer.querySelectorAll('.llm-selector-option').forEach(opt => {
-            opt.classList.toggle('selected', opt.dataset.modelId === selectedModelId);
-        });
-    }
 
     // --- System Reset, Backup, Restore ---
     async function handleSystemReset() {
@@ -663,7 +671,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(canvasId).then(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" /></svg>'; setTimeout(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" /></svg>'; }, 1500); }); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { document.querySelectorAll('.keyword-chip[data-tooltip]').forEach(chip => { if (chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = chip.dataset.tooltip; } }); document.querySelectorAll('.content-section strong[data-tooltip]').forEach(highlight => { if(!highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = highlight.dataset.tooltip; highlight.appendChild(tooltipElement); } }); }
-    function makePanelDraggable(panelElement) { if(!panelElement) return; const header = panelElement.querySelector('.panel-header'); if(!header) return; let isDragging = false, offset = { x: 0, y: 0 }; const onMouseMove = (e) => { if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; } }; const onMouseUp = () => { isDragging = false; panelElement.classList.remove('is-dragging'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }; header.addEventListener('mousedown', e => { if (e.target.closest('button, input, .close-btn, #delete-session-btn, #chat-mode-selector, #llm-model-selector-container')) return; isDragging = true; panelElement.classList.add('is-dragging'); offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); }); }
+    function makePanelDraggable(panelElement) { if(!panelElement) return; const header = panelElement.querySelector('.panel-header'); if(!header) return; let isDragging = false, offset = { x: 0, y: 0 }; const onMouseMove = (e) => { if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; } }; const onMouseUp = () => { isDragging = false; panelElement.classList.remove('is-dragging'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }; header.addEventListener('mousedown', e => { if (e.target.closest('button, input, select, .close-btn, #delete-session-btn, #chat-mode-selector')) return; isDragging = true; panelElement.classList.add('is-dragging'); offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); }); }
     function togglePanel(panelElement, forceShow = null) { if (!panelElement) return; const show = forceShow !== null ? forceShow : panelElement.style.display !== 'flex'; panelElement.style.display = show ? 'flex' : 'none'; }
     function setupNavigator() { const scrollNav = document.getElementById('scroll-nav'); if (!scrollNav || !learningContent) return; const headers = learningContent.querySelectorAll('h2, #section-4 h3, #section-5 h3, #section-6 h3'); if (headers.length === 0) { scrollNav.style.display = 'none'; if(wrapper) wrapper.classList.add('toc-hidden'); return; } scrollNav.style.display = 'block'; if(wrapper) wrapper.classList.remove('toc-hidden'); const navList = document.createElement('ul'); headers.forEach((header, index) => { let targetElement = header.closest('.content-section'); if (targetElement && !targetElement.id) targetElement.id = `nav-target-${index}`; if (targetElement) { const listItem = document.createElement('li'); const link = document.createElement('a'); let navText = header.textContent.trim().replace(/\[|\]|🤓|⏳|📖/g, '').trim(); link.textContent = navText.substring(0, 25); link.href = `#${targetElement.id}`; if (header.tagName === 'H3') { link.style.paddingLeft = '25px'; link.style.fontSize = '0.9em'; } listItem.appendChild(link); navList.appendChild(listItem); } }); scrollNav.innerHTML = '<h3>학습 내비게이션</h3>'; scrollNav.appendChild(navList); const links = scrollNav.querySelectorAll('a'); const observer = new IntersectionObserver(entries => { entries.forEach(entry => { const id = entry.target.getAttribute('id'); const navLink = scrollNav.querySelector(`a[href="#${id}"]`); if (navLink && entry.isIntersecting && entry.intersectionRatio > 0.5) { links.forEach(l => l.classList.remove('active')); navLink.classList.add('active'); } }); }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 }); headers.forEach(header => { const target = header.closest('.content-section'); if (target) observer.observe(target); }); }
     function handleTextSelection(e) { if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu, .session-context-menu')) return; const selection = window.getSelection(); const selectedText = selection.toString().trim(); removeContextMenu(); if (selectedText.length > 3) { lastSelectedText = selectedText; const range = selection.getRangeAt(0); const rect = range.getBoundingClientRect(); const popover = selectionPopover; let top = rect.top + window.scrollY - popover.offsetHeight - 10; let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2); popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`; popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`; popover.style.display = 'flex'; } else if (!e.target.closest('#selection-popover')) { selectionPopover.style.display = 'none'; } }
@@ -694,7 +702,7 @@ document.addEventListener('DOMContentLoaded', function () {
         initializeFirebase().then(() => {
             setupNavigator();
             setupChatModeSelector();
-            renderModelSelector(); // [NEW]
+            setupModelSelector(); // [MODIFIED]
             initializeTooltips();
             makePanelDraggable(chatPanel);
             makePanelDraggable(notesAppPanel);
@@ -705,9 +713,6 @@ document.addEventListener('DOMContentLoaded', function () {
             handleTextSelection(e);
             if (!e.target.closest('.session-context-menu, .project-context-menu')) {
                 removeContextMenu();
-            }
-            if (llmModelSelectorContainer && !llmModelSelectorContainer.contains(e.target)) {
-                llmModelSelectorContainer.classList.remove('open');
             }
         });
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
@@ -739,26 +744,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
-        
-        // --- [NEW] LLM Model Selector Event Listener ---
-        if (llmModelSelectorContainer) {
-            llmModelSelectorContainer.addEventListener('click', e => {
-                const display = e.target.closest('.llm-selector-display');
-                const option = e.target.closest('.llm-selector-option');
-                
-                if (display) {
-                    llmModelSelectorContainer.classList.toggle('open');
-                } else if (option) {
-                    const newModelId = option.dataset.modelId;
-                    if (newModelId !== selectedModelId) {
-                        selectedModelId = newModelId;
-                        localStorage.setItem('selectedLLM', selectedModelId);
-                        updateSelectedModelDisplay();
-                    }
-                    llmModelSelectorContainer.classList.remove('open');
-                }
-            });
-        }
         
         // --- [REFINED] Event Delegation for Sidebar ---
         if (sessionListContainer) {
