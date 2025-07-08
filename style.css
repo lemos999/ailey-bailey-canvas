@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 11.0 (Real-Time Streaming UI Support)
+Version: 11.0 (Real-time Streaming UI)
 Architect: [Username] & System Architect Ailey
-Description: Refactored the CSS to support the new 'Dual-Phase Streaming' architecture. The '.blinking-cursor' animation is now a generic utility class that can be applied to any element (`reasoning-content`, `chat-message.ai`) to visually indicate real-time text generation, replacing the old static loading indicators.
+Description: Overhauled chat message styles to support real-time streaming of AI responses. Introduced a new .ai-response-container to group reasoning and final answers. Added an .is-streaming class with a blinking cursor for live text rendering, and removed obsolete loading indicator styles.
 */
 
 :root {
@@ -317,13 +317,13 @@ body:not(.dark-mode) #chat-welcome-message { color: var(--sub-text-color-light);
 #chat-welcome-message h3 { font-family: 'Noto Serif KR', serif; font-size: 1.5em; margin-bottom: 10px; color: var(--h2-color-dark); }
 body:not(.dark-mode) #chat-welcome-message h3 { color: var(--h2-color-light); }
 
-/* [MODIFIED] Chat Message & AI Response Container Styles */
+/* [MODIFIED] Chat Message & AI Response Container Styles for Streaming */
 .chat-message { max-width: 85%; padding: 10px 15px; border-radius: 18px; line-height: 1.6; word-wrap: break-word; position: relative; }
 .chat-message.user { background-color: #8C6D46; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+/* [NEW] This container groups reasoning + final answer for a single AI response */
 .ai-response-container { max-width: 85%; align-self: flex-start; display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.chat-message.ai { background-color: var(--chat-ai-bg-dark); border-bottom-left-radius: 4px; width: fit-content; max-width: 100%; }
+.chat-message.ai { background-color: var(--chat-ai-bg-dark); border-bottom-left-radius: 4px; width: fit-content; max-width: 100%; white-space: pre-wrap; word-wrap: break-word; }
 body:not(.dark-mode) .chat-message.ai { background-color: var(--chat-ai-bg-light); }
-.chat-message.ai.blinking-cursor::after { content: '|'; animation: blink-caret 0.75s step-end infinite; }
 
 .chat-timestamp { font-size: 0.75em; color: var(--sub-text-color-dark); margin-top: 5px; text-align: right; }
 body:not(.dark-mode) .chat-timestamp { color: var(--sub-text-color-light); }
@@ -333,23 +333,23 @@ body:not(.dark-mode) .chat-timestamp { color: var(--sub-text-color-light); }
 body:not(.dark-mode) .ai-response-meta { color: var(--sub-text-color-light); }
 .ai-response-meta svg { fill: currentColor; }
 
-/* [MODIFIED] Reasoning Block & Blinking Cursor Styles */
+/* [NEW] Blinking cursor for streaming text */
+@keyframes blink-caret { from, to { opacity: 1; } 50% { opacity: 0; } }
+.is-streaming::after { content: '|'; animation: blink-caret 0.75s step-end infinite; }
+
+/* [MODIFIED] Reasoning Block Styles for Streaming */
 .reasoning-block { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; align-self: flex-start; }
 body:not(.dark-mode) .reasoning-block { background-color: var(--quote-bg-light); border: 1px solid var(--border-color-light); }
 body.dark-mode .reasoning-block { background-color: var(--quote-bg-dark); border: 1px solid var(--border-color-dark); }
-
 .reasoning-header { padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; user-select: none; }
 .reasoning-header .toggle-icon { transition: transform 0.3s ease; }
 .reasoning-block.expanded .toggle-icon { transform: rotate(90deg); }
-.reasoning-summary { font-style: italic; opacity: 0.8; }
-
+.reasoning-summary { font-style: italic; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* Removed blinking cursor */
 .reasoning-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, padding 0.4s ease-out; padding: 0 15px; line-height: 1.7; font-size: 0.95em; white-space: pre-wrap; word-wrap: break-word; }
 .reasoning-content.expanded { max-height: 1000px; padding: 15px; border-top: 1px solid; }
 body:not(.dark-mode) .reasoning-content.expanded { border-top-color: var(--border-color-light); }
 body.dark-mode .reasoning-content.expanded { border-top-color: var(--border-color-dark); }
-.reasoning-content.blinking-cursor::after { content: '|'; animation: blink-caret 0.75s step-end infinite; }
 
-@keyframes blink-caret { from, to { opacity: 1; } 50% { opacity: 0; } }
 
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; align-items: center; }
 body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
