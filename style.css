@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.7 (Reasoning UI Fix & Response Timer Styles)
+Version: 10.0 (Interactive Reasoning UI Styles)
 Architect: [Username] & System Architect Ailey
-Description: Added styles for the AI response container and the new response generation timer meta info. Ensures reasoning blocks, messages, and metadata are well-structured.
+Description: Added styles for the new 'loading' state of the reasoning block. This allows the UI to show an interactive placeholder while waiting for the AI response, improving user experience.
 */
 
 :root {
@@ -333,17 +333,11 @@ body:not(.dark-mode) .chat-timestamp { color: var(--sub-text-color-light); }
 body:not(.dark-mode) .ai-response-meta { color: var(--sub-text-color-light); }
 .ai-response-meta svg { fill: currentColor; }
 
-/* [MODIFIED] Loading Indicator Styles */
-.loading-container { align-self: flex-start; display: flex; align-items: center; gap: 8px; font-style: italic; color: var(--sub-text-color-dark); }
-body:not(.dark-mode) .loading-container { color: var(--sub-text-color-light); }
-.typing-indicator { display: flex; gap: 4px; }
-.typing-indicator span { width: 8px; height: 8px; border-radius: 50%; background-color: currentColor; animation: bounce 1.2s infinite ease-in-out; }
-.typing-indicator span:nth-of-type(2) { animation-delay: -0.2s; }
-.typing-indicator span:nth-of-type(3) { animation-delay: -0.4s; }
-@keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+/* [REMOVED] Old Loading Indicator Styles as it's now part of the reasoning block */
+.loading-container { display: none; } /* Kept for legacy, but should not be used */
 
-/* [MODIFIED] Reasoning Block Styles */
-.reasoning-block { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; }
+/* [MODIFIED] Reasoning Block Styles with Loading State */
+.reasoning-block { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; align-self: flex-start; }
 body:not(.dark-mode) .reasoning-block { background-color: var(--quote-bg-light); border: 1px solid var(--border-color-light); }
 body.dark-mode .reasoning-block { background-color: var(--quote-bg-dark); border: 1px solid var(--border-color-dark); }
 .reasoning-header { padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; user-select: none; }
@@ -356,6 +350,11 @@ body.dark-mode .reasoning-block { background-color: var(--quote-bg-dark); border
 .reasoning-content.expanded { max-height: 1000px; padding: 15px; border-top: 1px solid; }
 body:not(.dark-mode) .reasoning-content.expanded { border-top-color: var(--border-color-light); }
 body.dark-mode .reasoning-content.expanded { border-top-color: var(--border-color-dark); }
+
+/* [NEW] Loading state for the reasoning block itself */
+.reasoning-block.loading .reasoning-header { cursor: default; }
+.reasoning-block.loading .reasoning-summary { opacity: 0.7; }
+
 
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; align-items: center; }
 body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
