@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.7 (Dynamic Model Selector & Smart UI Sync)
+Version: 9.8 (Dynamic Reasoning UI)
 Architect: [Username] & System Architect Ailey
-Description: Refactored the chat panel's AI model selector to be fully dynamic. It now correctly displays and switches between default free models and the user's personal API key models (BYOK), eliminating UI confusion and improving usability.
+Description: Implemented a dynamic reasoning UI for AI responses. Features a "Thinking..." indicator, a collapsible reasoning block that shows animated summary steps when closed, and a real-time typewriter effect for detailed reasoning when expanded.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentQuizData = null;
     let currentOpenContextMenu = null;
     let newlyCreatedProjectId = null;
+    const activeTimers = {}; // [NEW] To manage dynamic intervals for animations
 
     // --- [REFINED] API Settings State ---
     let userApiSettings = {
@@ -535,6 +536,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
         if (!sessionData) return;
         currentSessionId = sessionId;
+        Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
         renderSidebarContent();
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
         if (chatMessages) chatMessages.style.display = 'flex';
@@ -546,7 +548,7 @@ document.addEventListener('DOMContentLoaded', function () {
         chatInput.focus();
     }
     
-    function handleNewChat() { currentSessionId = null; renderSidebarContent(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
+    function handleNewChat() { currentSessionId = null; Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval)); renderSidebarContent(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
     
     function handleDeleteSession(sessionId) {
         if (!sessionId) return;
@@ -584,6 +586,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const query = chatInput.value.trim();
         if (!query) return;
         
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
         chatInput.disabled = true;
         chatSendBtn.disabled = true;
 
@@ -610,6 +614,7 @@ document.addEventListener('DOMContentLoaded', function () {
             sessionRef = await chatSessionsCollectionRef.add(newSession);
             currentSessionId = sessionRef.id;
             messages = newSession.messages;
+            renderSidebarContent();
         } else {
             sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
             const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
@@ -622,10 +627,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         renderChatMessages(messages);
         
-        // Add loading indicator
+        // Add "Thinking..." indicator
         const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'chat-message ai';
-        loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>';
+        loadingDiv.className = 'loading-container';
+        loadingDiv.innerHTML = `Thinking... <div class="typing-indicator"><span></span><span></span><span></span></div>`;
         if (chatMessages) {
             chatMessages.appendChild(loadingDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -657,10 +662,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
             } else {
                 // --- Default Free API Logic ---
-                const apiMessages = messages.map(msg => ({
-                    role: msg.role === 'ai' ? 'model' : 'user',
-                    parts: [{ text: msg.content }]
-                }));
+                let promptWithReasoning;
+                const lastUserMessage = messages[messages.length - 1].content;
+                promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
+                
+                const apiMessages = [{
+                    role: 'user',
+                    parts: [{ text: promptWithReasoning }]
+                }];
+
                 const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
                     method: 'POST',
@@ -680,6 +690,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
+            // The 'renderChatMessages' will be triggered by the onSnapshot listener,
+            // so we just remove the loader here.
+             const loader = chatMessages.querySelector('.loading-container');
+             if (loader) loader.remove();
+
+
         } catch (e) {
             console.error("Chat send error:", e);
             const errorMessage = {
@@ -692,8 +708,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } finally {
             chatInput.disabled = false;
             chatSendBtn.disabled = false;
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
             chatInput.focus();
         }
     }
@@ -793,8 +807,156 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return { content: '알 수 없는 제공사입니다.', usage: null };
     }
+    
+    // --- [REFINED] RENDER CHAT with REASONING UI ---
+    function renderChatMessages(messages = []) {
+        if (!chatMessages) return;
+        
+        const loader = chatMessages.querySelector('.loading-container');
+        chatMessages.innerHTML = '';
+        if (messages.length === 0 && currentSessionId) {
+            // Empty session, do nothing
+        }
 
-    function renderChatMessages(messages = []) { if (!chatMessages) return; chatMessages.innerHTML = ''; if (messages.length === 0 && currentSessionId) { } messages.forEach(msg => { const d = document.createElement('div'); d.className = `chat-message ${msg.role}`; let c = msg.content; if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); } else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); } else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); } const cd = document.createElement('div'); cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); d.appendChild(cd); if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; const timestampDate = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp); t.textContent = timestampDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); } if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); } chatMessages.appendChild(d); }); chatMessages.scrollTop = chatMessages.scrollHeight; }
+        messages.forEach((msg, index) => {
+            if (msg.role === 'user') {
+                const d = document.createElement('div');
+                d.className = `chat-message user`;
+                d.textContent = msg.content;
+                chatMessages.appendChild(d);
+            } else if (msg.role === 'ai') {
+                const content = msg.content;
+                const reasoningRegex = /\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
+                const match = content.match(reasoningRegex);
+
+                if (match) {
+                    const reasoningBlockId = `reasoning-${index}`;
+                    const reasoningRaw = match[1];
+                    const finalAnswer = content.replace(reasoningRegex, '').trim();
+
+                    // Parse reasoning into steps
+                    const reasoningSteps = reasoningRaw.split('SUMMARY:')
+                        .filter(s => s.trim() !== '')
+                        .map(step => {
+                            const parts = step.split('|||DETAIL:');
+                            return { summary: parts[0]?.trim(), detail: parts[1]?.trim() };
+                        });
+                    
+                    // Create reasoning block
+                    const rBlock = document.createElement('div');
+                    rBlock.className = 'reasoning-block';
+                    rBlock.id = reasoningBlockId;
+                    rBlock.dataset.steps = JSON.stringify(reasoningSteps); // Store data
+
+                    rBlock.innerHTML = `
+                        <div class="reasoning-header">
+                            <span class="toggle-icon">▶</span>
+                            <span>AI의 추론 과정...</span>
+                            <span class="reasoning-summary"></span>
+                        </div>
+                        <div class="reasoning-content"></div>
+                    `;
+                    chatMessages.appendChild(rBlock);
+                    
+                    // Start summary animation for the new block
+                    startSummaryAnimation(rBlock, reasoningSteps);
+
+                    // Render final answer if it exists
+                    if (finalAnswer) {
+                        const finalAnswerDiv = document.createElement('div');
+                        finalAnswerDiv.className = 'chat-message ai';
+                        finalAnswerDiv.innerHTML = finalAnswer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                        chatMessages.appendChild(finalAnswerDiv);
+                    }
+
+                } else {
+                    // Regular AI message without reasoning
+                    const d = document.createElement('div');
+                    d.className = `chat-message ai`;
+                    d.innerHTML = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                    chatMessages.appendChild(d);
+                }
+            }
+        });
+        if (loader) chatMessages.appendChild(loader);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // [NEW] Helper functions for dynamic reasoning UI
+    function clearTimers(blockId) {
+        if (activeTimers[blockId]) {
+            activeTimers[blockId].forEach(clearInterval);
+            delete activeTimers[blockId];
+        }
+    }
+    
+    function startSummaryAnimation(blockElement, reasoningSteps) {
+        const blockId = blockElement.id;
+        clearTimers(blockId);
+        activeTimers[blockId] = [];
+
+        const summaryElement = blockElement.querySelector('.reasoning-summary');
+        if (!summaryElement || reasoningSteps.length === 0) return;
+
+        let stepIndex = 0;
+        const cycleSummary = () => {
+            const summaryText = reasoningSteps[stepIndex].summary;
+            typewriterEffect(summaryElement, summaryText, () => {
+                // After typing, wait a bit before fading out
+                const waitTimer = setTimeout(() => {
+                    summaryElement.style.opacity = '0';
+                    const fadeTimer = setTimeout(() => {
+                        stepIndex = (stepIndex + 1) % reasoningSteps.length;
+                        summaryElement.style.opacity = '1';
+                        // No need to call cycleSummary again here, setInterval does it
+                    }, 500); // fade out duration
+                     if (!activeTimers[blockId]) activeTimers[blockId] = [];
+                     activeTimers[blockId].push(fadeTimer);
+                }, 2000); // how long the text stays visible
+                 if (!activeTimers[blockId]) activeTimers[blockId] = [];
+                 activeTimers[blockId].push(waitTimer);
+            });
+        };
+        
+        cycleSummary(); // Initial call
+        const summaryInterval = setInterval(cycleSummary, 4000); // Time per summary cycle
+        if (!activeTimers[blockId]) activeTimers[blockId] = [];
+        activeTimers[blockId].push(summaryInterval);
+    }
+    
+    function typewriterEffect(element, text, onComplete) {
+        if (!element || !text) {
+            if (onComplete) onComplete();
+            return;
+        }
+
+        element.innerHTML = ''; // Clear previous content
+        let i = 0;
+        const blockId = element.closest('.reasoning-block').id;
+        
+        const typingInterval = setInterval(() => {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                i++;
+            } else {
+                clearInterval(typingInterval);
+                 // Remove cursor at the end
+                if (element.classList.contains('reasoning-summary')) {
+                     element.classList.remove('blinking-cursor');
+                }
+                if (onComplete) onComplete();
+            }
+        }, 30); // Typing speed
+
+        if (element.classList.contains('reasoning-summary')) {
+             element.classList.add('blinking-cursor');
+        }
+
+        if (!activeTimers[blockId]) activeTimers[blockId] = [];
+        activeTimers[blockId].push(typingInterval);
+    }
+
+
     function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, { id: 'deep_learning', t: '심화 학습', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,14A4,4 0 0,1 8,10H10A2,2 0 0,0 12,12A2,2 0 0,0 14,10H16A4,4 0 0,1 12,14M7.5,15.6C8.8,17.2 10.3,18 12,18C13.7,18 15.2,17.2 16.5,15.6C15.2,14.8 13.7,14 12,14C10.3,14 8.8,14.8 7.5,15.6Z" /></svg>' }, { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = `${m.i}<span>${m.t}</span>`; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
 
     // --- System Reset, Backup, Restore ---
@@ -1419,6 +1581,33 @@ document.addEventListener('DOMContentLoaded', function () {
         
         if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
         if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
+    
+        // [NEW] Event Delegation for Reasoning Blocks
+        if (chatMessages) {
+            chatMessages.addEventListener('click', (e) => {
+                const header = e.target.closest('.reasoning-header');
+                if (!header) return;
+
+                const block = header.closest('.reasoning-block');
+                const content = block.querySelector('.reasoning-content');
+                const blockId = block.id;
+                
+                clearTimers(blockId);
+                block.classList.toggle('expanded');
+                content.classList.toggle('expanded');
+                
+                if (block.classList.contains('expanded')) {
+                    const steps = JSON.parse(block.dataset.steps);
+                    const fullText = steps.map(s => s.detail).join('\n\n');
+                    content.innerHTML = '';
+                    typewriterEffect(content, fullText);
+                } else {
+                    content.innerHTML = '';
+                    const steps = JSON.parse(block.dataset.steps);
+                    startSummaryAnimation(block, steps);
+                }
+            });
+        }
     }
 
     // --- 5. [NEW] Session Context Menu & Related Functions ---
