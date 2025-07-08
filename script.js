@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.2 (Unified Event Handler)
+Version: 9.3 (Hybrid Event Handler)
 Architect: [Username] & System Architect Ailey
-Description: Refactored the chat sidebar event handling. Replaced multiple, conflicting event listeners with a single, unified event handler on the parent container (`chatSessionSidebar`). This resolves critical bugs related to creating projects, pinning sessions, and moving sessions, ensuring all sidebar interactions are stable and predictable.
+Description: Implemented a robust hybrid event handling model to fix critical sidebar bugs. Static elements ('New Chat', 'New Project') now have direct event listeners for maximum stability. Dynamic content (session list, project headers) is handled via a correctly scoped event delegation on its container. This resolves all previously reported functional failures.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const sessionContextMenu = document.getElementById('session-context-menu');
 
     // -- Chat Session & Project UI Elements --
-    const chatSessionSidebar = document.getElementById('chat-session-sidebar'); // [REFACTORED] Parent element for event handling
+    const chatSessionSidebar = document.getElementById('chat-session-sidebar');
     const newChatBtn = document.getElementById('new-chat-btn');
     const newProjectBtn = document.getElementById('new-project-btn');
     const sessionListContainer = document.getElementById('session-list-container');
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     
-    // --- [MODIFIED] Project Management ---
+    // --- Project Management ---
     function listenToProjects() {
         return new Promise((resolve) => {
             if (!projectsCollectionRef) return resolve();
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- [REWRITTEN] Sidebar Rendering with Projects ---
+    // --- Sidebar Rendering ---
     function renderSidebarContent() {
         if (!sessionListContainer) return;
         
@@ -421,7 +421,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (sessionContextMenu) sessionContextMenu.style.display = 'none';
     }
 
-    // --- Utilities & Unchanged Functions (Abridged) ---
+    // --- Utilities & Unchanged Functions ---
     function updateClock() { const el = document.getElementById('real-time-clock'); if (el) el.textContent = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const idDisp = document.getElementById('canvas-id-display'); if(idDisp) idDisp.textContent = canvasId.substring(0,8) + '...'; const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(canvasId).then(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></svg>'; setTimeout(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/></svg>'; }, 1500);});}); const tooltip=document.createElement('div'); tooltip.className='system-tooltip'; tooltip.innerHTML=`<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { document.querySelectorAll('.keyword-chip[data-tooltip]').forEach(c => { if (c.querySelector('.tooltip')) { c.classList.add('has-tooltip'); c.querySelector('.tooltip').textContent = c.dataset.tooltip; } }); document.querySelectorAll('.content-section strong[data-tooltip]').forEach(h => { if(!h.querySelector('.tooltip')) { h.classList.add('has-tooltip'); const t = document.createElement('span'); t.className = 'tooltip'; t.textContent = h.dataset.tooltip; h.appendChild(t); } }); }
@@ -461,9 +461,13 @@ document.addEventListener('DOMContentLoaded', function () {
             makePanelDraggable(notesAppPanel);
         });
 
-        // Event Listeners
+        // --- [REFACTORED] Hybrid Event Listeners ---
+
+        // Global listeners
         document.addEventListener('click', hideSessionContextMenu);
         document.addEventListener('mouseup', handleTextSelection);
+
+        // Static element listeners
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
         if (themeToggle) themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); themeToggle.querySelector('svg').innerHTML = body.classList.contains('dark-mode') ? '<path d="M12,2A9,9 0 0,0 3,11C3,14.53 5,17.6 8.24,19.22C7.47,18.5 7,17.54 7,16.5A4.5,4.5 0 0,1 11.5,12A4.5,4.5 0 0,1 16,16.5C16,17.54 15.53,18.5 14.76,19.22C18,17.6 20,14.53 20,11A9,9 0 0,0 12,2Z" />' : '<path d="M12,18V22H10V18H12M12,2V6H10V2H12M22,12H18V10H22V12M6,12H2V10H6V12M16.95,7.05L19.78,4.22L18.36,2.81L15.54,5.64L16.95,7.05M8.46,15.54L5.64,18.36L4.22,16.95L7.05,14.12L8.46,15.54M18.36,21.19L19.78,19.78L16.95,16.95L15.54,18.36L18.36,21.19M7.05,8.46L4.22,5.64L5.64,4.22L8.46,7.05L7.05,8.46M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7Z" />'; });
@@ -474,7 +478,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
         if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
         if (deleteSessionBtn) deleteSessionBtn.addEventListener('click', () => handleDeleteSession(currentSessionId));
-        if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
         if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
         if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
         if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
@@ -491,35 +494,40 @@ document.addEventListener('DOMContentLoaded', function () {
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
+        if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
+        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
         
-        // --- [REFACTORED] Unified Event Handler for Chat Sidebar ---
-        if (chatSessionSidebar) {
-            chatSessionSidebar.addEventListener('click', (e) => {
-                const newProjectButton = e.target.closest('#new-project-btn');
+        // --- Corrected Hybrid Event Listeners for Chat Sidebar ---
+
+        // 1. Direct listeners for static buttons
+        if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
+        if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
+
+        // 2. Event delegation for dynamically generated content in the list container
+        if (sessionListContainer) {
+            sessionListContainer.addEventListener('click', (e) => {
                 const sessionItem = e.target.closest('.session-item');
                 const pinButton = e.target.closest('.session-pin-btn');
                 const projectHeader = e.target.closest('.project-header');
                 const actionsButton = e.target.closest('.project-actions-btn');
 
-                if (newProjectButton) {
-                    createNewProject();
+                if (pinButton) {
+                    e.stopPropagation();
+                    const sessionId = pinButton.closest('.session-item')?.dataset.sessionId;
+                    if (sessionId) toggleChatPin(sessionId);
                     return;
                 }
                 
-                if (pinButton) {
-                    e.stopPropagation();
-                    toggleChatPin(pinButton.closest('.session-item').dataset.sessionId);
-                    return;
-                }
-
                 if (sessionItem) {
-                    selectSession(sessionItem.dataset.sessionId);
+                    const sessionId = sessionItem.dataset.sessionId;
+                    if (sessionId) selectSession(sessionId);
                     return;
                 }
-
+                
                 if (actionsButton) {
                     e.stopPropagation();
-                    const project = localProjectsCache.find(p => p.id === actionsButton.closest('.project-container').dataset.projectId);
+                    const projectId = actionsButton.closest('.project-container')?.dataset.projectId;
+                    const project = localProjectsCache.find(p => p.id === projectId);
                     if (project) {
                         const action = prompt(`'${project.name}' 프로젝트에 대한 작업을 선택하세요 (이름변경, 삭제):`);
                         if (action === '이름변경') renameProject(project.id, project.name);
@@ -529,15 +537,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 if (projectHeader) {
-                    toggleProjectExpansion(projectHeader.closest('.project-container').dataset.projectId);
+                    const projectId = projectHeader.closest('.project-container')?.dataset.projectId;
+                    if (projectId) toggleProjectExpansion(projectId);
                 }
             });
 
-            chatSessionSidebar.addEventListener('contextmenu', showSessionContextMenu);
+            sessionListContainer.addEventListener('contextmenu', showSessionContextMenu);
         }
-        
-        if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
-        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
     }
 
     // --- 5. Run Initialization ---
