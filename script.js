@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.6 (BYOK - Bring Your Own Key & Token Management)
+Version: 9.7 (Dynamic Model Selector & Smart UI Sync)
 Architect: [Username] & System Architect Ailey
-Description: Implemented a comprehensive API settings modal allowing users to use their own API keys (BYOK) from OpenAI, Anthropic, and Google. Features include provider auto-detection, dynamic model loading, max token limits, and cumulative token usage tracking.
+Description: Refactored the chat panel's AI model selector to be fully dynamic. It now correctly displays and switches between default free models and the user's personal API key models (BYOK), eliminating UI confusion and improving usability.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -99,11 +99,12 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentOpenContextMenu = null;
     let newlyCreatedProjectId = null;
 
-    // --- [NEW] API Settings State ---
+    // --- [REFINED] API Settings State ---
     let userApiSettings = {
         provider: null, // 'openai', 'anthropic', 'google_paid'
         apiKey: '',
         selectedModel: '',
+        availableModels: [], // List of models available for the key
         maxOutputTokens: 2048,
         tokenUsage: {
             prompt: 0,
@@ -812,8 +813,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 projectsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
                 
-                // [NEW] Also clear API settings from localStorage on system reset
+                // [MODIFIED] Also clear API settings and default model from localStorage on system reset
                 localStorage.removeItem('userApiSettings');
+                localStorage.removeItem('selectedAiModel');
 
                 alert("✅ 모든 데이터가 성공적으로 삭제되었습니다. 페이지를 새로고침하여 시스템을 다시 시작합니다.");
                 location.reload();
@@ -882,7 +884,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderQuiz(data) { if (!quizContainer || !data.questions) return; quizContainer.innerHTML = ''; data.questions.forEach((q, i) => { const b = document.createElement('div'); b.className = 'quiz-question-block'; const p = document.createElement('p'); p.textContent = `${i + 1}. ${q.q}`; const o = document.createElement('div'); o.className = 'quiz-options'; q.o.forEach(opt => { const l = document.createElement('label'); const r = document.createElement('input'); r.type = 'radio'; r.name = `q-${i}`; r.value = opt; l.append(r,` ${opt}`); o.appendChild(l); }); b.append(p, o); quizContainer.appendChild(b); }); }
 
     
-    // --- [NEW] API Settings Functions ---
+    // --- [REFINED] API Settings & Dynamic Model Selector Functions ---
     
     function createApiSettingsModal() {
         const modal = document.createElement('div');
@@ -951,32 +953,67 @@ document.addEventListener('DOMContentLoaded', function () {
         loadApiSettings();
         apiKeyInput.value = userApiSettings.apiKey;
         maxOutputTokensInput.value = userApiSettings.maxOutputTokens;
-        populateModelSelector(null, userApiSettings.provider, userApiSettings.selectedModel);
+        populateModelSelector(userApiSettings.availableModels, userApiSettings.provider, userApiSettings.selectedModel);
+        if (userApiSettings.apiKey) {
+             apiKeyStatus.textContent = `✅ [${userApiSettings.provider}] 키가 활성화되어 있습니다.`;
+             apiKeyStatus.className = 'status-success';
+        } else {
+             apiKeyStatus.textContent = '';
+             apiKeyStatus.className = '';
+        }
         renderTokenUsage();
         apiSettingsModalOverlay.style.display = 'flex';
     }
 
     function closeApiSettingsModal() {
         apiSettingsModalOverlay.style.display = 'none';
+        // Reload settings from storage to discard any non-saved changes in the modal
+        loadApiSettings(); 
+        // Sync the header UI with the reloaded (original) settings
+        updateChatHeaderModelSelector();
     }
 
+    // [MODIFIED] 로드 로직 강화
     function loadApiSettings() {
         const savedSettings = localStorage.getItem('userApiSettings');
         if (savedSettings) {
             userApiSettings = JSON.parse(savedSettings);
-            // Ensure tokenUsage exists
+            // Ensure all properties exist for backward compatibility
             if (!userApiSettings.tokenUsage) {
                 userApiSettings.tokenUsage = { prompt: 0, completion: 0 };
+            }
+            if (!userApiSettings.availableModels) {
+                userApiSettings.availableModels = [];
             }
         }
     }
 
+    // [MODIFIED] 저장 로직 개선
     function saveApiSettings(closeModal = true) {
-        userApiSettings.apiKey = apiKeyInput.value.trim();
-        userApiSettings.selectedModel = apiModelSelect.value;
-        userApiSettings.maxOutputTokens = Number(maxOutputTokensInput.value) || 2048;
-        // Provider is set during verification
+        const key = apiKeyInput.value.trim();
+
+        if (key) { // If a key is provided, save all settings
+            userApiSettings.apiKey = key;
+            userApiSettings.selectedModel = apiModelSelect.value;
+            userApiSettings.maxOutputTokens = Number(maxOutputTokensInput.value) || 2048;
+            // The 'provider' is already set during verification
+            if (apiModelSelect && apiModelSelect.options.length > 0 && !apiModelSelect.disabled) {
+                 userApiSettings.availableModels = Array.from(apiModelSelect.options).map(opt => opt.value);
+            }
+        } else { // If key is cleared, reset all BYOK-related settings
+            userApiSettings = {
+                provider: null,
+                apiKey: '',
+                selectedModel: '',
+                availableModels: [],
+                maxOutputTokens: 2048,
+                tokenUsage: { prompt: 0, completion: 0 } // Also reset usage
+            };
+        }
+        
         localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
+        updateChatHeaderModelSelector(); // Immediately update the header UI
+        
         if (closeModal) {
             closeApiSettingsModal();
         }
@@ -1004,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         
-        userApiSettings.provider = provider;
+        userApiSettings.provider = provider; // Temporarily set provider for fetching models
         apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`;
         apiKeyStatus.className = 'status-loading';
         verifyApiKeyBtn.disabled = true;
@@ -1012,7 +1049,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const models = await fetchAvailableModels(provider, key);
             populateModelSelector(models, provider);
-            apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하세요.`;
+            apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하고 저장하세요.`;
             apiKeyStatus.className = 'status-success';
             apiModelSelect.disabled = false;
         } catch (error) {
@@ -1074,6 +1111,51 @@ document.addEventListener('DOMContentLoaded', function () {
             apiModelSelect.disabled = true;
         }
     }
+    
+    // --- [NEW] Central function to manage the Chat Header's AI Model Selector ---
+    function updateChatHeaderModelSelector() {
+        if (!aiModelSelector) return;
+
+        const DEFAULT_MODELS = [
+            { value: 'gemini-2.5-flash-preview-04-17', text: '⚡️ Gemini 2.5 Flash (최신)' },
+            { value: 'gemini-2.0-flash', text: '💡 Gemini 2.0 Flash (안정)' }
+        ];
+        
+        aiModelSelector.innerHTML = ''; // Clear existing options
+
+        // Check if user is using a personal API key by checking for a provider
+        if (userApiSettings.provider && userApiSettings.apiKey) {
+            const models_to_show = userApiSettings.availableModels || [];
+            
+            if(models_to_show.length === 0 && userApiSettings.selectedModel) {
+                 // Fallback if the list is empty but a model is selected (e.g., from older versions)
+                 models_to_show.push(userApiSettings.selectedModel);
+            }
+            
+            models_to_show.forEach(modelId => {
+                const option = document.createElement('option');
+                option.value = modelId;
+                option.textContent = `[개인] ${modelId}`; // Add prefix
+                aiModelSelector.appendChild(option);
+            });
+            
+            aiModelSelector.value = userApiSettings.selectedModel;
+            aiModelSelector.title = `${userApiSettings.provider} 모델을 선택합니다. (개인 키 사용 중)`;
+
+        } else {
+            // Default Free Models
+            DEFAULT_MODELS.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.value;
+                option.textContent = model.text;
+                aiModelSelector.appendChild(option);
+            });
+            const savedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
+            aiModelSelector.value = savedDefaultModel;
+            aiModelSelector.title = 'AI 모델을 선택합니다.';
+        }
+    }
+
 
     function renderTokenUsage() {
         const { prompt, completion } = userApiSettings.tokenUsage;
@@ -1109,7 +1191,9 @@ document.addEventListener('DOMContentLoaded', function () {
             chatHeader.appendChild(apiSettingsBtn);
         }
 
+        // [MODIFIED] Load settings, then immediately update the model selector UI
         loadApiSettings();
+        updateChatHeaderModelSelector();
 
         initializeFirebase().then(() => {
             setupNavigator();
@@ -1156,16 +1240,20 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
         
-        // --- [MODIFIED] AI Model Selector Logic for Default Models ---
+        // --- [REFINED] Smart AI Model Selector Event Listener ---
         if (aiModelSelector) {
-            const savedModel = localStorage.getItem('selectedAiModel');
-            if (savedModel) {
-                defaultModel = savedModel;
-                aiModelSelector.value = savedModel;
-            }
             aiModelSelector.addEventListener('change', () => {
-                defaultModel = aiModelSelector.value;
-                localStorage.setItem('selectedAiModel', defaultModel);
+                const selectedValue = aiModelSelector.value;
+                // Check if we are in BYOK (personal key) mode
+                if (userApiSettings.provider && userApiSettings.apiKey) {
+                    userApiSettings.selectedModel = selectedValue;
+                    // Save the change to localStorage
+                    localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
+                } else {
+                    // We are in default mode
+                    defaultModel = selectedValue;
+                    localStorage.setItem('selectedAiModel', defaultModel);
+                }
             });
         }
         
