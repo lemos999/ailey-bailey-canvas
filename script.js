@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.8 (Dynamic Reasoning UI)
+Version: 9.9 (Thinking Time & Reasoning Fix)
 Architect: [Username] & System Architect Ailey
-Description: Implemented a dynamic reasoning UI for AI responses. Features a "Thinking..." indicator, a collapsible reasoning block that shows animated summary steps when closed, and a real-time typewriter effect for detailed reasoning when expanded.
+Description: Implemented a 'Thinking Time' display for AI responses, showing how long the AI took to generate an answer. Fixed the reasoning UI not appearing when using personal API keys by injecting system instructions to enforce the required response format.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -637,7 +637,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         try {
+            const startTime = Date.now(); // START TIMER
             let aiRes, usageData;
+
             // Check if user is using their own API key
             if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
                 // --- Custom API Key Logic ---
@@ -683,7 +685,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
             }
 
-            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() };
+            const endTime = Date.now(); // END TIMER
+            const thinkingTime = (endTime - startTime) / 1000; // in seconds
+
+            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), thinkingTime: thinkingTime };
             messages.push(aiMessage);
             await sessionRef.update({
                 messages: messages,
@@ -714,12 +719,14 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // --- [NEW] API Request Helper Functions ---
     function buildApiRequest(provider, model, messages, maxTokens) {
-        const history = messages.map(msg => ({
-            role: msg.role === 'ai' ? 'assistant' : 'user', // OpenAI/Anthropic use 'assistant'
-            content: msg.content
-        }));
-
+        const reasoningInstruction = "Your entire response must follow a strict protocol. For any user query that requires explanation, logic, or step-by-step thinking, you MUST first output a reasoning block. This block MUST start with `[REASONING_START]` and end with `[REASONING_END]`. Inside this block, each step of your thinking process MUST be formatted as `SUMMARY:{A one-line summary of the step}|||DETAIL:{The full, detailed explanation of the step}`. After the `[REASONING_END]` tag, you will provide the final, user-facing answer in a friendly, informal Korean tone. For simple greetings like 'hello', you can omit the reasoning block. This structure is mandatory for all complex responses.";
+    
         if (provider === 'openai') {
+            const history = messages.map(msg => ({
+                role: msg.role === 'ai' ? 'assistant' : 'user',
+                content: msg.content
+            }));
+            const openAiHistory = [{ role: 'system', content: reasoningInstruction }, ...history];
             return {
                 url: 'https://api.openai.com/v1/chat/completions',
                 options: {
@@ -730,13 +737,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     body: JSON.stringify({
                         model: model,
-                        messages: history,
+                        messages: openAiHistory,
                         max_tokens: Number(maxTokens) || 2048
                     })
                 }
             };
         } else if (provider === 'anthropic') {
-             return {
+            const anthropicHistory = messages.map(msg => ({
+                role: msg.role === 'ai' ? 'assistant' : 'user',
+                content: msg.content
+            }));
+            return {
                 url: 'https://api.anthropic.com/v1/messages',
                 options: {
                     method: 'POST',
@@ -747,7 +758,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     body: JSON.stringify({
                         model: model,
-                        messages: history,
+                        system: reasoningInstruction,
+                        messages: anthropicHistory,
                         max_tokens: Number(maxTokens) || 2048
                     })
                 }
@@ -757,6 +769,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 role: msg.role === 'ai' ? 'model' : 'user',
                 parts: [{ text: msg.content }]
             }));
+            googleHistory.unshift(
+                { role: 'user', parts: [{ text: reasoningInstruction }] },
+                { role: 'model', parts: [{ text: "알겠습니다. 지금부터 모든 복잡한 질문에 대해 지시된 `[REASONING_START]...[REASONING_END]` 형식을 사용하여 답변하겠습니다." }] }
+            );
             return {
                 url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userApiSettings.apiKey}`,
                 options: {
@@ -825,6 +841,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 d.textContent = msg.content;
                 chatMessages.appendChild(d);
             } else if (msg.role === 'ai') {
+                const aiResponseContainer = document.createElement('div');
+                aiResponseContainer.className = 'ai-response-container';
+
                 const content = msg.content;
                 const reasoningRegex = /\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
                 const match = content.match(reasoningRegex);
@@ -834,7 +853,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     const reasoningRaw = match[1];
                     const finalAnswer = content.replace(reasoningRegex, '').trim();
 
-                    // Parse reasoning into steps
                     const reasoningSteps = reasoningRaw.split('SUMMARY:')
                         .filter(s => s.trim() !== '')
                         .map(step => {
@@ -842,11 +860,10 @@ document.addEventListener('DOMContentLoaded', function () {
                             return { summary: parts[0]?.trim(), detail: parts[1]?.trim() };
                         });
                     
-                    // Create reasoning block
                     const rBlock = document.createElement('div');
                     rBlock.className = 'reasoning-block';
                     rBlock.id = reasoningBlockId;
-                    rBlock.dataset.steps = JSON.stringify(reasoningSteps); // Store data
+                    rBlock.dataset.steps = JSON.stringify(reasoningSteps);
 
                     rBlock.innerHTML = `
                         <div class="reasoning-header">
@@ -856,26 +873,40 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                         <div class="reasoning-content"></div>
                     `;
-                    chatMessages.appendChild(rBlock);
-                    
-                    // Start summary animation for the new block
+                    aiResponseContainer.appendChild(rBlock);
                     startSummaryAnimation(rBlock, reasoningSteps);
 
-                    // Render final answer if it exists
                     if (finalAnswer) {
                         const finalAnswerDiv = document.createElement('div');
                         finalAnswerDiv.className = 'chat-message ai';
                         finalAnswerDiv.innerHTML = finalAnswer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-                        chatMessages.appendChild(finalAnswerDiv);
+                        aiResponseContainer.appendChild(finalAnswerDiv);
                     }
 
                 } else {
-                    // Regular AI message without reasoning
                     const d = document.createElement('div');
                     d.className = `chat-message ai`;
                     d.innerHTML = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-                    chatMessages.appendChild(d);
+                    aiResponseContainer.appendChild(d);
                 }
+
+                if (msg.thinkingTime !== undefined) {
+                    const timeDiv = document.createElement('div');
+                    timeDiv.className = 'thinking-time-display';
+                    
+                    const totalSeconds = msg.thinkingTime;
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = Math.round(totalSeconds % 60);
+
+                    if (minutes > 0) {
+                        timeDiv.textContent = `Thinking ${minutes}min ${seconds}sec`;
+                    } else {
+                        timeDiv.textContent = `Thinking ${seconds}sec`;
+                    }
+                    aiResponseContainer.appendChild(timeDiv);
+                }
+
+                chatMessages.appendChild(aiResponseContainer);
             }
         });
         if (loader) chatMessages.appendChild(loader);
@@ -1760,3 +1791,4 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- 6. Run Initialization ---
     initialize();
 });
+```
