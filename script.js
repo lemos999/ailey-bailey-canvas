@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.1 (Context Menu Implementation)
+Version: 9.2 (Unified Event Handler)
 Architect: [Username] & System Architect Ailey
-Description: Fixed the "New Project" button bug. Completely replaced the drag-and-drop logic with a more precise right-click context menu for moving sessions between projects. Implemented all related event listeners and handlers for a seamless user experience.
+Description: Refactored the chat sidebar event handling. Replaced multiple, conflicting event listeners with a single, unified event handler on the parent container (`chatSessionSidebar`). This resolves critical bugs related to creating projects, pinning sessions, and moving sessions, ensuring all sidebar interactions are stable and predictable.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -51,9 +51,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const themeToggle = document.getElementById('theme-toggle');
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
-    const sessionContextMenu = document.getElementById('session-context-menu'); // [NEW]
+    const sessionContextMenu = document.getElementById('session-context-menu');
 
     // -- Chat Session & Project UI Elements --
+    const chatSessionSidebar = document.getElementById('chat-session-sidebar'); // [REFACTORED] Parent element for event handling
     const newChatBtn = document.getElementById('new-chat-btn');
     const newProjectBtn = document.getElementById('new-project-btn');
     const sessionListContainer = document.getElementById('session-list-container');
@@ -474,7 +475,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
         if (deleteSessionBtn) deleteSessionBtn.addEventListener('click', () => handleDeleteSession(currentSessionId));
         if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
-        if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject); // [FIXED]
         if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
         if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
         if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
@@ -492,32 +492,48 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
         
-        // --- [MODIFIED] Event Delegation for Sidebar ---
-        if (sessionListContainer) {
-            sessionListContainer.addEventListener('contextmenu', showSessionContextMenu); // [NEW] For right-click
-            sessionListContainer.addEventListener('click', (e) => {
+        // --- [REFACTORED] Unified Event Handler for Chat Sidebar ---
+        if (chatSessionSidebar) {
+            chatSessionSidebar.addEventListener('click', (e) => {
+                const newProjectButton = e.target.closest('#new-project-btn');
                 const sessionItem = e.target.closest('.session-item');
                 const pinButton = e.target.closest('.session-pin-btn');
                 const projectHeader = e.target.closest('.project-header');
                 const actionsButton = e.target.closest('.project-actions-btn');
 
+                if (newProjectButton) {
+                    createNewProject();
+                    return;
+                }
+                
                 if (pinButton) {
                     e.stopPropagation();
                     toggleChatPin(pinButton.closest('.session-item').dataset.sessionId);
-                } else if (sessionItem) {
+                    return;
+                }
+
+                if (sessionItem) {
                     selectSession(sessionItem.dataset.sessionId);
-                } else if (actionsButton) {
+                    return;
+                }
+
+                if (actionsButton) {
                     e.stopPropagation();
-                    const project = localProjectsCache.find(p=>p.id === actionsButton.closest('.project-container').dataset.projectId);
-                    if(project) {
+                    const project = localProjectsCache.find(p => p.id === actionsButton.closest('.project-container').dataset.projectId);
+                    if (project) {
                         const action = prompt(`'${project.name}' 프로젝트에 대한 작업을 선택하세요 (이름변경, 삭제):`);
-                        if(action === '이름변경') renameProject(project.id, project.name);
-                        else if(action === '삭제') deleteProject(project.id);
+                        if (action === '이름변경') renameProject(project.id, project.name);
+                        else if (action === '삭제') deleteProject(project.id);
                     }
-                } else if (projectHeader) {
+                    return;
+                }
+
+                if (projectHeader) {
                     toggleProjectExpansion(projectHeader.closest('.project-container').dataset.projectId);
                 }
             });
+
+            chatSessionSidebar.addEventListener('contextmenu', showSessionContextMenu);
         }
         
         if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
