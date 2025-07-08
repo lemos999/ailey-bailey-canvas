@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.6 (Model Selector Hotfix)
+Version: 9.4 (Advanced Sidebar & Session Context Menu)
 Architect: [Username] & System Architect Ailey
-Description: Corrected a CSS selector specificity issue that caused the new model selector to be hidden. The layout of the chat panel header is now fixed and displays all elements correctly.
+Description: Added comprehensive styles for the new session context menu (right-click menu), including submenus for moving sessions. Styled new group headers for 'Projects' and 'General Chats' in the sidebar. Added visual feedback for drag-and-drop target areas when moving a session out of a project.
 */
 
 :root {
@@ -290,55 +290,33 @@ body:not(.dark-mode) .context-submenu {
 .sessions-in-project.expanded { max-height: 500px; /* Adjust as needed */ }
 
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
-
-/* [MODIFIED] Adjust panel header for new model selector */
-#chat-main-view .panel-header > div:first-of-type {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start; /* Changed from space-between */
-    align-items: center;
-    gap: 15px; /* Added gap */
-}
-/* [CORRECTED] This selector now correctly targets ONLY the button container */
-#chat-main-view .panel-header > div:first-of-type > div:last-of-type {
-    margin-left: auto; /* Push buttons to the right */
-}
-
+#chat-main-view .panel-header { /* gap is now set on the inner div */ }
 #chat-session-title { font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#delete-session-btn { display: none; background: none; border: none; line-height: 0; }
+#delete-session-btn svg { fill: currentColor; }
 
-/* [ADDED] Model Selector Styles */
-#chat-model-selector-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9em;
-}
-#chat-model-selector-container label {
-    white-space: nowrap;
-    opacity: 0.8;
-}
-#api-model-select {
-    font-family: 'Gowun Batang', serif;
-    border-radius: 5px;
+/* [NEW] AI Model Selector Style */
+#ai-model-selector {
     padding: 4px 8px;
+    font-size: 0.9em;
+    border-radius: 6px;
     border: 1px solid;
-    outline: none;
+    font-family: 'Gowun Batang', serif;
     cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0; /* Prevents selector from shrinking too much */
 }
-body.dark-mode #api-model-select {
-    background-color: var(--quote-bg-dark);
-    border-color: var(--border-color-dark);
-    color: var(--text-color-dark);
-}
-body:not(.dark-mode) #api-model-select {
+body:not(.dark-mode) #ai-model-selector {
     background-color: var(--quote-bg-light);
     border-color: var(--border-color-light);
     color: var(--text-color-light);
 }
+body.dark-mode #ai-model-selector {
+    background-color: var(--quote-bg-dark);
+    border-color: var(--border-color-dark);
+    color: var(--text-color-dark);
+}
 
-
-#delete-session-btn { display: none; background: none; border: none; line-height: 0; }
-#delete-session-btn svg { fill: currentColor; }
 
 #chat-mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; width: 100%; justify-content: center; padding: 8px 0; border-top: 1px solid transparent; }
 body:not(.dark-mode) #chat-mode-selector { border-top-color: var(--border-color-light); }
