@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const deleteSessionBtn = document.getElementById('delete-session-btn');
     const chatWelcomeMessage = document.getElementById('chat-welcome-message');
     const searchSessionsInput = document.getElementById('search-sessions-input');
+    const llmModelSelectorContainer = document.getElementById('llm-model-selector-container');
 
     // -- Backup & Restore UI Elements
     const restoreDataBtn = document.getElementById('restore-data-btn');
@@ -91,6 +92,13 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentQuizData = null;
     let currentOpenContextMenu = null;
     let newlyCreatedProjectId = null;
+
+    // --- LLM Model Selector State ---
+    const MODELS = {
+        'gemini-2.5-flash-preview-04-17': { name: 'Gemini 2.5 Flash', desc: '최신, 가장 빠른 모델 (기본값)' },
+        'gemini-pro': { name: 'Gemini Pro', desc: '안정적인 이전 세대 모델' },
+    };
+    let selectedModelId = localStorage.getItem('selectedLlmModelId') || 'gemini-2.5-flash-preview-04-17';
 
 
     // --- 3. Function Definitions ---
@@ -361,10 +369,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const searchTerm = searchSessionsInput.value.toLowerCase();
         sessionListContainer.innerHTML = ''; // Clear previous content
     
-        // Filter projects and sessions based on search
-        const filteredProjects = localProjectsCache.filter(p => p.name?.toLowerCase().includes(searchTerm));
-        const filteredSessions = localChatSessionsCache.filter(s => (s.title || '새 대화').toLowerCase().includes(searchTerm));
-    
         const fragment = document.createDocumentFragment();
     
         // --- 1. Render Projects Group ---
@@ -569,7 +573,31 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) { console.error("Error toggling pin status:", error); }
     }
 
-    async function handleChatSend() { if (!chatInput || chatInput.disabled) return; const query = chatInput.value.trim(); if (!query) return; chatInput.disabled = true; chatSendBtn.disabled = true; const userMessage = { role: 'user', content: query, timestamp: new Date() }; let sessionRef; let messages = []; let newSessionProjectId = null; try { document.querySelector('.project-header.active-drop-target')?.dataset.projectId; if (!currentSessionId) { const activeProject = document.querySelector('.project-header.active-drop-target'); newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null; if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; const newSession = { title: query.substring(0, 40) + (query.length > 40 ? '...' : ''), messages: [userMessage], mode: selectedMode, projectId: newSessionProjectId, isPinned: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; sessionRef = await chatSessionsCollectionRef.add(newSession); currentSessionId = sessionRef.id; messages = newSession.messages; } else { sessionRef = chatSessionsCollectionRef.doc(currentSessionId); const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); messages = [...(currentSessionData.messages || []), userMessage]; await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } renderChatMessages(messages); const loadingDiv = document.createElement('div'); loadingDiv.className = 'chat-message ai'; loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>'; if (chatMessages) { chatMessages.appendChild(loadingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; } const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] })); const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: apiMessages }) }); if (!res.ok) throw new Error(`${res.status}`); const result = await res.json(); let aiRes = "답변 생성 중 오류... 😥"; if (result.candidates?.[0].content.parts[0]) { aiRes = result.candidates[0].content.parts[0].text; } const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() }; messages.push(aiMessage); await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { console.error("Chat send error:", e); const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() }; if (sessionRef) { const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); const errorMessages = [...(currentSessionData?.messages || []), errorMessage]; await sessionRef.update({ messages: errorMessages }); } } finally { chatInput.disabled = false; chatSendBtn.disabled = false; chatInput.value = ''; chatInput.style.height = 'auto'; chatInput.focus(); } }
+    // --- [NEW] LLM Model Selector Logic ---
+    function renderModelSelector() {
+        if (!llmModelSelectorContainer) return;
+
+        const currentModel = MODELS[selectedModelId];
+        llmModelSelectorContainer.innerHTML = `
+            <div class="llm-selector-display">
+                <span class="model-name">${currentModel.name}</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7,10L12,15L17,10H7Z"></path></svg>
+            </div>
+            <div class="llm-selector-options">
+                ${Object.keys(MODELS).map(id => `
+                    <div class="llm-selector-option ${id === selectedModelId ? 'selected' : ''}" data-model-id="${id}">
+                        <div class="model-info">
+                            <strong>${MODELS[id].name}</strong>
+                            <small>${MODELS[id].desc}</small>
+                        </div>
+                        <span class="selected-indicator">✓</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    async function handleChatSend() { if (!chatInput || chatInput.disabled) return; const query = chatInput.value.trim(); if (!query) return; chatInput.disabled = true; chatSendBtn.disabled = true; const userMessage = { role: 'user', content: query, timestamp: new Date() }; let sessionRef; let messages = []; let newSessionProjectId = null; try { document.querySelector('.project-header.active-drop-target')?.dataset.projectId; if (!currentSessionId) { const activeProject = document.querySelector('.project-header.active-drop-target'); newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null; if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; const newSession = { title: query.substring(0, 40) + (query.length > 40 ? '...' : ''), messages: [userMessage], mode: selectedMode, projectId: newSessionProjectId, isPinned: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; sessionRef = await chatSessionsCollectionRef.add(newSession); currentSessionId = sessionRef.id; messages = newSession.messages; } else { sessionRef = chatSessionsCollectionRef.doc(currentSessionId); const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); messages = [...(currentSessionData.messages || []), userMessage]; await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } renderChatMessages(messages); const loadingDiv = document.createElement('div'); loadingDiv.className = 'chat-message ai'; loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>'; if (chatMessages) { chatMessages.appendChild(loadingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; } const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] })); const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent?key=`; const res = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: apiMessages }) }); if (!res.ok) throw new Error(`${res.status}`); const result = await res.json(); let aiRes = "답변 생성 중 오류... 😥"; if (result.candidates?.[0].content.parts[0]) { aiRes = result.candidates[0].content.parts[0].text; } const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() }; messages.push(aiMessage); await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { console.error("Chat send error:", e); const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() }; if (sessionRef) { const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); const errorMessages = [...(currentSessionData?.messages || []), errorMessage]; await sessionRef.update({ messages: errorMessages }); } } finally { chatInput.disabled = false; chatSendBtn.disabled = false; chatInput.value = ''; chatInput.style.height = 'auto'; chatInput.focus(); } }
     function renderChatMessages(messages = []) { if (!chatMessages) return; chatMessages.innerHTML = ''; if (messages.length === 0 && currentSessionId) { } messages.forEach(msg => { const d = document.createElement('div'); d.className = `chat-message ${msg.role}`; let c = msg.content; if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); } else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); } else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); } const cd = document.createElement('div'); cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); d.appendChild(cd); if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; const timestampDate = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp); t.textContent = timestampDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); } if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); } chatMessages.appendChild(d); }); chatMessages.scrollTop = chatMessages.scrollHeight; }
     function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, { id: 'deep_learning', t: '심화 학습', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,14A4,4 0 0,1 8,10H10A2,2 0 0,0 12,12A2,2 0 0,0 14,10H16A4,4 0 0,1 12,14M7.5,15.6C8.8,17.2 10.3,18 12,18C13.7,18 15.2,17.2 16.5,15.6C15.2,14.8 13.7,14 12,14C10.3,14 8.8,14.8 7.5,15.6Z" /></svg>' }, { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = `${m.i}<span>${m.t}</span>`; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
 
@@ -670,8 +698,9 @@ document.addEventListener('DOMContentLoaded', function () {
         // Event Listeners
         document.addEventListener('click', (e) => {
             handleTextSelection(e);
-            if (!e.target.closest('.session-context-menu, .project-context-menu')) {
+            if (!e.target.closest('.session-context-menu, .project-context-menu, .llm-selector-container')) {
                 removeContextMenu();
+                llmModelSelectorContainer?.classList.remove('open');
             }
         });
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
@@ -703,6 +732,27 @@ document.addEventListener('DOMContentLoaded', function () {
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
+        
+        // LLM Model Selector
+        if (llmModelSelectorContainer) {
+            renderModelSelector(); // Initial render
+            llmModelSelectorContainer.addEventListener('click', (e) => {
+                const display = e.target.closest('.llm-selector-display');
+                const option = e.target.closest('.llm-selector-option');
+
+                if (display) {
+                    llmModelSelectorContainer.classList.toggle('open');
+                } else if (option) {
+                    const newModelId = option.dataset.modelId;
+                    if (newModelId !== selectedModelId) {
+                        selectedModelId = newModelId;
+                        localStorage.setItem('selectedLlmModelId', selectedModelId);
+                        renderModelSelector(); // Re-render to show selection
+                    }
+                    llmModelSelectorContainer.classList.remove('open');
+                }
+            });
+        }
         
         // --- [REFINED] Event Delegation for Sidebar ---
         if (sessionListContainer) {
