@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.9 (Reasoning UI Fix & Response Timer)
+Version: 10.0 (Interactive Reasoning UI Implementation)
 Architect: [Username] & System Architect Ailey
-Description: Fixed the rendering issue with the collapsible reasoning block. Added a response timer to measure and display how long each AI response took to generate. Refactored AI message rendering for better HTML structure.
+Description: Implemented a state-based rendering system for AI responses. Instead of a simple "Thinking..." text, a placeholder reasoning block UI is now displayed immediately. This block transitions seamlessly into the final AI response (either a full reasoning block or a standard message), providing a more intuitive and interactive user experience.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentQuizData = null;
     let currentOpenContextMenu = null;
     let newlyCreatedProjectId = null;
-    const activeTimers = {}; // [NEW] To manage dynamic intervals for animations
+    const activeTimers = {}; // [MODIFIED] Manages all dynamic intervals, crucial for stopping animations.
 
     // --- [REFINED] API Settings State ---
     let userApiSettings = {
@@ -519,8 +519,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderSidebarContent();
                 if (currentSessionId) {
                     const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                    if (!currentSessionData) handleNewChat();
-                    else renderChatMessages(currentSessionData.messages || []);
+                    if (!currentSessionData) {
+                        handleNewChat();
+                    } else {
+                        // Pass the entire session data to render messages
+                        renderChatMessages(currentSessionData);
+                    }
                 }
                 resolve();
             }, error => {
@@ -540,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function () {
         renderSidebarContent();
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
         if (chatMessages) chatMessages.style.display = 'flex';
-        renderChatMessages(sessionData.messages || []);
+        renderChatMessages(sessionData);
         if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화';
         if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block';
         if (chatInput) chatInput.disabled = false;
@@ -580,31 +584,36 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) { console.error("Error toggling pin status:", error); }
     }
 
-    // --- [MAJOR REFACTOR & ADDITION] Chat Send Logic with Timer ---
+    // --- [MAJOR REFACTOR & ADDITION] Chat Send Logic with State-Based Rendering ---
     async function handleChatSend() {
         if (!chatInput || chatInput.disabled) return;
         const query = chatInput.value.trim();
         if (!query) return;
-        
+
         chatInput.value = '';
         chatInput.style.height = 'auto';
         chatInput.disabled = true;
         chatSendBtn.disabled = true;
 
         const userMessage = { role: 'user', content: query, timestamp: new Date() };
+        const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
         let sessionRef;
-        let messages = [];
+        let currentMessages = [];
+        let isNewSession = false;
 
-        // Determine if a new session needs to be created
         if (!currentSessionId) {
+            isNewSession = true;
             const activeProject = document.querySelector('.project-header.active-drop-target');
             const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
             if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
             if (chatMessages) chatMessages.style.display = 'flex';
+            currentMessages = [userMessage, loadingMessage];
+            // Render immediately with loading state
+            renderChatMessages({ messages: currentMessages });
             
             const newSession = {
                 title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-                messages: [userMessage],
+                messages: [userMessage], // Start with only the user message in Firestore
                 mode: selectedMode,
                 projectId: newSessionProjectId,
                 isPinned: false,
@@ -613,51 +622,38 @@ document.addEventListener('DOMContentLoaded', function () {
             };
             sessionRef = await chatSessionsCollectionRef.add(newSession);
             currentSessionId = sessionRef.id;
-            messages = newSession.messages;
-            renderSidebarContent();
         } else {
             sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
             const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-            messages = [...(currentSessionData.messages || []), userMessage];
+            currentMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
+            // Render immediately with loading state
+            renderChatMessages({ messages: currentMessages });
+            
             await sessionRef.update({
-                messages: messages,
+                messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
-
-        renderChatMessages(messages);
         
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'loading-container';
-        loadingDiv.innerHTML = `Thinking... <div class="typing-indicator"><span></span><span></span><span></span></div>`;
-        if (chatMessages) {
-            chatMessages.appendChild(loadingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        const startTime = performance.now(); // [NEW] Start timer
+        const startTime = performance.now();
         try {
             let aiRes, usageData;
+            // The API call logic remains the same
+             const historyForApi = isNewSession ? [userMessage] : localChatSessionsCache.find(s => s.id === currentSessionId)?.messages || [userMessage];
+
             if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
-                const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, messages, userApiSettings.maxOutputTokens);
+                const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
                 const res = await fetch(requestDetails.url, requestDetails.options);
                 if (!res.ok) { const errorBody = await res.text(); throw new Error(`API Error ${res.status}: ${errorBody}`); }
                 const result = await res.json();
                 const parsed = parseApiResponse(userApiSettings.provider, result);
                 aiRes = parsed.content;
                 usageData = parsed.usage;
-                
-                if (usageData) {
-                    userApiSettings.tokenUsage.prompt += usageData.prompt;
-                    userApiSettings.tokenUsage.completion += usageData.completion;
-                    saveApiSettings(false);
-                }
-
+                if (usageData) { userApiSettings.tokenUsage.prompt += usageData.prompt; userApiSettings.tokenUsage.completion += usageData.completion; saveApiSettings(false); }
             } else {
                 let promptWithReasoning;
-                const lastUserMessage = messages[messages.length - 1].content;
+                const lastUserMessage = historyForApi[historyForApi.length - 1].content;
                 promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
-                
                 const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
                 const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
@@ -665,38 +661,35 @@ document.addEventListener('DOMContentLoaded', function () {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: apiMessages })
                 });
-
                 if (!res.ok) throw new Error(`Google API Error ${res.status}`);
                 const result = await res.json();
                 aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
             }
             
-            const endTime = performance.now(); // [NEW] End timer
-            const duration = ((endTime - startTime) / 1000).toFixed(2); // [NEW] Calculate duration
-
-            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration }; // [MODIFIED] Add duration to message
-            messages.push(aiMessage);
+            const endTime = performance.now();
+            const duration = ((endTime - startTime) / 1000).toFixed(2);
+            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
+            
             await sessionRef.update({
-                messages: messages,
+                messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-             const loader = chatMessages.querySelector('.loading-container');
-             if (loader) loader.remove();
+            // The listener will pick up the change and re-render automatically.
 
         } catch (e) {
             console.error("Chat send error:", e);
-            const errorMessage = {
-                role: 'ai',
-                content: `API 오류가 발생했습니다: ${e.message}`,
-                timestamp: new Date()
-            };
-            messages.push(errorMessage);
-            await sessionRef.update({ messages: messages });
+            const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
+            await sessionRef.update({ 
+                messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
+            });
         } finally {
             chatInput.disabled = false;
             chatSendBtn.disabled = false;
             chatInput.focus();
+            if (isNewSession) {
+                renderSidebarContent();
+            }
         }
     }
     
@@ -729,15 +722,13 @@ document.addEventListener('DOMContentLoaded', function () {
         return { content: '알 수 없는 제공사입니다.', usage: null };
     }
     
-    // --- [REFINED & FIXED] RENDER CHAT with REASONING UI and RESPONSE TIMER ---
-    function renderChatMessages(messages = []) {
-        if (!chatMessages) return;
+    // --- [REFINED & FIXED] RENDER CHAT with STATE-BASED REASONING UI ---
+    function renderChatMessages(sessionData) {
+        if (!chatMessages || !sessionData) return;
         
-        const loader = chatMessages.querySelector('.loading-container');
+        // Use the messages from the provided session data. If it's a temporary render (like for loading), it will have a 'status' property.
+        const messages = sessionData.messages || [];
         chatMessages.innerHTML = '';
-        if (messages.length === 0 && currentSessionId) {
-            // Empty session, do nothing
-        }
 
         messages.forEach((msg, index) => {
             if (msg.role === 'user') {
@@ -747,6 +738,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 chatMessages.appendChild(d);
 
             } else if (msg.role === 'ai') {
+                // [NEW] Handle the loading state explicitly
+                if (msg.status === 'loading') {
+                    const loadingBlock = document.createElement('div');
+                    loadingBlock.className = 'reasoning-block loading';
+                    loadingBlock.id = msg.id; // Assign the temporary ID
+                    loadingBlock.innerHTML = `
+                        <div class="reasoning-header">
+                            <span class="toggle-icon">▶</span>
+                            <span class="reasoning-summary blinking-cursor">AI가 생각하는 중...</span>
+                        </div>
+                    `;
+                    chatMessages.appendChild(loadingBlock);
+                    return; // Skip to the next message
+                }
+
                 const aiContainer = document.createElement('div');
                 aiContainer.className = 'ai-response-container';
 
@@ -796,7 +802,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     aiContainer.appendChild(d);
                 }
 
-                // [NEW] Render response time if available
                 if (msg.duration) {
                     const metaDiv = document.createElement('div');
                     metaDiv.className = 'ai-response-meta';
@@ -811,11 +816,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        if (loader) chatMessages.appendChild(loader);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
     
-    // [NEW] Helper functions for dynamic reasoning UI
+    // [MODIFIED] Helper functions for dynamic reasoning UI
     function clearTimers(blockId) {
         if (activeTimers[blockId]) {
             activeTimers[blockId].forEach(clearInterval);
@@ -863,12 +867,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         element.innerHTML = '';
+        element.classList.add('blinking-cursor');
         let i = 0;
         const blockId = element.closest('.reasoning-block')?.id;
-        if (!blockId) { // Fallback for content outside reasoning block
-             if (onComplete) onComplete();
-             return;
-        }
         
         const typingInterval = setInterval(() => {
             if (i < text.length) {
@@ -876,19 +877,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 i++;
             } else {
                 clearInterval(typingInterval);
-                if (element.classList.contains('reasoning-summary')) {
-                     element.classList.remove('blinking-cursor');
-                }
+                element.classList.remove('blinking-cursor');
                 if (onComplete) onComplete();
             }
         }, 30); 
 
-        if (element.classList.contains('reasoning-summary')) {
-             element.classList.add('blinking-cursor');
+        if (blockId && activeTimers[blockId]) {
+            activeTimers[blockId].push(typingInterval);
+        } else {
+            // Fallback for elements not in a managed block, though this is less ideal.
+            // Consider creating a global timer manager if needed.
         }
-
-        if (!activeTimers[blockId]) activeTimers[blockId] = [];
-        activeTimers[blockId].push(typingInterval);
     }
 
 
@@ -1312,6 +1311,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!header) return;
 
                 const block = header.closest('.reasoning-block');
+                if (block.classList.contains('loading')) return; // Do not interact with loading blocks
+
                 const content = block.querySelector('.reasoning-content');
                 const blockId = block.id;
                 
@@ -1320,13 +1321,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 content.classList.toggle('expanded');
                 
                 if (block.classList.contains('expanded')) {
-                    // Stop summary animation and show detailed content with typewriter
                     const steps = JSON.parse(block.dataset.steps);
                     const fullText = steps.map(s => s.detail).filter(Boolean).join('\n\n');
                     content.innerHTML = '';
                     typewriterEffect(content, fullText);
                 } else {
-                    // Restart summary animation
                     content.innerHTML = '';
                     const steps = JSON.parse(block.dataset.steps);
                     startSummaryAnimation(block, steps);
