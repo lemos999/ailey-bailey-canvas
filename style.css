@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.2 (UX/UI Polish for Instant Create)
+Version: 9.3 (Temporal Grouping UI)
 Architect: [Username] & System Architect Ailey
-Description: Polished the project creation UX by fixing button text wrapping and adding styles for the new inline project renaming input field. Ensures a seamless visual experience for the "Instant Create & Inline Edit" feature.
+Description: Added CSS styles for the new `.date-group-header` class. This ensures that the new temporal dividers in the chat sidebar are visually distinct from clickable session/project items, improving UI clarity and usability.
 */
 
 :root {
@@ -135,9 +135,22 @@ body.dark-mode .sidebar-button-group button:hover { background-color: #D4B28C; }
 body:not(.dark-mode) .sidebar-button-group button:hover { background-color: #A88A68; }
 
 #session-list-container { flex-grow: 1; overflow-y: auto; padding: 0 10px 10px 10px; }
-.session-group-header { font-size: 0.8em; font-weight: bold; padding: 15px 5px 5px 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-body.dark-mode .session-group-header { color: var(--sub-text-color-dark); }
-body:not(.dark-mode) .session-group-header { color: var(--sub-text-color-light); }
+/* [MODIFIED] Grouping header styles for date and session type */
+.date-group-header, .session-group-header { 
+    font-size: 0.8em;
+    font-weight: bold;
+    padding: 15px 5px 5px 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+body.dark-mode .date-group-header,
+body.dark-mode .session-group-header {
+    color: var(--sub-text-color-dark);
+}
+body:not(.dark-mode) .date-group-header,
+body:not(.dark-mode) .session-group-header {
+    color: var(--sub-text-color-light);
+}
 
 .session-item { padding: 12px 10px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; transition: background-color 0.2s; font-size: 0.95em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: space-between; align-items: center; position: relative; }
 .session-item.is-dragging { opacity: 0.5; background-color: var(--h2-border-dark); }
@@ -157,7 +170,7 @@ body:not(.dark-mode) .session-pin-btn { color: var(--sub-text-color-light); }
 .session-pin-btn svg { fill: currentColor; }
 
 /* --- [NEW & REFINED] CHAT PROJECT STYLES --- */
-.project-container { margin-bottom: 10px; }
+.project-container { margin-bottom: 5px; }
 .project-header { display: flex; align-items: center; padding: 10px 5px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; position: relative; }
 body.dark-mode .project-header:hover { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .project-header:hover { background-color: var(--quote-bg-light); }
