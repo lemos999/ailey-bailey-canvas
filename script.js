@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.5 (Gemini Model Selector)
+Version: 9.5 (AI Model Selector)
 Architect: [Username] & System Architect Ailey
-Description: Added a dropdown menu in the chat panel header allowing users to select the Gemini API model (2.5 Flash or 2.0 Flash). The selection is saved to localStorage and dynamically used in API calls.
+Description: Added a dropdown menu in the chat panel header to allow users to select the AI model (Gemini 2.5 Flash or Gemini 2.0 Flash). The user's selection is saved to localStorage and dynamically used for API requests.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const deleteSessionBtn = document.getElementById('delete-session-btn');
     const chatWelcomeMessage = document.getElementById('chat-welcome-message');
     const searchSessionsInput = document.getElementById('search-sessions-input');
-    const chatModelSelectorContainer = document.getElementById('chat-model-selector-container'); // [ADDED]
+    const aiModelSelector = document.getElementById('ai-model-selector'); // [NEW] AI Model Selector
 
     // -- Backup & Restore UI Elements
     const restoreDataBtn = document.getElementById('restore-data-btn');
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let unsubscribeFromChatSessions = null;
     let unsubscribeFromProjects = null;
     let selectedMode = 'ailey_coaching';
-    let selectedApiModel = localStorage.getItem('selectedApiModel') || 'gemini-2.5-flash-preview-04-17'; // [ADDED]
+    let selectedModel = 'gemini-2.5-flash-preview-04-17'; // [NEW] Default model
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
     let currentQuizData = null;
     let currentOpenContextMenu = null;
@@ -571,47 +571,98 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) { console.error("Error toggling pin status:", error); }
     }
 
-    async function handleChatSend() { if (!chatInput || chatInput.disabled) return; const query = chatInput.value.trim(); if (!query) return; chatInput.disabled = true; chatSendBtn.disabled = true; const userMessage = { role: 'user', content: query, timestamp: new Date() }; let sessionRef; let messages = []; let newSessionProjectId = null; try { document.querySelector('.project-header.active-drop-target')?.dataset.projectId; if (!currentSessionId) { const activeProject = document.querySelector('.project-header.active-drop-target'); newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null; if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; const newSession = { title: query.substring(0, 40) + (query.length > 40 ? '...' : ''), messages: [userMessage], mode: selectedMode, projectId: newSessionProjectId, isPinned: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; sessionRef = await chatSessionsCollectionRef.add(newSession); currentSessionId = sessionRef.id; messages = newSession.messages; } else { sessionRef = chatSessionsCollectionRef.doc(currentSessionId); const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); messages = [...(currentSessionData.messages || []), userMessage]; await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } renderChatMessages(messages); const loadingDiv = document.createElement('div'); loadingDiv.className = 'chat-message ai'; loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>'; if (chatMessages) { chatMessages.appendChild(loadingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; } const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] })); const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedApiModel}:generateContent?key=`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: apiMessages }) }); if (!res.ok) throw new Error(`${res.status}`); const result = await res.json(); let aiRes = "답변 생성 중 오류... 😥"; if (result.candidates?.[0].content.parts[0]) { aiRes = result.candidates[0].content.parts[0].text; } const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() }; messages.push(aiMessage); await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { console.error("Chat send error:", e); const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() }; if (sessionRef) { const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); const errorMessages = [...(currentSessionData?.messages || []), errorMessage]; await sessionRef.update({ messages: errorMessages }); } } finally { chatInput.disabled = false; chatSendBtn.disabled = false; chatInput.value = ''; chatInput.style.height = 'auto'; chatInput.focus(); } }
+    async function handleChatSend() {
+        if (!chatInput || chatInput.disabled) return;
+        const query = chatInput.value.trim();
+        if (!query) return;
+        chatInput.disabled = true;
+        chatSendBtn.disabled = true;
+        const userMessage = { role: 'user', content: query, timestamp: new Date() };
+        let sessionRef;
+        let messages = [];
+        let newSessionProjectId = null;
+        try {
+            document.querySelector('.project-header.active-drop-target')?.dataset.projectId;
+            if (!currentSessionId) {
+                const activeProject = document.querySelector('.project-header.active-drop-target');
+                newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
+                if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
+                if (chatMessages) chatMessages.style.display = 'flex';
+                const newSession = {
+                    title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
+                    messages: [userMessage],
+                    mode: selectedMode,
+                    projectId: newSessionProjectId,
+                    isPinned: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                sessionRef = await chatSessionsCollectionRef.add(newSession);
+                currentSessionId = sessionRef.id;
+                messages = newSession.messages;
+            } else {
+                sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
+                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+                messages = [...(currentSessionData.messages || []), userMessage];
+                await sessionRef.update({
+                    messages: messages,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+            renderChatMessages(messages);
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'chat-message ai';
+            loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>';
+            if (chatMessages) {
+                chatMessages.appendChild(loadingDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            const apiMessages = messages.map(msg => ({
+                role: msg.role === 'ai' ? 'model' : 'user',
+                parts: [{ text: msg.content }]
+            }));
+
+            // [MODIFIED] Dynamic API URL based on selectedModel
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: apiMessages })
+            });
+
+            if (!res.ok) throw new Error(`${res.status}`);
+            const result = await res.json();
+            let aiRes = "답변 생성 중 오류... 😥";
+            if (result.candidates?.[0].content.parts[0]) {
+                aiRes = result.candidates[0].content.parts[0].text;
+            }
+            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() };
+            messages.push(aiMessage);
+            await sessionRef.update({
+                messages: messages,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) {
+            console.error("Chat send error:", e);
+            const errorMessage = {
+                role: 'ai',
+                content: `API 오류가 발생했습니다: ${e.message}`,
+                timestamp: new Date()
+            };
+            if (sessionRef) {
+                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+                const errorMessages = [...(currentSessionData?.messages || []), errorMessage];
+                await sessionRef.update({ messages: errorMessages });
+            }
+        } finally {
+            chatInput.disabled = false;
+            chatSendBtn.disabled = false;
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            chatInput.focus();
+        }
+    }
     function renderChatMessages(messages = []) { if (!chatMessages) return; chatMessages.innerHTML = ''; if (messages.length === 0 && currentSessionId) { } messages.forEach(msg => { const d = document.createElement('div'); d.className = `chat-message ${msg.role}`; let c = msg.content; if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); } else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); } else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); } const cd = document.createElement('div'); cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); d.appendChild(cd); if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; const timestampDate = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp); t.textContent = timestampDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); } if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); } chatMessages.appendChild(d); }); chatMessages.scrollTop = chatMessages.scrollHeight; }
     function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, { id: 'deep_learning', t: '심화 학습', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,14A4,4 0 0,1 8,10H10A2,2 0 0,0 12,12A2,2 0 0,0 14,10H16A4,4 0 0,1 12,14M7.5,15.6C8.8,17.2 10.3,18 12,18C13.7,18 15.2,17.2 16.5,15.6C15.2,14.8 13.7,14 12,14C10.3,14 8.8,14.8 7.5,15.6Z" /></svg>' }, { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = `${m.i}<span>${m.t}</span>`; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
-
-    // [ADDED] New function to set up the API model selector
-    function setupModelSelector() {
-        if (!chatModelSelectorContainer) return;
-        
-        chatModelSelectorContainer.innerHTML = ''; // Clear previous content
-
-        const label = document.createElement('label');
-        label.htmlFor = 'api-model-select';
-        label.textContent = 'Model:';
-
-        const select = document.createElement('select');
-        select.id = 'api-model-select';
-
-        const models = [
-            { name: 'Gemini 2.5 Flash (기본)', value: 'gemini-2.5-flash-preview-04-17' },
-            { name: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash' }
-        ];
-
-        models.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.value;
-            option.textContent = model.name;
-            if (model.value === selectedApiModel) {
-                option.selected = true;
-            }
-            select.appendChild(option);
-        });
-
-        select.addEventListener('change', (e) => {
-            selectedApiModel = e.target.value;
-            localStorage.setItem('selectedApiModel', selectedApiModel);
-        });
-
-        chatModelSelectorContainer.appendChild(label);
-        chatModelSelectorContainer.appendChild(select);
-    }
-
 
     // --- System Reset, Backup, Restore ---
     async function handleSystemReset() {
@@ -702,7 +753,6 @@ document.addEventListener('DOMContentLoaded', function () {
         initializeFirebase().then(() => {
             setupNavigator();
             setupChatModeSelector();
-            setupModelSelector(); // [MODIFIED]
             initializeTooltips();
             makePanelDraggable(chatPanel);
             makePanelDraggable(notesAppPanel);
@@ -744,6 +794,22 @@ document.addEventListener('DOMContentLoaded', function () {
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
+        
+        // --- [NEW] AI Model Selector Logic ---
+        if (aiModelSelector) {
+            // Restore saved model selection on load
+            const savedModel = localStorage.getItem('selectedAiModel');
+            if (savedModel) {
+                selectedModel = savedModel;
+                aiModelSelector.value = savedModel;
+            }
+            
+            // Save model selection on change
+            aiModelSelector.addEventListener('change', () => {
+                selectedModel = aiModelSelector.value;
+                localStorage.setItem('selectedAiModel', selectedModel);
+            });
+        }
         
         // --- [REFINED] Event Delegation for Sidebar ---
         if (sessionListContainer) {
