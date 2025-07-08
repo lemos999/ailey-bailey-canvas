@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.1 (Full Project Management)
+Version: 9.2 (UX/UI Polish for Instant Create)
 Architect: [Username] & System Architect Ailey
-Description: Added styles for the dynamically generated project context menu (rename, delete) to support the full project management feature set.
+Description: Polished the project creation UX by fixing button text wrapping and adding styles for the new inline project renaming input field. Ensures a seamless visual experience for the "Instant Create & Inline Edit" feature.
 */
 
 :root {
@@ -125,7 +125,7 @@ body.dark-mode #search-sessions-input { border-color: var(--border-color-dark); 
 body:not(.dark-mode) #search-sessions-input { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
 
 .sidebar-button-group { display: flex; gap: 8px; }
-.sidebar-button-group button { flex-grow: 1; padding: 8px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95em; font-family: 'Gowun Batang', serif; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.sidebar-button-group button { flex-grow: 1; padding: 8px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95em; font-family: 'Gowun Batang', serif; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; /* [FIX] Prevents text from wrapping */ }
 .sidebar-button-group button svg { fill: currentColor; }
 
 #new-chat-btn, #new-project-btn { }
@@ -156,7 +156,7 @@ body:not(.dark-mode) .session-pin-btn { color: var(--sub-text-color-light); }
 .session-pin-btn.pinned-active { color: var(--pin-color); }
 .session-pin-btn svg { fill: currentColor; }
 
-/* --- [NEW] CHAT PROJECT STYLES --- */
+/* --- [NEW & REFINED] CHAT PROJECT STYLES --- */
 .project-container { margin-bottom: 10px; }
 .project-header { display: flex; align-items: center; padding: 10px 5px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; position: relative; }
 body.dark-mode .project-header:hover { background-color: var(--quote-bg-dark); }
@@ -169,9 +169,11 @@ body:not(.dark-mode) .project-header.drag-over { background-color: var(--h2-bord
 .project-icon { margin-right: 8px; line-height: 0; }
 .project-header svg { fill: currentColor; }
 
-.project-title { font-weight: bold; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.project-title-input { font-weight: bold; flex-grow: 1; border: none; background-color: transparent; color: inherit; padding: 2px 4px; border-radius: 4px; outline: 1px solid var(--header-color-dark); font-family: 'Gowun Batang', serif; }
+.project-title { font-weight: bold; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1em; }
+.project-title-input { font-weight: bold; flex-grow: 1; border: none; background-color: transparent; color: inherit; padding: 2px 4px; border-radius: 4px; outline: 1px solid; font-family: 'Gowun Batang', serif; font-size: 1em; box-sizing: border-box; }
+body.dark-mode .project-title-input { outline-color: var(--header-color-dark); }
 body:not(.dark-mode) .project-title-input { outline-color: var(--header-color-light); }
+
 
 .project-actions-btn { background: none; border: none; cursor: pointer; padding: 5px; border-radius: 50%; line-height: 0; opacity: 0; transition: opacity 0.2s; }
 .project-header:hover .project-actions-btn, .project-actions-btn.active { opacity: 1; }
