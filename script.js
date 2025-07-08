@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.1 (Full Project Management)
+Version: 9.2 (Instant Create & Inline Edit)
 Architect: [Username] & System Architect Ailey
-Description: Implemented a full-featured project management system. Added context menus for renaming/deleting projects, inline editing for project titles, and completed the drag-and-drop logic for session management. Refactored sidebar event handling using event delegation.
+Description: Revolutionized project creation UX. Replaced the old prompt-based method with an "Instant Create & Inline Edit" paradigm. Clicking 'New Project' now instantly creates a new project in the UI and automatically enters rename mode for a seamless workflow.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -89,7 +89,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedMode = 'ailey_coaching';
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
     let currentQuizData = null;
-    let currentOpenContextMenu = null; // [NEW] To manage project context menu
+    let currentOpenContextMenu = null;
+    let newlyCreatedProjectId = null; // [NEW] To track the new project for auto-rename
 
 
     // --- 3. Function Definitions ---
@@ -122,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 chatSessionsCollectionRef = db.collection(`${chatHistoryPath}/sessions`);
                 projectsCollectionRef = db.collection(`${chatHistoryPath}/projects`);
 
-                // Listen to all data sources and render once all are available
                 await Promise.all([
                     listenToNotes(),
                     listenToChatSessions(),
@@ -144,13 +144,24 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!projectsCollectionRef) return resolve();
             if (unsubscribeFromProjects) unsubscribeFromProjects();
             unsubscribeFromProjects = projectsCollectionRef.orderBy("createdAt", "asc").onSnapshot(snapshot => {
-                const hadData = localProjectsCache.length > 0;
+                const oldCache = [...localProjectsCache];
                 localProjectsCache = snapshot.docs.map(doc => ({
                     id: doc.id,
-                    isExpanded: localProjectsCache.find(p => p.id === doc.id)?.isExpanded ?? true,
+                    isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true,
                     ...doc.data()
                 }));
-                if(hadData) renderSidebarContent();
+                
+                renderSidebarContent();
+
+                // [NEW] Auto-rename logic for newly created project
+                if (newlyCreatedProjectId) {
+                    const newProjectElement = document.querySelector(`.project-container[data-project-id="${newlyCreatedProjectId}"]`);
+                    if (newProjectElement) {
+                        startProjectRename(newlyCreatedProjectId);
+                        newlyCreatedProjectId = null; // Reset the flag
+                    }
+                }
+
                 resolve();
             }, error => {
                 console.error("Project listener error:", error);
@@ -158,19 +169,31 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+    function getNewProjectDefaultName() {
+        const baseName = "새 프로젝트";
+        const existingNames = new Set(localProjectsCache.map(p => p.name));
+        if (!existingNames.has(baseName)) {
+            return baseName;
+        }
+        let i = 2;
+        while (existingNames.has(`${baseName} ${i}`)) {
+            i++;
+        }
+        return `${baseName} ${i}`;
+    }
     
     async function createNewProject() {
-        const projectName = prompt("새 프로젝트의 이름을 입력하세요:", "새 프로젝트");
-        if (projectName && projectName.trim()) {
-            try {
-                await projectsCollectionRef.add({
-                    name: projectName.trim(),
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (error) {
-                console.error("Error creating new project:", error);
-                alert("프로젝트 생성에 실패했습니다.");
-            }
+        const newName = getNewProjectDefaultName();
+        try {
+            const newProjectRef = await projectsCollectionRef.add({
+                name: newName,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            newlyCreatedProjectId = newProjectRef.id; // Set flag to trigger auto-rename
+        } catch (error) {
+            console.error("Error creating new project:", error);
+            alert("프로젝트 생성에 실패했습니다.");
         }
     }
 
@@ -226,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function showProjectContextMenu(projectId, buttonElement) {
-        removeContextMenu(); // Close any existing menu
+        removeContextMenu();
         const menu = document.createElement('div');
         menu.className = 'project-context-menu';
         menu.innerHTML = `
@@ -251,39 +274,45 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function startProjectRename(projectId) {
         const projectContainer = document.querySelector(`.project-container[data-project-id="${projectId}"]`);
+        if (!projectContainer) return;
         const titleSpan = projectContainer.querySelector('.project-title');
         if (!titleSpan) return;
 
+        const originalTitle = titleSpan.textContent;
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'project-title-input';
-        input.value = titleSpan.textContent;
+        input.value = originalTitle;
 
         titleSpan.replaceWith(input);
         input.focus();
         input.select();
 
         const finishEditing = () => {
-            renameProject(projectId, input.value);
-            // The snapshot listener will handle the UI update back to a span,
-            // but we can do it preemptively for faster UI feedback.
-            const newTitleSpan = document.createElement('span');
-            newTitleSpan.className = 'project-title';
-            newTitleSpan.textContent = input.value;
-            input.replaceWith(newTitleSpan);
+            const newName = input.value.trim();
+            if (newName && newName !== originalTitle) {
+                 renameProject(projectId, newName);
+            } else {
+                // If name is unchanged or empty, revert to original
+                const newTitleSpan = document.createElement('span');
+                newTitleSpan.className = 'project-title';
+                newTitleSpan.textContent = originalTitle;
+                input.replaceWith(newTitleSpan);
+            }
+            // Let the snapshot listener handle the final UI update
         };
 
         input.addEventListener('blur', finishEditing);
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                finishEditing();
+                input.blur(); // Trigger the blur event to save
             } else if (e.key === 'Escape') {
-                input.replaceWith(titleSpan); // Cancel editing
+                input.value = originalTitle; // Revert value
+                input.blur(); // and save
             }
         });
     }
     
-    // --- [REWRITTEN] Sidebar Rendering with Projects ---
     function renderSidebarContent() {
         if (!sessionListContainer) return;
         
@@ -330,8 +359,8 @@ document.addEventListener('DOMContentLoaded', function () {
             sessionListContainer.appendChild(projectContainer);
         });
         
-        if (unassignedSessions.length > 0 || localProjectsCache.length === 0) {
-             if (unassignedSessions.length > 0 && localProjectsCache.length > 0) {
+        if (unassignedSessions.length > 0 || (localProjectsCache.length === 0 && filteredSessions.length > 0) ) {
+             if (unassignedSessions.length > 0 && projectsWithFilteredSessions.length > 0) {
                 const groupHeader = document.createElement('div');
                 groupHeader.className = 'session-group-header';
                 groupHeader.textContent = '일반 대화';
@@ -360,21 +389,18 @@ document.addEventListener('DOMContentLoaded', function () {
         return item;
     }
 
-    // --- Chat Session Management (Modified/Existing) ---
+    // --- Chat Session Management ---
     function listenToChatSessions() {
         return new Promise((resolve) => {
             if (!chatSessionsCollectionRef) return resolve();
             if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
             unsubscribeFromChatSessions = chatSessionsCollectionRef.onSnapshot(snapshot => {
-                const hadData = localChatSessionsCache.length > 0;
                 localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (hadData) {
-                    renderSidebarContent();
-                    if (currentSessionId) {
-                        const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                        if (!currentSessionData) handleNewChat();
-                        else renderChatMessages(currentSessionData.messages || []);
-                    }
+                renderSidebarContent();
+                if (currentSessionId) {
+                    const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+                    if (!currentSessionData) handleNewChat();
+                    else renderChatMessages(currentSessionData.messages || []);
                 }
                 resolve();
             }, error => {
@@ -402,7 +428,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderChatMessages(messages = []) { if (!chatMessages) return; chatMessages.innerHTML = ''; if (messages.length === 0 && currentSessionId) { } messages.forEach(msg => { const d = document.createElement('div'); d.className = `chat-message ${msg.role}`; let c = msg.content; if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); } else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); } else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); } const cd = document.createElement('div'); cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); d.appendChild(cd); if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; const timestampDate = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp); t.textContent = timestampDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); } if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); } chatMessages.appendChild(d); }); chatMessages.scrollTop = chatMessages.scrollHeight; }
     function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, { id: 'deep_learning', t: '심화 학습', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,14A4,4 0 0,1 8,10H10A2,2 0 0,0 12,12A2,2 0 0,0 14,10H16A4,4 0 0,1 12,14M7.5,15.6C8.8,17.2 10.3,18 12,18C13.7,18 15.2,17.2 16.5,15.6C15.2,14.8 13.7,14 12,14C10.3,14 8.8,14.8 7.5,15.6Z" /></svg>' }, { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = `${m.i}<span>${m.t}</span>`; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
 
-    // --- System Reset, Backup, Restore (Largely Unchanged) ---
+    // --- System Reset, Backup, Restore ---
     async function handleSystemReset() {
         const message = "정말로 이 캔버스의 모든 프로젝트, 채팅, 메모 기록을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.";
         showModal(message, async () => {
@@ -456,7 +482,7 @@ document.addEventListener('DOMContentLoaded', function () {
         reader.readAsText(file);
     }
     
-    // --- Utilities, Notes, and Unchanged Functions ---
+    // --- Utilities, Notes, and Other Functions ---
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(canvasId).then(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" /></svg>'; setTimeout(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" /></svg>'; }, 1500); }); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { document.querySelectorAll('.keyword-chip[data-tooltip]').forEach(chip => { if (chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = chip.dataset.tooltip; } }); document.querySelectorAll('.content-section strong[data-tooltip]').forEach(highlight => { if(!highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = highlight.dataset.tooltip; highlight.appendChild(tooltipElement); } }); }
@@ -489,7 +515,6 @@ document.addEventListener('DOMContentLoaded', function () {
         updateClock(); setInterval(updateClock, 1000);
         
         initializeFirebase().then(() => {
-            renderSidebarContent();
             setupNavigator();
             setupChatModeSelector();
             initializeTooltips();
@@ -498,11 +523,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Event Listeners
-        document.addEventListener('click', handleTextSelection); // Modified to handle context menu closing
+        document.addEventListener('click', handleTextSelection);
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
-        if (themeToggle) themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light'); themeToggle.querySelector('svg').innerHTML = body.classList.contains('dark-mode') ? '<path d="M12,2A9,9 0 0,0 3,11C3,14.53 5,17.6 8.24,19.22C7.47,18.5 7,17.54 7,16.5A4.5,4.5 0 0,1 11.5,12A4.5,4.5 0 0,1 16,16.5C16,17.54 15.53,18.5 14.76,19.22C18,17.6 20,14.53 20,11A9,9 0 0,0 12,2Z" />' : '<path d="M12,18V22H10V18H12M12,2V6H10V2H12M22,12H18V10H22V12M6,12H2V10H6V12M16.95,7.05L19.78,4.22L18.36,2.81L15.54,5.64L16.95,7.05M8.46,15.54L5.64,18.36L4.22,16.95L7.05,14.12L8.46,15.54M18.36,21.19L19.78,19.78L16.95,16.95L15.54,18.36L18.36,21.19M7.05,8.46L4.22,5.64L5.64,4.22L8.46,7.05L7.05,8.46M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7Z" />'; });
-        if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode');
+        if (themeToggle) { themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light'); }); if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); }
         if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); systemInfoWidget?.classList.toggle('tucked'); });
         if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
@@ -530,19 +554,24 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
         
-        // --- [NEW/RE-ARCHITECTED] Event Delegation for Sidebar ---
+        // Event Delegation for Sidebar
         if (sessionListContainer) {
             sessionListContainer.addEventListener('click', (e) => {
-                const sessionItem = e.target.closest('.session-item');
-                const pinButton = e.target.closest('.session-pin-btn');
-                const projectHeader = e.target.closest('.project-header');
                 const actionsButton = e.target.closest('.project-actions-btn');
-
                 if (actionsButton) {
                     e.stopPropagation();
                     const projectId = actionsButton.closest('.project-container').dataset.projectId;
                     showProjectContextMenu(projectId, actionsButton);
-                } else if (pinButton) {
+                    return;
+                }
+
+                removeContextMenu(); // Close context menu if clicking elsewhere
+
+                const sessionItem = e.target.closest('.session-item');
+                const pinButton = e.target.closest('.session-pin-btn');
+                const projectHeader = e.target.closest('.project-header');
+
+                if (pinButton) {
                     e.stopPropagation();
                     toggleChatPin(pinButton.closest('.session-item').dataset.sessionId);
                 } else if (sessionItem) {
@@ -569,24 +598,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.querySelectorAll('.project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
             });
             sessionListContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
                 const targetProject = e.target.closest('.project-header');
+                document.querySelectorAll('.project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
                 if (targetProject) {
-                    e.preventDefault();
-                    document.querySelectorAll('.project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
                     targetProject.classList.add('drag-over');
-                }
-            });
-            sessionListContainer.addEventListener('dragleave', (e) => {
-                const targetProject = e.target.closest('.project-header');
-                if (targetProject && !targetProject.contains(e.relatedTarget)) {
-                    targetProject.classList.remove('drag-over');
                 }
             });
             sessionListContainer.addEventListener('drop', async (e) => {
                 e.preventDefault();
+                document.querySelectorAll('.project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
                 const targetProjectHeader = e.target.closest('.project-header');
                 if (targetProjectHeader && draggedItem) {
-                    targetProjectHeader.classList.remove('drag-over');
                     const sessionId = e.dataTransfer.getData('text/plain');
                     const projectId = targetProjectHeader.closest('.project-container').dataset.projectId;
                     try {
