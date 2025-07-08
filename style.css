@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.0 (Project Folders & SVG Icon System)
+Version: 9.1 (Full Project Management)
 Architect: [Username] & System Architect Ailey
-Description: Overhauled the entire UI with a consistent SVG icon system. Added comprehensive styles for the new chat project folders, including accordion UI, context menus, and drag-and-drop visual feedback.
+Description: Added styles for the dynamically generated project context menu (rename, delete) to support the full project management feature set.
 */
 
 :root {
@@ -171,16 +171,46 @@ body:not(.dark-mode) .project-header.drag-over { background-color: var(--h2-bord
 
 .project-title { font-weight: bold; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .project-title-input { font-weight: bold; flex-grow: 1; border: none; background-color: transparent; color: inherit; padding: 2px 4px; border-radius: 4px; outline: 1px solid var(--header-color-dark); font-family: 'Gowun Batang', serif; }
+body:not(.dark-mode) .project-title-input { outline-color: var(--header-color-light); }
 
 .project-actions-btn { background: none; border: none; cursor: pointer; padding: 5px; border-radius: 50%; line-height: 0; opacity: 0; transition: opacity 0.2s; }
-.project-header:hover .project-actions-btn, .project-actions-btn:focus { opacity: 1; }
+.project-header:hover .project-actions-btn, .project-actions-btn.active { opacity: 1; }
 .project-actions-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
 
-.project-context-menu { position: absolute; top: 100%; right: 0; background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10; padding: 5px; display: none; }
-body:not(.dark-mode) .project-context-menu { background-color: var(--container-bg-light); border-color: var(--border-color-light); }
-.project-context-menu button { background: none; border: none; color: inherit; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer; border-radius: 4px; font-family: 'Gowun Batang', serif; }
-body:not(.dark-mode) .project-context-menu button:hover { background-color: var(--quote-bg-light); }
-body.dark-mode .project-context-menu button:hover { background-color: var(--quote-bg-dark); }
+.project-context-menu {
+    position: absolute;
+    top: 95%; /* Position relative to the project-header */
+    right: 5px;
+    background-color: var(--container-bg-dark);
+    border: 1px solid var(--border-color-dark);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 10;
+    padding: 5px;
+    display: none; /* Changed by JS */
+}
+body:not(.dark-mode) .project-context-menu {
+    background-color: var(--container-bg-light);
+    border-color: var(--border-color-light);
+}
+.project-context-menu button {
+    background: none;
+    border: none;
+    color: inherit;
+    padding: 8px 12px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: 'Gowun Batang', serif;
+    font-size: 0.9em;
+}
+body:not(.dark-mode) .project-context-menu button:hover {
+    background-color: var(--quote-bg-light);
+}
+body.dark-mode .project-context-menu button:hover {
+    background-color: var(--quote-bg-dark);
+}
 
 .sessions-in-project { padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
 .sessions-in-project.expanded { max-height: 500px; /* Adjust as needed */ }
