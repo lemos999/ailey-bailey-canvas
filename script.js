@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.2 (Instant Create & Inline Edit)
+Version: 9.3 (Temporal Grouping UI)
 Architect: [Username] & System Architect Ailey
-Description: Revolutionized project creation UX. Replaced the old prompt-based method with an "Instant Create & Inline Edit" paradigm. Clicking 'New Project' now instantly creates a new project in the UI and automatically enters rename mode for a seamless workflow.
+Description: Implemented a major UX enhancement for the chat sidebar. All projects and chat sessions are now automatically grouped by their last update time (e.g., 'Today', 'Yesterday', 'Last 7 Days'). This provides a more intuitive and chronologically organized view of user activity.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -138,12 +138,54 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     
+    // --- [NEW] Temporal Grouping Helper ---
+    function getRelativeDateGroup(timestamp, isPinned = false) {
+        if (isPinned) {
+            return { key: 0, label: '📌 고정됨' };
+        }
+    
+        if (!timestamp) {
+            return { key: 99, label: '날짜 정보 없음' };
+        }
+    
+        const now = new Date();
+        const date = timestamp instanceof Date ? timestamp : timestamp.toDate();
+        
+        now.setHours(0, 0, 0, 0);
+        date.setHours(0, 0, 0, 0);
+    
+        const diffTime = now.getTime() - date.getTime();
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    
+        if (diffDays < 1) return { key: 1, label: '오늘' };
+        if (diffDays < 2) return { key: 2, label: '어제' };
+        if (diffDays < 7) return { key: 3, label: '지난 7일' };
+    
+        const nowMonth = now.getMonth();
+        const dateMonth = date.getMonth();
+        const nowYear = now.getFullYear();
+        const dateYear = date.getFullYear();
+    
+        if (nowYear === dateYear && nowMonth === dateMonth) {
+            return { key: 4, label: '이번 달' };
+        }
+    
+        // Check for last month
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        if (dateYear === lastMonth.getFullYear() && dateMonth === lastMonth.getMonth()) {
+             return { key: 5, label: '지난 달' };
+        }
+    
+        return { key: 6 + (nowYear - dateYear) * 12 + (nowMonth - dateMonth), label: `${dateYear}년 ${dateMonth + 1}월` };
+    }
+
+
     // --- [NEW/REFINED] Project Management ---
     function listenToProjects() {
         return new Promise((resolve) => {
             if (!projectsCollectionRef) return resolve();
             if (unsubscribeFromProjects) unsubscribeFromProjects();
-            unsubscribeFromProjects = projectsCollectionRef.orderBy("createdAt", "asc").onSnapshot(snapshot => {
+            unsubscribeFromProjects = projectsCollectionRef.onSnapshot(snapshot => {
                 const oldCache = [...localProjectsCache];
                 localProjectsCache = snapshot.docs.map(doc => ({
                     id: doc.id,
@@ -153,12 +195,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 renderSidebarContent();
 
-                // [NEW] Auto-rename logic for newly created project
                 if (newlyCreatedProjectId) {
                     const newProjectElement = document.querySelector(`.project-container[data-project-id="${newlyCreatedProjectId}"]`);
                     if (newProjectElement) {
                         startProjectRename(newlyCreatedProjectId);
-                        newlyCreatedProjectId = null; // Reset the flag
+                        newlyCreatedProjectId = null;
                     }
                 }
 
@@ -189,9 +230,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const newProjectRef = await projectsCollectionRef.add({
                 name: newName,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp() // Add updatedAt on creation
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            newlyCreatedProjectId = newProjectRef.id; // Set flag to trigger auto-rename
+            newlyCreatedProjectId = newProjectRef.id;
         } catch (error) {
             console.error("Error creating new project:", error);
             alert("프로젝트 생성에 실패했습니다.");
@@ -297,93 +338,139 @@ document.addEventListener('DOMContentLoaded', function () {
             if (newName && newName !== originalTitle) {
                  renameProject(projectId, newName);
             } else {
-                // If name is unchanged or empty, let the snapshot listener revert it
-                // by simply re-rendering. No need for manual DOM manipulation here.
                  input.blur(); 
             }
-             // The Firestore listener will handle the UI update, ensuring consistency.
         };
 
         input.addEventListener('blur', finishEditing);
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                input.blur(); // Trigger the blur event to save
+                input.blur();
             } else if (e.key === 'Escape') {
-                input.value = originalTitle; // Revert value
-                input.blur(); // and trigger re-render
+                input.value = originalTitle;
+                input.blur();
             }
         });
     }
     
+    // --- [REFACTORED] Sidebar Rendering with Temporal Grouping ---
     function renderSidebarContent() {
         if (!sessionListContainer) return;
-        
         const searchTerm = searchSessionsInput.value.toLowerCase();
-        
-        const filteredSessions = localChatSessionsCache.filter(s => s.title?.toLowerCase().includes(searchTerm));
-        const projectsWithFilteredSessions = localProjectsCache.map(p => {
-            const sessions = filteredSessions.filter(s => s.projectId === p.id);
-            return { ...p, sessions };
-        }).filter(p => p.name.toLowerCase().includes(searchTerm) || p.sessions.length > 0);
-
-        const unassignedSessions = filteredSessions.filter(s => !s.projectId);
-
         sessionListContainer.innerHTML = '';
-        
-        projectsWithFilteredSessions.forEach(project => {
-            const projectContainer = document.createElement('div');
-            projectContainer.className = 'project-container';
-            projectContainer.dataset.projectId = project.id;
-            
-            const projectHeader = document.createElement('div');
-            projectHeader.className = 'project-header';
-            
-            const createdAt = project.createdAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || '정보 없음';
-            const updatedAt = project.updatedAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || createdAt;
-            projectHeader.title = `생성: ${createdAt}\n마지막 활동: ${updatedAt}`;
-
-            projectHeader.innerHTML = `
-                <span class="project-toggle-icon ${project.isExpanded ? 'expanded' : ''}">
-                    <svg viewBox="0 0 24 24" width="16" height="16"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" /></svg>
-                </span>
-                <span class="project-icon">
-                    <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2Z" /></svg>
-                </span>
-                <span class="project-title">${project.name}</span>
-                <button class="project-actions-btn" title="프로젝트 메뉴">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z" /></svg>
-                </button>
-            `;
-            
-            const sessionsContainer = document.createElement('div');
-            sessionsContainer.className = `sessions-in-project ${project.isExpanded ? 'expanded' : ''}`;
-            
-            project.sessions.sort((a,b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-            project.sessions.forEach(session => sessionsContainer.appendChild(createSessionItem(session)));
-
-            projectContainer.appendChild(projectHeader);
-            projectContainer.appendChild(sessionsContainer);
-            sessionListContainer.appendChild(projectContainer);
+    
+        // 1. Combine projects and sessions into a single list
+        const allItems = [
+            ...localProjectsCache.map(p => ({
+                ...p,
+                type: 'project',
+                name: p.name // Ensure 'name' property for filtering
+            })),
+            ...localChatSessionsCache.map(s => ({
+                ...s,
+                type: 'session',
+                name: s.title || '새 대화' // Ensure 'name' property for filtering
+            }))
+        ];
+    
+        // 2. Filter based on search term
+        const filteredItems = allItems.filter(item => item.name?.toLowerCase().includes(searchTerm));
+    
+        // 3. Assign date group to each item
+        filteredItems.forEach(item => {
+            const timestamp = item.updatedAt || item.createdAt;
+            item.dateGroup = getRelativeDateGroup(timestamp, item.isPinned);
         });
-        
-        if (unassignedSessions.length > 0 || (localProjectsCache.length === 0 && filteredSessions.length > 0) ) {
-             if (unassignedSessions.length > 0 && projectsWithFilteredSessions.length > 0) {
-                const groupHeader = document.createElement('div');
-                groupHeader.className = 'session-group-header';
-                groupHeader.textContent = '일반 대화';
-                sessionListContainer.appendChild(groupHeader);
+    
+        // 4. Group items by date label
+        const groupedItems = filteredItems.reduce((acc, item) => {
+            const label = item.dateGroup.label;
+            if (!acc[label]) {
+                acc[label] = { key: item.dateGroup.key, items: [] };
             }
-            unassignedSessions.sort((a,b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-            unassignedSessions.forEach(session => sessionListContainer.appendChild(createSessionItem(session)));
-        }
+            acc[label].items.push(item);
+            return acc;
+        }, {});
+    
+        // 5. Sort groups chronologically
+        const sortedGroupLabels = Object.keys(groupedItems).sort((a, b) => {
+            return groupedItems[a].key - groupedItems[b].key;
+        });
+    
+        // 6. Render groups and their items
+        sortedGroupLabels.forEach(label => {
+            // Render group header
+            const header = document.createElement('div');
+            header.className = 'date-group-header';
+            header.textContent = label;
+            sessionListContainer.appendChild(header);
+    
+            const group = groupedItems[label];
+            // Sort items within the group by last update
+            group.items.sort((a, b) => {
+                const timeA = a.updatedAt?.toMillis() || a.createdAt?.toMillis() || 0;
+                const timeB = b.updatedAt?.toMillis() || b.createdAt?.toMillis() || 0;
+                return timeB - timeA;
+            });
+    
+            // Render items
+            group.items.forEach(item => {
+                if (item.type === 'project') {
+                    // Find sessions belonging to this project
+                    const sessionsInProject = localChatSessionsCache
+                        .filter(s => s.projectId === item.id)
+                        .sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+    
+                    const projectContainer = document.createElement('div');
+                    projectContainer.className = 'project-container';
+                    projectContainer.dataset.projectId = item.id;
+    
+                    const projectHeader = document.createElement('div');
+                    projectHeader.className = 'project-header';
+    
+                    const createdAt = item.createdAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || '정보 없음';
+                    const updatedAt = item.updatedAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || createdAt;
+                    projectHeader.title = `생성: ${createdAt}\n최종 수정: ${updatedAt}`;
+    
+                    projectHeader.innerHTML = `
+                        <span class="project-toggle-icon ${item.isExpanded ? 'expanded' : ''}">
+                            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" /></svg>
+                        </span>
+                        <span class="project-icon">
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2Z" /></svg>
+                        </span>
+                        <span class="project-title">${item.name}</span>
+                        <button class="project-actions-btn" title="프로젝트 메뉴">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z" /></svg>
+                        </button>
+                    `;
+    
+                    const sessionsContainer = document.createElement('div');
+                    sessionsContainer.className = `sessions-in-project ${item.isExpanded ? 'expanded' : ''}`;
+                    sessionsInProject.forEach(session => sessionsContainer.appendChild(createSessionItem(session)));
+    
+                    projectContainer.appendChild(projectHeader);
+                    projectContainer.appendChild(sessionsContainer);
+                    sessionListContainer.appendChild(projectContainer);
+                } else if (item.type === 'session' && !item.projectId) {
+                    // Only render sessions that don't belong to a project
+                    sessionListContainer.appendChild(createSessionItem(item));
+                }
+            });
+        });
     }
 
+    // --- [MODIFIED] Added detailed title attribute ---
     function createSessionItem(session) {
         const item = document.createElement('div');
         item.className = 'session-item';
         item.dataset.sessionId = session.id;
         item.draggable = true;
         if (session.id === currentSessionId) item.classList.add('active');
+        
+        const createdAt = session.createdAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || '정보 없음';
+        const updatedAt = session.updatedAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || createdAt;
+        item.title = `생성: ${createdAt}\n최종 수정: ${updatedAt}`;
         
         const pinIconSVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>`;
 
