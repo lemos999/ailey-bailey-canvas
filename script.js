@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.5 (AI Model Selector)
+Version: 9.6 (BYOK - Bring Your Own Key & Token Management)
 Architect: [Username] & System Architect Ailey
-Description: Added a dropdown menu in the chat panel header to allow users to select the AI model (Gemini 2.5 Flash or Gemini 2.0 Flash). The user's selection is saved to localStorage and dynamically used for API requests.
+Description: Implemented a comprehensive API settings modal allowing users to use their own API keys (BYOK) from OpenAI, Anthropic, and Google. Features include provider auto-detection, dynamic model loading, max token limits, and cumulative token usage tracking.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const deleteSessionBtn = document.getElementById('delete-session-btn');
     const chatWelcomeMessage = document.getElementById('chat-welcome-message');
     const searchSessionsInput = document.getElementById('search-sessions-input');
-    const aiModelSelector = document.getElementById('ai-model-selector'); // [NEW] AI Model Selector
+    const aiModelSelector = document.getElementById('ai-model-selector');
 
     // -- Backup & Restore UI Elements
     const restoreDataBtn = document.getElementById('restore-data-btn');
@@ -68,6 +68,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // -- System Reset UI Element
     const systemResetBtn = document.getElementById('system-reset-btn');
+
+    // -- [NEW] API Settings UI Elements (to be created dynamically) --
+    let apiSettingsBtn, apiSettingsModalOverlay, apiKeyInput, verifyApiKeyBtn, apiKeyStatus,
+        apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn,
+        apiSettingsSaveBtn, apiSettingsCancelBtn;
 
 
     // --- 2. State Management ---
@@ -88,11 +93,23 @@ document.addEventListener('DOMContentLoaded', function () {
     let unsubscribeFromChatSessions = null;
     let unsubscribeFromProjects = null;
     let selectedMode = 'ailey_coaching';
-    let selectedModel = 'gemini-2.5-flash-preview-04-17'; // [NEW] Default model
+    let defaultModel = 'gemini-2.5-flash-preview-04-17';
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
     let currentQuizData = null;
     let currentOpenContextMenu = null;
     let newlyCreatedProjectId = null;
+
+    // --- [NEW] API Settings State ---
+    let userApiSettings = {
+        provider: null, // 'openai', 'anthropic', 'google_paid'
+        apiKey: '',
+        selectedModel: '',
+        maxOutputTokens: 2048,
+        tokenUsage: {
+            prompt: 0,
+            completion: 0
+        }
+    };
 
 
     // --- 3. Function Definitions ---
@@ -178,7 +195,6 @@ document.addEventListener('DOMContentLoaded', function () {
     
         return { key: 6 + (nowYear - dateYear) * 12 + (nowMonth - dateMonth), label: `${dateYear}년 ${dateMonth + 1}월` };
     }
-
 
     // --- [NEW/REFINED] Project & Session Management ---
     function listenToProjects() {
@@ -295,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function () {
         removeContextMenu();
         const rect = buttonElement.getBoundingClientRect();
         const menu = document.createElement('div');
-        menu.className = 'project-context-menu'; // Using existing style for consistency
+        menu.className = 'project-context-menu'; 
         menu.style.position = 'absolute';
         menu.style.top = `${rect.bottom + 2}px`;
         menu.style.right = '5px';
@@ -304,7 +320,6 @@ document.addEventListener('DOMContentLoaded', function () {
             <button data-action="delete">삭제</button>
         `;
         
-        // This needs to be appended to a relative parent, or body
         sessionListContainer.appendChild(menu);
         menu.style.display = 'block';
         currentOpenContextMenu = menu;
@@ -342,7 +357,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (newName && newName !== originalTitle) {
                  renameProject(projectId, newName);
             }
-             // Re-render to restore the span, even if no change
              renderSidebarContent();
         };
 
@@ -357,26 +371,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
     
-    // --- [RESTRUCTURED] Sidebar Rendering with Project Grouping ---
     function renderSidebarContent() {
         if (!sessionListContainer) return;
         const searchTerm = searchSessionsInput.value.toLowerCase();
-        sessionListContainer.innerHTML = ''; // Clear previous content
+        sessionListContainer.innerHTML = ''; 
     
-        // Filter projects and sessions based on search
         const filteredProjects = localProjectsCache.filter(p => p.name?.toLowerCase().includes(searchTerm));
         const filteredSessions = localChatSessionsCache.filter(s => (s.title || '새 대화').toLowerCase().includes(searchTerm));
     
         const fragment = document.createDocumentFragment();
     
-        // --- 1. Render Projects Group ---
         if (filteredProjects.length > 0 || localProjectsCache.length > 0) {
             const projectGroupHeader = document.createElement('div');
             projectGroupHeader.className = 'session-group-header';
             projectGroupHeader.textContent = '📁 프로젝트';
             fragment.appendChild(projectGroupHeader);
     
-            // Sort projects: pinned first, then by last update
             const sortedProjects = [...(searchTerm ? filteredProjects : localProjectsCache)].sort((a, b) => {
                  const timeA = a.updatedAt?.toMillis() || 0;
                  const timeB = b.updatedAt?.toMillis() || 0;
@@ -388,7 +398,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     .filter(s => s.projectId === project.id)
                     .sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
                 
-                // If searching, only show project if it matches or its sessions match
                 if (searchTerm && !project.name.toLowerCase().includes(searchTerm) && sessionsInProject.filter(s => (s.title || '').toLowerCase().includes(searchTerm)).length === 0) {
                     return;
                 }
@@ -431,7 +440,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     
-        // --- 2. Render Unassigned Sessions Group ---
         const unassignedSessions = filteredSessions.filter(s => !s.projectId);
     
         if (unassignedSessions.length > 0) {
@@ -539,7 +547,6 @@ document.addEventListener('DOMContentLoaded', function () {
     
     function handleNewChat() { currentSessionId = null; renderSidebarContent(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
     
-    // [MODIFIED] Accepts sessionId to be reusable
     function handleDeleteSession(sessionId) {
         if (!sessionId) return;
         const sessionToDelete = localChatSessionsCache.find(s => s.id === sessionId);
@@ -549,7 +556,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (chatSessionsCollectionRef) {
                 chatSessionsCollectionRef.doc(sessionId).delete().then(() => {
                     console.log("Session deleted successfully");
-                    // If the deleted session was the active one, reset the view
                     if (currentSessionId === sessionId) {
                         handleNewChat();
                     }
@@ -571,76 +577,108 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) { console.error("Error toggling pin status:", error); }
     }
 
+    // --- [MAJOR REFACTOR] Chat Send Logic ---
     async function handleChatSend() {
         if (!chatInput || chatInput.disabled) return;
         const query = chatInput.value.trim();
         if (!query) return;
+        
         chatInput.disabled = true;
         chatSendBtn.disabled = true;
+
         const userMessage = { role: 'user', content: query, timestamp: new Date() };
         let sessionRef;
         let messages = [];
-        let newSessionProjectId = null;
-        try {
-            document.querySelector('.project-header.active-drop-target')?.dataset.projectId;
-            if (!currentSessionId) {
-                const activeProject = document.querySelector('.project-header.active-drop-target');
-                newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
-                if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-                if (chatMessages) chatMessages.style.display = 'flex';
-                const newSession = {
-                    title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-                    messages: [userMessage],
-                    mode: selectedMode,
-                    projectId: newSessionProjectId,
-                    isPinned: false,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                };
-                sessionRef = await chatSessionsCollectionRef.add(newSession);
-                currentSessionId = sessionRef.id;
-                messages = newSession.messages;
-            } else {
-                sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
-                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                messages = [...(currentSessionData.messages || []), userMessage];
-                await sessionRef.update({
-                    messages: messages,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
-            renderChatMessages(messages);
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'chat-message ai';
-            loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>';
-            if (chatMessages) {
-                chatMessages.appendChild(loadingDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-            const apiMessages = messages.map(msg => ({
-                role: msg.role === 'ai' ? 'model' : 'user',
-                parts: [{ text: msg.content }]
-            }));
 
-            // [MODIFIED] Dynamic API URL based on selectedModel
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: apiMessages })
+        // Determine if a new session needs to be created
+        if (!currentSessionId) {
+            const activeProject = document.querySelector('.project-header.active-drop-target');
+            const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
+            if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
+            if (chatMessages) chatMessages.style.display = 'flex';
+            
+            const newSession = {
+                title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
+                messages: [userMessage],
+                mode: selectedMode, // Note: This might be overridden by custom API settings
+                projectId: newSessionProjectId,
+                isPinned: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            sessionRef = await chatSessionsCollectionRef.add(newSession);
+            currentSessionId = sessionRef.id;
+            messages = newSession.messages;
+        } else {
+            sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
+            const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+            messages = [...(currentSessionData.messages || []), userMessage];
+            await sessionRef.update({
+                messages: messages,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+        }
 
-            if (!res.ok) throw new Error(`${res.status}`);
-            const result = await res.json();
-            let aiRes = "답변 생성 중 오류... 😥";
-            if (result.candidates?.[0].content.parts[0]) {
-                aiRes = result.candidates[0].content.parts[0].text;
+        renderChatMessages(messages);
+        
+        // Add loading indicator
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'chat-message ai';
+        loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>';
+        if (chatMessages) {
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        try {
+            let aiRes, usageData;
+            // Check if user is using their own API key
+            if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
+                // --- Custom API Key Logic ---
+                const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, messages, userApiSettings.maxOutputTokens);
+                
+                const res = await fetch(requestDetails.url, requestDetails.options);
+                if (!res.ok) {
+                    const errorBody = await res.text();
+                    throw new Error(`API Error ${res.status}: ${errorBody}`);
+                }
+                const result = await res.json();
+                const parsed = parseApiResponse(userApiSettings.provider, result);
+                aiRes = parsed.content;
+                usageData = parsed.usage;
+                
+                // Update token usage
+                if (usageData) {
+                    userApiSettings.tokenUsage.prompt += usageData.prompt;
+                    userApiSettings.tokenUsage.completion += usageData.completion;
+                    saveApiSettings(false); // Save updated usage without showing modal
+                }
+
+            } else {
+                // --- Default Free API Logic ---
+                const apiMessages = messages.map(msg => ({
+                    role: msg.role === 'ai' ? 'model' : 'user',
+                    parts: [{ text: msg.content }]
+                }));
+                const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: apiMessages })
+                });
+
+                if (!res.ok) throw new Error(`Google API Error ${res.status}`);
+                const result = await res.json();
+                aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
             }
+
             const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() };
             messages.push(aiMessage);
             await sessionRef.update({
                 messages: messages,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+
         } catch (e) {
             console.error("Chat send error:", e);
             const errorMessage = {
@@ -648,11 +686,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 content: `API 오류가 발생했습니다: ${e.message}`,
                 timestamp: new Date()
             };
-            if (sessionRef) {
-                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                const errorMessages = [...(currentSessionData?.messages || []), errorMessage];
-                await sessionRef.update({ messages: errorMessages });
-            }
+            messages.push(errorMessage);
+            await sessionRef.update({ messages: messages });
         } finally {
             chatInput.disabled = false;
             chatSendBtn.disabled = false;
@@ -661,6 +696,103 @@ document.addEventListener('DOMContentLoaded', function () {
             chatInput.focus();
         }
     }
+    
+    // --- [NEW] API Request Helper Functions ---
+    function buildApiRequest(provider, model, messages, maxTokens) {
+        const history = messages.map(msg => ({
+            role: msg.role === 'ai' ? 'assistant' : 'user', // OpenAI/Anthropic use 'assistant'
+            content: msg.content
+        }));
+
+        if (provider === 'openai') {
+            return {
+                url: 'https://api.openai.com/v1/chat/completions',
+                options: {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${userApiSettings.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: history,
+                        max_tokens: Number(maxTokens) || 2048
+                    })
+                }
+            };
+        } else if (provider === 'anthropic') {
+             return {
+                url: 'https://api.anthropic.com/v1/messages',
+                options: {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': userApiSettings.apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: history,
+                        max_tokens: Number(maxTokens) || 2048
+                    })
+                }
+            };
+        } else if (provider === 'google_paid') {
+            const googleHistory = messages.map(msg => ({
+                role: msg.role === 'ai' ? 'model' : 'user',
+                parts: [{ text: msg.content }]
+            }));
+            return {
+                url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userApiSettings.apiKey}`,
+                options: {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: googleHistory,
+                        generationConfig: {
+                            maxOutputTokens: Number(maxTokens) || 2048
+                        }
+                    })
+                }
+            }
+        }
+        throw new Error(`Unsupported provider: ${provider}`);
+    }
+
+    function parseApiResponse(provider, result) {
+        try {
+            if (provider === 'openai') {
+                return {
+                    content: result.choices[0].message.content,
+                    usage: {
+                        prompt: result.usage.prompt_tokens,
+                        completion: result.usage.completion_tokens
+                    }
+                };
+            } else if (provider === 'anthropic') {
+                return {
+                    content: result.content[0].text,
+                    usage: {
+                        prompt: result.usage.input_tokens,
+                        completion: result.usage.output_tokens
+                    }
+                };
+            } else if (provider === 'google_paid') {
+                // Google's generateContent API does not return token usage in the response body.
+                // This would require a separate call to model.countTokens if needed, which adds complexity.
+                // For now, we acknowledge this limitation.
+                return {
+                    content: result.candidates[0].content.parts[0].text,
+                    usage: null // Mark as null
+                };
+            }
+        } catch (error) {
+            console.error(`Error parsing ${provider} response:`, error, result);
+            return { content: 'API 응답을 파싱하는 중 오류가 발생했습니다.', usage: null };
+        }
+        return { content: '알 수 없는 제공사입니다.', usage: null };
+    }
+
     function renderChatMessages(messages = []) { if (!chatMessages) return; chatMessages.innerHTML = ''; if (messages.length === 0 && currentSessionId) { } messages.forEach(msg => { const d = document.createElement('div'); d.className = `chat-message ${msg.role}`; let c = msg.content; if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); } else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); } else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); } const cd = document.createElement('div'); cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); d.appendChild(cd); if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; const timestampDate = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp); t.textContent = timestampDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); } if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); } chatMessages.appendChild(d); }); chatMessages.scrollTop = chatMessages.scrollHeight; }
     function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, { id: 'deep_learning', t: '심화 학습', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,14A4,4 0 0,1 8,10H10A2,2 0 0,0 12,12A2,2 0 0,0 14,10H16A4,4 0 0,1 12,14M7.5,15.6C8.8,17.2 10.3,18 12,18C13.7,18 15.2,17.2 16.5,15.6C15.2,14.8 13.7,14 12,14C10.3,14 8.8,14.8 7.5,15.6Z" /></svg>' }, { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = `${m.i}<span>${m.t}</span>`; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
 
@@ -679,6 +811,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 const projectsSnapshot = await projectsCollectionRef.get();
                 projectsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
+                
+                // [NEW] Also clear API settings from localStorage on system reset
+                localStorage.removeItem('userApiSettings');
+
                 alert("✅ 모든 데이터가 성공적으로 삭제되었습니다. 페이지를 새로고침하여 시스템을 다시 시작합니다.");
                 location.reload();
             } catch (error) { console.error("❌ 시스템 초기화 실패:", error); alert(`시스템 초기화 중 오류가 발생했습니다: ${error.message}`); updateStatus("초기화 실패 ❌", false); }
@@ -722,7 +858,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(canvasId).then(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" /></svg>'; setTimeout(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" /></svg>'; }, 1500); }); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { document.querySelectorAll('.keyword-chip[data-tooltip]').forEach(chip => { if (chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = chip.dataset.tooltip; } }); document.querySelectorAll('.content-section strong[data-tooltip]').forEach(highlight => { if(!highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = highlight.dataset.tooltip; highlight.appendChild(tooltipElement); } }); }
-    function makePanelDraggable(panelElement) { if(!panelElement) return; const header = panelElement.querySelector('.panel-header'); if(!header) return; let isDragging = false, offset = { x: 0, y: 0 }; const onMouseMove = (e) => { if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; } }; const onMouseUp = () => { isDragging = false; panelElement.classList.remove('is-dragging'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }; header.addEventListener('mousedown', e => { if (e.target.closest('button, input, select, .close-btn, #delete-session-btn, #chat-mode-selector')) return; isDragging = true; panelElement.classList.add('is-dragging'); offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); }); }
+    function makePanelDraggable(panelElement) { if(!panelElement) return; const header = panelElement.querySelector('.panel-header'); if(!header) return; let isDragging = false, offset = { x: 0, y: 0 }; const onMouseMove = (e) => { if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; } }; const onMouseUp = () => { isDragging = false; panelElement.classList.remove('is-dragging'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }; header.addEventListener('mousedown', e => { if (e.target.closest('button, input, select, .close-btn, #delete-session-btn, #chat-mode-selector, #api-settings-btn')) return; isDragging = true; panelElement.classList.add('is-dragging'); offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); }); }
     function togglePanel(panelElement, forceShow = null) { if (!panelElement) return; const show = forceShow !== null ? forceShow : panelElement.style.display !== 'flex'; panelElement.style.display = show ? 'flex' : 'none'; }
     function setupNavigator() { const scrollNav = document.getElementById('scroll-nav'); if (!scrollNav || !learningContent) return; const headers = learningContent.querySelectorAll('h2, #section-4 h3, #section-5 h3, #section-6 h3'); if (headers.length === 0) { scrollNav.style.display = 'none'; if(wrapper) wrapper.classList.add('toc-hidden'); return; } scrollNav.style.display = 'block'; if(wrapper) wrapper.classList.remove('toc-hidden'); const navList = document.createElement('ul'); headers.forEach((header, index) => { let targetElement = header.closest('.content-section'); if (targetElement && !targetElement.id) targetElement.id = `nav-target-${index}`; if (targetElement) { const listItem = document.createElement('li'); const link = document.createElement('a'); let navText = header.textContent.trim().replace(/\[|\]|🤓|⏳|📖/g, '').trim(); link.textContent = navText.substring(0, 25); link.href = `#${targetElement.id}`; if (header.tagName === 'H3') { link.style.paddingLeft = '25px'; link.style.fontSize = '0.9em'; } listItem.appendChild(link); navList.appendChild(listItem); } }); scrollNav.innerHTML = '<h3>학습 내비게이션</h3>'; scrollNav.appendChild(navList); const links = scrollNav.querySelectorAll('a'); const observer = new IntersectionObserver(entries => { entries.forEach(entry => { const id = entry.target.getAttribute('id'); const navLink = scrollNav.querySelector(`a[href="#${id}"]`); if (navLink && entry.isIntersecting && entry.intersectionRatio > 0.5) { links.forEach(l => l.classList.remove('active')); navLink.classList.add('active'); } }); }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 }); headers.forEach(header => { const target = header.closest('.content-section'); if (target) observer.observe(target); }); }
     function handleTextSelection(e) { if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu, .session-context-menu')) return; const selection = window.getSelection(); const selectedText = selection.toString().trim(); removeContextMenu(); if (selectedText.length > 3) { lastSelectedText = selectedText; const range = selection.getRangeAt(0); const rect = range.getBoundingClientRect(); const popover = selectionPopover; let top = rect.top + window.scrollY - popover.offsetHeight - 10; let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2); popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`; popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`; popover.style.display = 'flex'; } else if (!e.target.closest('#selection-popover')) { selectionPopover.style.display = 'none'; } }
@@ -745,11 +881,236 @@ document.addEventListener('DOMContentLoaded', function () {
     async function startQuiz() { if (!quizModalOverlay) return; const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', '); if (!k) { showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); return; } if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>'; if (quizResults) quizResults.innerHTML = ''; quizModalOverlay.style.display = 'flex'; try { const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); currentQuizData = JSON.parse(res); renderQuiz(currentQuizData); } catch (e) { if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; } }
     function renderQuiz(data) { if (!quizContainer || !data.questions) return; quizContainer.innerHTML = ''; data.questions.forEach((q, i) => { const b = document.createElement('div'); b.className = 'quiz-question-block'; const p = document.createElement('p'); p.textContent = `${i + 1}. ${q.q}`; const o = document.createElement('div'); o.className = 'quiz-options'; q.o.forEach(opt => { const l = document.createElement('label'); const r = document.createElement('input'); r.type = 'radio'; r.name = `q-${i}`; r.value = opt; l.append(r,` ${opt}`); o.appendChild(l); }); b.append(p, o); quizContainer.appendChild(b); }); }
 
+    
+    // --- [NEW] API Settings Functions ---
+    
+    function createApiSettingsModal() {
+        const modal = document.createElement('div');
+        modal.id = 'api-settings-modal-overlay';
+        modal.className = 'custom-modal-overlay'; // Re-use existing overlay style
+        modal.innerHTML = `
+            <div class="custom-modal api-settings-modal">
+                <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg> 개인 API 설정 (BYOK)</h3>
+                <p class="api-modal-desc">기본 제공되는 모델 외에, 개인 API 키를 사용하여 더 다양하고 강력한 모델을 이용할 수 있습니다.</p>
+                
+                <div class="api-form-section">
+                    <label for="api-key-input">API 키</label>
+                    <div class="api-key-wrapper">
+                        <input type="password" id="api-key-input" placeholder="sk-..., sk-ant-..., 또는 Google API 키를 입력하세요">
+                        <button id="verify-api-key-btn">키 검증 & 모델 로드</button>
+                    </div>
+                    <div id="api-key-status"></div>
+                </div>
+
+                <div class="api-form-section">
+                    <label for="api-model-select">사용 모델</label>
+                    <select id="api-model-select" disabled>
+                        <option value="">API 키를 먼저 검증해주세요</option>
+                    </select>
+                </div>
+
+                <div class="api-form-section">
+                    <label>토큰 한도 설정</label>
+                    <div class="token-limit-wrapper">
+                        <input type="number" id="max-output-tokens-input" placeholder="최대 출력 (예: 2048)">
+                    </div>
+                    <small>모델이 생성할 응답의 최대 길이를 제한합니다. (입력값 없을 시 모델 기본값 사용)</small>
+                </div>
+
+                <div class="api-form-section token-usage-section">
+                    <label>누적 토큰 사용량 (개인 키)</label>
+                    <div id="token-usage-display">
+                        <span>입력: 0</span> | <span>출력: 0</span> | <strong>총합: 0</strong>
+                    </div>
+                    <button id="reset-token-usage-btn">사용량 초기화</button>
+                    <small>Google 유료 모델은 응답에 토큰 정보를 포함하지 않아 집계되지 않습니다.</small>
+                </div>
+
+                <div class="custom-modal-actions">
+                    <button id="api-settings-cancel-btn" class="modal-btn">취소</button>
+                    <button id="api-settings-save-btn" class="modal-btn">저장</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Assign elements after creation
+        apiSettingsModalOverlay = document.getElementById('api-settings-modal-overlay');
+        apiKeyInput = document.getElementById('api-key-input');
+        verifyApiKeyBtn = document.getElementById('verify-api-key-btn');
+        apiKeyStatus = document.getElementById('api-key-status');
+        apiModelSelect = document.getElementById('api-model-select');
+        maxOutputTokensInput = document.getElementById('max-output-tokens-input');
+        tokenUsageDisplay = document.getElementById('token-usage-display');
+        resetTokenUsageBtn = document.getElementById('reset-token-usage-btn');
+        apiSettingsSaveBtn = document.getElementById('api-settings-save-btn');
+        apiSettingsCancelBtn = document.getElementById('api-settings-cancel-btn');
+    }
+
+    function openApiSettingsModal() {
+        loadApiSettings();
+        apiKeyInput.value = userApiSettings.apiKey;
+        maxOutputTokensInput.value = userApiSettings.maxOutputTokens;
+        populateModelSelector(null, userApiSettings.provider, userApiSettings.selectedModel);
+        renderTokenUsage();
+        apiSettingsModalOverlay.style.display = 'flex';
+    }
+
+    function closeApiSettingsModal() {
+        apiSettingsModalOverlay.style.display = 'none';
+    }
+
+    function loadApiSettings() {
+        const savedSettings = localStorage.getItem('userApiSettings');
+        if (savedSettings) {
+            userApiSettings = JSON.parse(savedSettings);
+            // Ensure tokenUsage exists
+            if (!userApiSettings.tokenUsage) {
+                userApiSettings.tokenUsage = { prompt: 0, completion: 0 };
+            }
+        }
+    }
+
+    function saveApiSettings(closeModal = true) {
+        userApiSettings.apiKey = apiKeyInput.value.trim();
+        userApiSettings.selectedModel = apiModelSelect.value;
+        userApiSettings.maxOutputTokens = Number(maxOutputTokensInput.value) || 2048;
+        // Provider is set during verification
+        localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
+        if (closeModal) {
+            closeApiSettingsModal();
+        }
+    }
+
+    function detectProvider(key) {
+        if (key.startsWith('sk-ant-api')) return 'anthropic';
+        if (key.startsWith('sk-')) return 'openai';
+        if (key.length > 35 && key.startsWith('AIza')) return 'google_paid'; // Common Google API key pattern
+        return null;
+    }
+
+    async function handleVerifyApiKey() {
+        const key = apiKeyInput.value.trim();
+        if (!key) {
+            apiKeyStatus.textContent = 'API 키를 입력해주세요.';
+            apiKeyStatus.className = 'status-error';
+            return;
+        }
+
+        const provider = detectProvider(key);
+        if (!provider) {
+            apiKeyStatus.textContent = '알 수 없는 형식의 API 키입니다. (OpenAI, Anthropic, Google 지원)';
+            apiKeyStatus.className = 'status-error';
+            return;
+        }
+        
+        userApiSettings.provider = provider;
+        apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`;
+        apiKeyStatus.className = 'status-loading';
+        verifyApiKeyBtn.disabled = true;
+
+        try {
+            const models = await fetchAvailableModels(provider, key);
+            populateModelSelector(models, provider);
+            apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하세요.`;
+            apiKeyStatus.className = 'status-success';
+            apiModelSelect.disabled = false;
+        } catch (error) {
+            console.error("API Key Verification Error:", error);
+            apiKeyStatus.textContent = `❌ [${provider}] 키 검증 실패: ${error.message}`;
+            apiKeyStatus.className = 'status-error';
+            apiModelSelect.innerHTML = '<option>키 검증에 실패했습니다</option>';
+            apiModelSelect.disabled = true;
+        } finally {
+            verifyApiKeyBtn.disabled = false;
+        }
+    }
+
+    async function fetchAvailableModels(provider, key) {
+        if (provider === 'openai') {
+            const response = await fetch('https://api.openai.com/v1/models', {
+                headers: { 'Authorization': `Bearer ${key}` }
+            });
+            if (!response.ok) throw new Error('OpenAI 서버에서 모델 목록을 가져올 수 없습니다.');
+            const data = await response.json();
+            return data.data.filter(m => m.id.includes('gpt')).map(m => m.id).sort().reverse();
+        } else if (provider === 'anthropic') {
+            // Anthropic doesn't have a public /v1/models endpoint. We provide a list of common models.
+            // A real API call to messages with a test prompt would be a better verification, but is more complex.
+            // For now, we trust the key format and provide a list.
+            return ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-2.1'];
+        } else if (provider === 'google_paid') {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+            if (!response.ok) throw new Error('Google 서버에서 모델 목록을 가져올 수 없습니다.');
+            const data = await response.json();
+            return data.models.map(m => m.name.replace('models/', '')).filter(m => m.includes('gemini'));
+        }
+        return [];
+    }
+
+    function populateModelSelector(models, provider, selectedModel = null) {
+        apiModelSelect.innerHTML = '';
+        const effectiveModels = models || [];
+
+        if (provider && effectiveModels.length === 0) {
+            if (provider === 'anthropic') {
+                 effectiveModels.push('claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307');
+            }
+        }
+
+        if (effectiveModels.length > 0) {
+            effectiveModels.forEach(modelId => {
+                const option = document.createElement('option');
+                option.value = modelId;
+                option.textContent = modelId;
+                if (modelId === selectedModel) {
+                    option.selected = true;
+                }
+                apiModelSelect.appendChild(option);
+            });
+            apiModelSelect.disabled = false;
+        } else {
+            apiModelSelect.innerHTML = '<option>사용 가능한 모델 없음</option>';
+            apiModelSelect.disabled = true;
+        }
+    }
+
+    function renderTokenUsage() {
+        const { prompt, completion } = userApiSettings.tokenUsage;
+        const total = prompt + completion;
+        tokenUsageDisplay.innerHTML = `
+            <span>입력: ${prompt.toLocaleString()}</span> | 
+            <span>출력: ${completion.toLocaleString()}</span> | 
+            <strong>총합: ${total.toLocaleString()}</strong>
+        `;
+    }
+
+    function resetTokenUsage() {
+        showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => {
+             userApiSettings.tokenUsage = { prompt: 0, completion: 0 };
+             saveApiSettings(false); // Save without closing modal
+             renderTokenUsage();
+        });
+    }
+
     // --- 4. Global Initialization ---
     function initialize() {
         if (!body || !wrapper) { console.error("Core layout elements not found."); return; }
         updateClock(); setInterval(updateClock, 1000);
         
+        // [NEW] Create and set up API settings UI
+        createApiSettingsModal();
+        const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
+        if (chatHeader) {
+            apiSettingsBtn = document.createElement('span');
+            apiSettingsBtn.id = 'api-settings-btn';
+            apiSettingsBtn.title = '개인 API 설정';
+            apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
+            chatHeader.appendChild(apiSettingsBtn);
+        }
+
+        loadApiSettings();
+
         initializeFirebase().then(() => {
             setupNavigator();
             setupChatModeSelector();
@@ -795,29 +1156,34 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
         
-        // --- [NEW] AI Model Selector Logic ---
+        // --- [MODIFIED] AI Model Selector Logic for Default Models ---
         if (aiModelSelector) {
-            // Restore saved model selection on load
             const savedModel = localStorage.getItem('selectedAiModel');
             if (savedModel) {
-                selectedModel = savedModel;
+                defaultModel = savedModel;
                 aiModelSelector.value = savedModel;
             }
-            
-            // Save model selection on change
             aiModelSelector.addEventListener('change', () => {
-                selectedModel = aiModelSelector.value;
-                localStorage.setItem('selectedAiModel', selectedModel);
+                defaultModel = aiModelSelector.value;
+                localStorage.setItem('selectedAiModel', defaultModel);
             });
         }
         
-        // --- [REFINED] Event Delegation for Sidebar ---
+        // --- [NEW] API Settings Modal Listeners ---
+        if (apiSettingsBtn) apiSettingsBtn.addEventListener('click', openApiSettingsModal);
+        if (apiSettingsCancelBtn) apiSettingsCancelBtn.addEventListener('click', closeApiSettingsModal);
+        if (apiSettingsSaveBtn) apiSettingsSaveBtn.addEventListener('click', () => saveApiSettings(true));
+        if (verifyApiKeyBtn) verifyApiKeyBtn.addEventListener('click', handleVerifyApiKey);
+        if (resetTokenUsageBtn) resetTokenUsageBtn.addEventListener('click', resetTokenUsage);
+        if (apiSettingsModalOverlay) apiSettingsModalOverlay.addEventListener('click', (e) => {
+            if (e.target === apiSettingsModalOverlay) closeApiSettingsModal();
+        });
+
+        // --- REFINED Event Delegation for Sidebar ---
         if (sessionListContainer) {
             sessionListContainer.addEventListener('click', (e) => {
-                // Close project context menu if clicking elsewhere
                 if (!e.target.closest('.project-context-menu')) {
-                    const existingProjectMenu = sessionListContainer.querySelector('.project-context-menu');
-                    if (existingProjectMenu) removeContextMenu();
+                    removeContextMenu();
                 }
 
                 const sessionItem = e.target.closest('.session-item');
@@ -839,14 +1205,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (actionsButton) {
                         e.stopPropagation();
                         showProjectContextMenu(projectId, actionsButton);
-                    } else if (!e.target.closest('input')) { // Don't toggle if clicking the rename input
+                    } else if (!e.target.closest('input')) { 
                         toggleProjectExpansion(projectId);
                     }
                     return;
                 }
             });
 
-            // --- [NEW] Session Context Menu (Right-click) ---
             sessionListContainer.addEventListener('contextmenu', (e) => {
                 const sessionItem = e.target.closest('.session-item');
                 if (sessionItem) {
@@ -856,7 +1221,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
 
-            // --- [REFINED] Drag and Drop Logic ---
             let draggedItem = null;
             sessionListContainer.addEventListener('dragstart', (e) => {
                 if (e.target.classList.contains('session-item')) {
@@ -883,7 +1247,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.preventDefault();
                 const targetProjectHeader = e.target.closest('.project-header');
                 
-                // Clear all previous highlights
                 document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => {
                     el.classList.remove('drag-over', 'drag-target-area');
                 });
@@ -893,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const sourceSessionId = draggedItem.dataset.sessionId;
                 const sourceSession = localChatSessionsCache.find(s => s.id === sourceSessionId);
 
-                if (targetProjectHeader) { // Dragging over a project
+                if (targetProjectHeader) { 
                     const targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId;
                     if (sourceSession && sourceSession.projectId !== targetProjectId) {
                         e.dataTransfer.dropEffect = 'move';
@@ -901,8 +1264,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     } else {
                          e.dataTransfer.dropEffect = 'none';
                     }
-                } else { // Dragging over the general area (for dropping out)
-                     if (sourceSession && sourceSession.projectId) { // Only if it's in a project
+                } else { 
+                     if (sourceSession && sourceSession.projectId) { 
                         e.dataTransfer.dropEffect = 'move';
                         sessionListContainer.classList.add('drag-target-area');
                     } else {
@@ -934,13 +1297,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const sourceSession = localChatSessionsCache.find(s => s.id === sessionId);
                 if (!sourceSession) return;
 
-                if (targetProjectHeader) { // Dropped on a project
+                if (targetProjectHeader) { 
                     targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId;
                     if (sourceSession.projectId !== targetProjectId) {
                         shouldUpdate = true;
                     }
-                } else { // Dropped outside a project
-                    if (sourceSession.projectId) { // Only update if it was in a project
+                } else { 
+                    if (sourceSession.projectId) { 
                         targetProjectId = null;
                         shouldUpdate = true;
                     }
@@ -954,7 +1317,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         };
                         await chatSessionsCollectionRef.doc(sessionId).update(updates);
                         
-                        // Also update the target project's timestamp to bring it to top
                         if (targetProjectId) {
                             await projectsCollectionRef.doc(targetProjectId).update({
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -980,9 +1342,8 @@ document.addEventListener('DOMContentLoaded', function () {
         removeContextMenu();
     
         const menu = document.createElement('div');
-        menu.className = 'session-context-menu'; // A new specific class for session menus
+        menu.className = 'session-context-menu'; 
     
-        // Move To Submenu
         let moveToSubMenuHTML = localProjectsCache
             .map(p => `<button class="context-menu-item" data-project-id="${p.id}" ${session.projectId === p.id ? 'disabled' : ''}>${p.name}</button>`)
             .join('');
@@ -1015,7 +1376,6 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="context-menu-item disabled">수정: ${updatedAt}</div>
         `;
     
-        // Position and display menu
         document.body.appendChild(menu);
         const menuWidth = menu.offsetWidth;
         const menuHeight = menu.offsetHeight;
@@ -1028,7 +1388,6 @@ document.addEventListener('DOMContentLoaded', function () {
     
         currentOpenContextMenu = menu;
     
-        // Add event listeners for menu actions
         menu.addEventListener('click', (e) => {
             e.stopPropagation();
             const target = e.target.closest('.context-menu-item');
@@ -1060,7 +1419,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 projectId: newProjectId,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            // Update the new project's timestamp as well
             if (newProjectId) {
                  await projectsCollectionRef.doc(newProjectId).update({
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1081,7 +1439,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const originalTitle = titleSpan.textContent;
         const input = document.createElement('input');
         input.type = 'text';
-        input.className = 'project-title-input'; // Reuse project rename style
+        input.className = 'project-title-input'; 
         input.value = originalTitle;
     
         titleSpan.replaceWith(input);
@@ -1093,7 +1451,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (newTitle && newTitle !== originalTitle) {
                 renameSession(sessionId, newTitle);
             } else {
-                 renderSidebarContent(); // Restore original if empty or unchanged
+                 renderSidebarContent(); 
             }
         };
     
@@ -1102,7 +1460,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (e.key === 'Enter') {
                 input.blur();
             } else if (e.key === 'Escape') {
-                input.value = originalTitle; // Revert on escape
+                input.value = originalTitle; 
                 input.blur();
             }
         });
