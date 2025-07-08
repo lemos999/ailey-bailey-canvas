@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.4 (Advanced Sidebar & Session Context Menu)
+Version: 9.5 (Gemini Model Selector)
 Architect: [Username] & System Architect Ailey
-Description: Added comprehensive styles for the new session context menu (right-click menu), including submenus for moving sessions. Styled new group headers for 'Projects' and 'General Chats' in the sidebar. Added visual feedback for drag-and-drop target areas when moving a session out of a project.
+Description: Added styles for the new Gemini API model selector dropdown in the chat panel header, ensuring consistency with both light and dark themes. Adjusted header layout for proper alignment.
 */
 
 :root {
@@ -290,8 +290,52 @@ body:not(.dark-mode) .context-submenu {
 .sessions-in-project.expanded { max-height: 500px; /* Adjust as needed */ }
 
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
-#chat-main-view .panel-header { gap: 5px; }
+
+/* [MODIFIED] Adjust panel header for new model selector */
+#chat-main-view .panel-header > div:first-of-type {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start; /* Changed from space-between */
+    align-items: center;
+    gap: 15px; /* Added gap */
+}
+#chat-main-view .panel-header > div:first-of-type > div {
+    margin-left: auto; /* Push buttons to the right */
+}
+
 #chat-session-title { font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* [ADDED] Model Selector Styles */
+#chat-model-selector-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+}
+#chat-model-selector-container label {
+    white-space: nowrap;
+    opacity: 0.8;
+}
+#api-model-select {
+    font-family: 'Gowun Batang', serif;
+    border-radius: 5px;
+    padding: 4px 8px;
+    border: 1px solid;
+    outline: none;
+    cursor: pointer;
+}
+body.dark-mode #api-model-select {
+    background-color: var(--quote-bg-dark);
+    border-color: var(--border-color-dark);
+    color: var(--text-color-dark);
+}
+body:not(.dark-mode) #api-model-select {
+    background-color: var(--quote-bg-light);
+    border-color: var(--border-color-light);
+    color: var(--text-color-light);
+}
+
+
 #delete-session-btn { display: none; background: none; border: none; line-height: 0; }
 #delete-session-btn svg { fill: currentColor; }
 
@@ -304,7 +348,7 @@ body:not(.dark-mode) #chat-mode-selector button { background-color: #e0d8ca; bor
 body:not(.dark-mode) #chat-mode-selector button:hover { background-color: #d1c8bb; }
 body:not(.dark-mode) #chat-mode-selector button.active { background-color: var(--h2-color-light); color: white; border-color: var(--h2-color-light); font-weight: bold; }
 body.dark-mode #chat-mode-selector button { background-color: #3f3f3f; border-color: #555; color: var(--text-color-dark); }
-body:dark-mode #chat-mode-selector button:hover { background-color: #555; }
+body.dark-mode #chat-mode-selector button:hover { background-color: #555; }
 body.dark-mode #chat-mode-selector button.active { background-color: var(--h2-color-dark); color: var(--bg-color-dark); border-color: var(--h2-color-dark); font-weight: bold; }
 
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
@@ -394,7 +438,7 @@ body:not(.dark-mode) #note-content-textarea { color: var(--text-color-light); }
 .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; }
 .custom-modal { padding: 30px; border-radius: 10px; width: 90%; max-width: 450px; text-align: center; }
 body:not(.dark-mode) .custom-modal { background-color: var(--bg-color-light); }
-body:dark-mode .custom-modal { background-color: var(--container-bg-dark); }
+body.dark-mode .custom-modal { background-color: var(--container-bg-dark); }
 .custom-modal-actions { margin-top: 20px; display: flex; justify-content: center; gap: 15px; }
 .modal-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; }
 #modal-confirm-btn, #prompt-save-btn { background-color: #8C6D46; color: white; }
@@ -420,108 +464,3 @@ body:not(:dark-mode) #quiz-submit-btn { background-color: var(--h2-color-light);
 /* Prompt Modal */
 #prompt-modal-overlay textarea { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
 body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }
-
-/* --- [NEW] LLM Model Selector Styles --- */
-#llm-model-selector-container {
-    position: relative;
-    font-size: 0.9em;
-}
-
-.llm-selector-display {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    user-select: none;
-}
-body:not(.dark-mode) .llm-selector-display {
-    background-color: rgba(0, 0, 0, 0.05);
-    border: 1px solid var(--border-color-light);
-}
-body:dark-mode .llm-selector-display {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid var(--border-color-dark);
-}
-body:not(.dark-mode) .llm-selector-display:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-body:dark-mode .llm-selector-display:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-}
-
-.llm-selector-display .model-name {
-    font-weight: bold;
-}
-
-.llm-selector-display .dropdown-arrow {
-    font-size: 0.8em;
-    transition: transform 0.2s;
-}
-
-#llm-model-selector-container.open .dropdown-arrow {
-    transform: rotate(180deg);
-}
-
-.llm-selector-options {
-    display: none;
-    position: absolute;
-    top: calc(100% + 5px);
-    left: 0;
-    z-index: 1200; /* Must be above other panel elements */
-    min-width: 280px;
-    border-radius: 8px;
-    padding: 5px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-body:not(.dark-mode) .llm-selector-options {
-    background-color: var(--container-bg-light);
-    border: 1px solid var(--border-color-light);
-}
-body:dark-mode .llm-selector-options {
-    background-color: var(--container-bg-dark);
-    border: 1px solid var(--border-color-dark);
-}
-
-#llm-model-selector-container.open .llm-selector-options {
-    display: block;
-}
-
-.llm-selector-option {
-    padding: 10px 15px;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background-color 0.2s;
-    display: flex;
-    flex-direction: column;
-}
-body:not(.dark-mode) .llm-selector-option:hover {
-    background-color: var(--quote-bg-light);
-}
-body:dark-mode .llm-selector-option:hover {
-    background-color: var(--quote-bg-dark);
-}
-
-.llm-selector-option.selected {
-    font-weight: bold;
-}
-
-body:not(.dark-mode) .llm-selector-option.selected {
-    background-color: var(--strong-bg-light);
-    color: var(--h2-color-light);
-}
-body:dark-mode .llm-selector-option.selected {
-    background-color: var(--strong-bg-dark);
-    color: var(--header-color-dark);
-}
-
-.llm-selector-option .model-title {
-    font-weight: bold;
-}
-.llm-selector-option .model-desc {
-    font-size: 0.9em;
-    opacity: 0.8;
-    margin-top: 3px;
-}
