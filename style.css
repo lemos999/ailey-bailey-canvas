@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 7.3 (System Reset UI)
+Version: 7.4 (Chat Session Enhancement UI)
 Architect: [Username] & System Architect Ailey
-Description: Added styles for the new System Reset button to provide a clear visual warning for this critical function.
+Description: Added styles for the new chat session search bar, time-based group headers, and pin button to enhance session management UI/UX.
 */
 
 :root {
@@ -126,10 +126,36 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 body.dark-mode #chat-session-sidebar { border-right: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) #chat-session-sidebar { border-right: 1px solid var(--border-color-light); }
 
+/* [MODIFIED] Sidebar header to accommodate search */
 #sidebar-header {
     padding: 10px;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
+
+/* [NEW] Search input for chat sessions */
+#search-sessions-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid;
+    outline: none;
+    font-family: 'Gowun Batang', serif;
+}
+body.dark-mode #search-sessions-input {
+    border-color: var(--border-color-dark);
+    background-color: var(--quote-bg-dark);
+    color: var(--text-color-dark);
+}
+body:not(.dark-mode) #search-sessions-input {
+    border-color: var(--border-color-light);
+    background-color: var(--quote-bg-light);
+    color: var(--text-color-light);
+}
+
 
 #new-chat-btn {
     width: 100%;
@@ -151,6 +177,20 @@ body:not(.dark-mode) #new-chat-btn:hover { background-color: #A88A68; }
     overflow-y: auto;
     padding: 0 10px 10px 10px;
 }
+
+/* [NEW] Session Group Header Style */
+.session-group-header {
+    font-size: 0.8em;
+    font-weight: bold;
+    padding: 15px 10px 5px 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+body.dark-mode .session-group-header { color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .session-group-header { color: var(--sub-text-color-light); }
+
+
+/* [MODIFIED] Session item for pin button */
 .session-item {
     padding: 12px 10px;
     border-radius: 6px;
@@ -164,6 +204,7 @@ body:not(.dark-mode) #new-chat-btn:hover { background-color: #A88A68; }
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative; /* For pin button positioning */
 }
 body.dark-mode .session-item:hover { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .session-item:hover { background-color: var(--quote-bg-light); }
@@ -178,8 +219,34 @@ body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-li
     flex-grow: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-right: 25px; /* Make space for pin button */
 }
-.session-item-actions { display: none; } /* Hide for now, can be added later */
+
+/* [NEW] Session pin button */
+.session-pin-btn {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1em;
+    padding: 5px;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+}
+.session-item:hover .session-pin-btn,
+.session-pin-btn.pinned-active {
+    opacity: 1;
+}
+body.dark-mode .session-pin-btn { color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .session-pin-btn { color: var(--sub-text-color-light); }
+.session-pin-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
+.session-pin-btn.pinned-active {
+    color: var(--pin-color);
+}
 
 
 #chat-main-view {
