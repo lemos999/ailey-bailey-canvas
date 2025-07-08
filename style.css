@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.6 (Dynamic Reasoning UI Styles)
+Version: 9.7 (Reasoning UI Fix & Response Timer Styles)
 Architect: [Username] & System Architect Ailey
-Description: Added styles for the new dynamic "Thinking..." indicator and the collapsible AI reasoning block. Includes styles for the closed state with summary animation and the expanded state with a typewriter effect.
+Description: Added styles for the AI response container and the new response generation timer meta info. Ensures reasoning blocks, messages, and metadata are well-structured.
 */
 
 :root {
@@ -291,41 +291,13 @@ body:not(.dark-mode) .context-submenu {
 #delete-session-btn { display: none; background: none; border: none; line-height: 0; }
 #delete-session-btn svg { fill: currentColor; }
 
-/* [NEW] API Settings Button */
-#api-settings-btn {
-    cursor: pointer;
-    margin-left: 10px;
-    line-height: 0;
-    transition: transform 0.2s ease-in-out;
-}
-#api-settings-btn:hover {
-    transform: scale(1.15) rotate(20deg);
-}
-#api-settings-btn svg {
-    fill: currentColor;
-}
+#api-settings-btn { cursor: pointer; margin-left: 10px; line-height: 0; transition: transform 0.2s ease-in-out; }
+#api-settings-btn:hover { transform: scale(1.15) rotate(20deg); }
+#api-settings-btn svg { fill: currentColor; }
 
-#ai-model-selector {
-    padding: 4px 8px;
-    font-size: 0.9em;
-    border-radius: 6px;
-    border: 1px solid;
-    font-family: 'Gowun Batang', serif;
-    cursor: pointer;
-    transition: all 0.2s;
-    flex-shrink: 0; 
-}
-body:not(.dark-mode) #ai-model-selector {
-    background-color: var(--quote-bg-light);
-    border-color: var(--border-color-light);
-    color: var(--text-color-light);
-}
-body.dark-mode #ai-model-selector {
-    background-color: var(--quote-bg-dark);
-    border-color: var(--border-color-dark);
-    color: var(--text-color-dark);
-}
-
+#ai-model-selector { padding: 4px 8px; font-size: 0.9em; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+body:not(.dark-mode) #ai-model-selector { background-color: var(--quote-bg-light); border-color: var(--border-color-light); color: var(--text-color-light); }
+body.dark-mode #ai-model-selector { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
 
 #chat-mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; width: 100%; justify-content: center; padding: 8px 0; border-top: 1px solid transparent; }
 body:not(.dark-mode) #chat-mode-selector { border-top-color: var(--border-color-light); }
@@ -344,15 +316,24 @@ body.dark-mode #chat-mode-selector button.active { background-color: var(--h2-co
 body:not(.dark-mode) #chat-welcome-message { color: var(--sub-text-color-light); }
 #chat-welcome-message h3 { font-family: 'Noto Serif KR', serif; font-size: 1.5em; margin-bottom: 10px; color: var(--h2-color-dark); }
 body:not(.dark-mode) #chat-welcome-message h3 { color: var(--h2-color-light); }
+
+/* [MODIFIED] Chat Message & AI Response Container Styles */
 .chat-message { max-width: 85%; padding: 10px 15px; border-radius: 18px; line-height: 1.6; word-wrap: break-word; position: relative; }
-.chat-message.ai { background-color: var(--chat-ai-bg-dark); align-self: flex-start; border-bottom-left-radius: 4px; }
-body:not(.dark-mode) .chat-message.ai { background-color: var(--chat-ai-bg-light); }
 .chat-message.user { background-color: #8C6D46; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.ai-response-container { max-width: 85%; align-self: flex-start; display: flex; flex-direction: column; gap: 8px; }
+.chat-message.ai { background-color: var(--chat-ai-bg-dark); border-bottom-left-radius: 4px; width: fit-content; }
+body:not(.dark-mode) .chat-message.ai { background-color: var(--chat-ai-bg-light); }
+
 .chat-timestamp { font-size: 0.75em; color: var(--sub-text-color-dark); margin-top: 5px; text-align: right; }
 body:not(.dark-mode) .chat-timestamp { color: var(--sub-text-color-light); }
 .chat-message.user .chat-timestamp { text-align: left; }
 
-/* [NEW] Loading Indicator Styles */
+/* [NEW] AI Response Meta (Timer) Styles */
+.ai-response-meta { display: flex; align-items: center; gap: 6px; font-size: 0.8em; color: var(--sub-text-color-dark); padding: 0 10px; }
+body:not(.dark-mode) .ai-response-meta { color: var(--sub-text-color-light); }
+.ai-response-meta svg { fill: currentColor; }
+
+/* [MODIFIED] Loading Indicator Styles */
 .loading-container { align-self: flex-start; display: flex; align-items: center; gap: 8px; font-style: italic; color: var(--sub-text-color-dark); }
 body:not(.dark-mode) .loading-container { color: var(--sub-text-color-light); }
 .typing-indicator { display: flex; gap: 4px; }
@@ -361,8 +342,8 @@ body:not(.dark-mode) .loading-container { color: var(--sub-text-color-light); }
 .typing-indicator span:nth-of-type(3) { animation-delay: -0.4s; }
 @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
 
-/* [NEW] Reasoning Block Styles */
-.reasoning-block { border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+/* [MODIFIED] Reasoning Block Styles */
+.reasoning-block { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; }
 body:not(.dark-mode) .reasoning-block { background-color: var(--quote-bg-light); border: 1px solid var(--border-color-light); }
 body.dark-mode .reasoning-block { background-color: var(--quote-bg-dark); border: 1px solid var(--border-color-dark); }
 .reasoning-header { padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; user-select: none; }
