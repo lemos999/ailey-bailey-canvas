@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.3 (Temporal Grouping UI)
+Version: 9.4 (Advanced Sidebar & Session Context Menu)
 Architect: [Username] & System Architect Ailey
-Description: Implemented a major UX enhancement for the chat sidebar. All projects and chat sessions are now automatically grouped by their last update time (e.g., 'Today', 'Yesterday', 'Last 7 Days'). This provides a more intuitive and chronologically organized view of user activity.
+Description: Major sidebar UX overhaul. Projects are now grouped at the top. Sessions are grouped below projects by date. Added a powerful right-click context menu for sessions (rename, move, pin, delete, view info). Implemented drag-and-drop functionality to move sessions out of projects.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
     let currentQuizData = null;
     let currentOpenContextMenu = null;
-    let newlyCreatedProjectId = null; // [NEW] To track the new project for auto-rename
+    let newlyCreatedProjectId = null;
 
 
     // --- 3. Function Definitions ---
@@ -138,7 +138,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     
-    // --- [NEW] Temporal Grouping Helper ---
     function getRelativeDateGroup(timestamp, isPinned = false) {
         if (isPinned) {
             return { key: 0, label: '📌 고정됨' };
@@ -170,7 +169,6 @@ document.addEventListener('DOMContentLoaded', function () {
             return { key: 4, label: '이번 달' };
         }
     
-        // Check for last month
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         if (dateYear === lastMonth.getFullYear() && dateMonth === lastMonth.getMonth()) {
              return { key: 5, label: '지난 달' };
@@ -180,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-    // --- [NEW/REFINED] Project Management ---
+    // --- [NEW/REFINED] Project & Session Management ---
     function listenToProjects() {
         return new Promise((resolve) => {
             if (!projectsCollectionRef) return resolve();
@@ -287,26 +285,30 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function removeContextMenu() {
-        if (currentOpenContextMenu) {
-            currentOpenContextMenu.remove();
-            currentOpenContextMenu = null;
-        }
+        currentOpenContextMenu?.remove();
+        currentOpenContextMenu = null;
     }
     
     function showProjectContextMenu(projectId, buttonElement) {
         removeContextMenu();
+        const rect = buttonElement.getBoundingClientRect();
         const menu = document.createElement('div');
-        menu.className = 'project-context-menu';
+        menu.className = 'project-context-menu'; // Using existing style for consistency
+        menu.style.position = 'absolute';
+        menu.style.top = `${rect.bottom + 2}px`;
+        menu.style.right = '5px';
         menu.innerHTML = `
             <button data-action="rename">이름 변경</button>
             <button data-action="delete">삭제</button>
         `;
         
-        buttonElement.closest('.project-header').appendChild(menu);
+        // This needs to be appended to a relative parent, or body
+        sessionListContainer.appendChild(menu);
         menu.style.display = 'block';
         currentOpenContextMenu = menu;
 
         menu.addEventListener('click', (e) => {
+            e.stopPropagation();
             const action = e.target.dataset.action;
             if (action === 'rename') {
                 startProjectRename(projectId);
@@ -337,9 +339,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const newName = input.value.trim();
             if (newName && newName !== originalTitle) {
                  renameProject(projectId, newName);
-            } else {
-                 input.blur(); 
             }
+             // Re-render to restore the span, even if no change
+             renderSidebarContent();
         };
 
         input.addEventListener('blur', finishEditing);
@@ -353,114 +355,120 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
     
-    // --- [REFACTORED] Sidebar Rendering with Temporal Grouping ---
+    // --- [RESTRUCTURED] Sidebar Rendering with Project Grouping ---
     function renderSidebarContent() {
         if (!sessionListContainer) return;
         const searchTerm = searchSessionsInput.value.toLowerCase();
-        sessionListContainer.innerHTML = '';
+        sessionListContainer.innerHTML = ''; // Clear previous content
     
-        // 1. Combine projects and sessions into a single list
-        const allItems = [
-            ...localProjectsCache.map(p => ({
-                ...p,
-                type: 'project',
-                name: p.name // Ensure 'name' property for filtering
-            })),
-            ...localChatSessionsCache.map(s => ({
-                ...s,
-                type: 'session',
-                name: s.title || '새 대화' // Ensure 'name' property for filtering
-            }))
-        ];
+        // Filter projects and sessions based on search
+        const filteredProjects = localProjectsCache.filter(p => p.name?.toLowerCase().includes(searchTerm));
+        const filteredSessions = localChatSessionsCache.filter(s => (s.title || '새 대화').toLowerCase().includes(searchTerm));
     
-        // 2. Filter based on search term
-        const filteredItems = allItems.filter(item => item.name?.toLowerCase().includes(searchTerm));
+        const fragment = document.createDocumentFragment();
     
-        // 3. Assign date group to each item
-        filteredItems.forEach(item => {
-            const timestamp = item.updatedAt || item.createdAt;
-            item.dateGroup = getRelativeDateGroup(timestamp, item.isPinned);
-        });
+        // --- 1. Render Projects Group ---
+        if (filteredProjects.length > 0 || localProjectsCache.length > 0) {
+            const projectGroupHeader = document.createElement('div');
+            projectGroupHeader.className = 'session-group-header';
+            projectGroupHeader.textContent = '📁 프로젝트';
+            fragment.appendChild(projectGroupHeader);
     
-        // 4. Group items by date label
-        const groupedItems = filteredItems.reduce((acc, item) => {
-            const label = item.dateGroup.label;
-            if (!acc[label]) {
-                acc[label] = { key: item.dateGroup.key, items: [] };
-            }
-            acc[label].items.push(item);
-            return acc;
-        }, {});
-    
-        // 5. Sort groups chronologically
-        const sortedGroupLabels = Object.keys(groupedItems).sort((a, b) => {
-            return groupedItems[a].key - groupedItems[b].key;
-        });
-    
-        // 6. Render groups and their items
-        sortedGroupLabels.forEach(label => {
-            // Render group header
-            const header = document.createElement('div');
-            header.className = 'date-group-header';
-            header.textContent = label;
-            sessionListContainer.appendChild(header);
-    
-            const group = groupedItems[label];
-            // Sort items within the group by last update
-            group.items.sort((a, b) => {
-                const timeA = a.updatedAt?.toMillis() || a.createdAt?.toMillis() || 0;
-                const timeB = b.updatedAt?.toMillis() || b.createdAt?.toMillis() || 0;
-                return timeB - timeA;
+            // Sort projects: pinned first, then by last update
+            const sortedProjects = [...(searchTerm ? filteredProjects : localProjectsCache)].sort((a, b) => {
+                 const timeA = a.updatedAt?.toMillis() || 0;
+                 const timeB = b.updatedAt?.toMillis() || 0;
+                 return timeB - timeA;
             });
     
-            // Render items
-            group.items.forEach(item => {
-                if (item.type === 'project') {
-                    // Find sessions belonging to this project
-                    const sessionsInProject = localChatSessionsCache
-                        .filter(s => s.projectId === item.id)
-                        .sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-    
-                    const projectContainer = document.createElement('div');
-                    projectContainer.className = 'project-container';
-                    projectContainer.dataset.projectId = item.id;
-    
-                    const projectHeader = document.createElement('div');
-                    projectHeader.className = 'project-header';
-    
-                    const createdAt = item.createdAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || '정보 없음';
-                    const updatedAt = item.updatedAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || createdAt;
-                    projectHeader.title = `생성: ${createdAt}\n최종 수정: ${updatedAt}`;
-    
-                    projectHeader.innerHTML = `
-                        <span class="project-toggle-icon ${item.isExpanded ? 'expanded' : ''}">
-                            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" /></svg>
-                        </span>
-                        <span class="project-icon">
-                            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2Z" /></svg>
-                        </span>
-                        <span class="project-title">${item.name}</span>
-                        <button class="project-actions-btn" title="프로젝트 메뉴">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z" /></svg>
-                        </button>
-                    `;
-    
-                    const sessionsContainer = document.createElement('div');
-                    sessionsContainer.className = `sessions-in-project ${item.isExpanded ? 'expanded' : ''}`;
-                    sessionsInProject.forEach(session => sessionsContainer.appendChild(createSessionItem(session)));
-    
-                    projectContainer.appendChild(projectHeader);
-                    projectContainer.appendChild(sessionsContainer);
-                    sessionListContainer.appendChild(projectContainer);
-                } else if (item.type === 'session' && !item.projectId) {
-                    // Only render sessions that don't belong to a project
-                    sessionListContainer.appendChild(createSessionItem(item));
+            sortedProjects.forEach(project => {
+                const sessionsInProject = localChatSessionsCache
+                    .filter(s => s.projectId === project.id)
+                    .sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+                
+                // If searching, only show project if it matches or its sessions match
+                if (searchTerm && !project.name.toLowerCase().includes(searchTerm) && sessionsInProject.filter(s => (s.title || '').toLowerCase().includes(searchTerm)).length === 0) {
+                    return;
                 }
+
+                const projectContainer = document.createElement('div');
+                projectContainer.className = 'project-container';
+                projectContainer.dataset.projectId = project.id;
+        
+                const projectHeader = document.createElement('div');
+                projectHeader.className = 'project-header';
+        
+                const createdAt = project.createdAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || '정보 없음';
+                const updatedAt = project.updatedAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || createdAt;
+                projectHeader.title = `생성: ${createdAt}\n최종 수정: ${updatedAt}`;
+        
+                projectHeader.innerHTML = `
+                    <span class="project-toggle-icon ${project.isExpanded ? 'expanded' : ''}">
+                        <svg viewBox="0 0 24 24" width="16" height="16"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" /></svg>
+                    </span>
+                    <span class="project-icon">
+                        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2Z" /></svg>
+                    </span>
+                    <span class="project-title">${project.name}</span>
+                    <button class="project-actions-btn" title="프로젝트 메뉴">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z" /></svg>
+                    </button>
+                `;
+        
+                const sessionsContainer = document.createElement('div');
+                sessionsContainer.className = `sessions-in-project ${project.isExpanded ? 'expanded' : ''}`;
+                sessionsInProject.forEach(session => {
+                    if (!searchTerm || (session.title || '새 대화').toLowerCase().includes(searchTerm)) {
+                         sessionsContainer.appendChild(createSessionItem(session));
+                    }
+                });
+        
+                projectContainer.appendChild(projectHeader);
+                projectContainer.appendChild(sessionsContainer);
+                fragment.appendChild(projectContainer);
             });
-        });
+        }
+    
+        // --- 2. Render Unassigned Sessions Group ---
+        const unassignedSessions = filteredSessions.filter(s => !s.projectId);
+    
+        if (unassignedSessions.length > 0) {
+            const generalGroupHeader = document.createElement('div');
+            generalGroupHeader.className = 'session-group-header';
+            generalGroupHeader.textContent = '💬 일반 대화';
+            fragment.appendChild(generalGroupHeader);
+    
+            unassignedSessions.forEach(session => {
+                const timestamp = session.updatedAt || session.createdAt;
+                session.dateGroup = getRelativeDateGroup(timestamp, session.isPinned);
+            });
+    
+            const groupedSessions = unassignedSessions.reduce((acc, session) => {
+                const label = session.dateGroup.label;
+                if (!acc[label]) {
+                    acc[label] = { key: session.dateGroup.key, items: [] };
+                }
+                acc[label].items.push(session);
+                return acc;
+            }, {});
+    
+            const sortedGroupLabels = Object.keys(groupedSessions).sort((a, b) => groupedSessions[a].key - groupedSessions[b].key);
+    
+            sortedGroupLabels.forEach(label => {
+                const header = document.createElement('div');
+                header.className = 'date-group-header';
+                header.textContent = label;
+                fragment.appendChild(header);
+    
+                const group = groupedSessions[label];
+                group.items.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+                group.items.forEach(session => fragment.appendChild(createSessionItem(session)));
+            });
+        }
+    
+        sessionListContainer.appendChild(fragment);
     }
 
-    // --- [MODIFIED] Added detailed title attribute ---
     function createSessionItem(session) {
         const item = document.createElement('div');
         item.className = 'session-item';
@@ -473,13 +481,19 @@ document.addEventListener('DOMContentLoaded', function () {
         item.title = `생성: ${createdAt}\n최종 수정: ${updatedAt}`;
         
         const pinIconSVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>`;
+        
+        const titleSpan = document.createElement('div');
+        titleSpan.className = 'session-item-title';
+        titleSpan.textContent = session.title || '새 대화';
 
-        item.innerHTML = `
-            <div class="session-item-title">${session.title || '새 대화'}</div>
-            <button class="session-pin-btn ${session.isPinned ? 'pinned-active' : ''}" title="${session.isPinned ? '고정 해제' : '고정하기'}">
-                ${pinIconSVG}
-            </button>
-        `;
+        const pinButton = document.createElement('button');
+        pinButton.className = `session-pin-btn ${session.isPinned ? 'pinned-active' : ''}`;
+        pinButton.title = session.isPinned ? '고정 해제' : '고정하기';
+        pinButton.innerHTML = pinIconSVG;
+
+        item.appendChild(titleSpan);
+        item.appendChild(pinButton);
+        
         return item;
     }
 
@@ -504,10 +518,44 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function selectSession(sessionId) { if (!sessionId) return; const sessionData = localChatSessionsCache.find(s => s.id === sessionId); if (!sessionData) return; currentSessionId = sessionId; renderSidebarContent(); if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; renderChatMessages(sessionData.messages || []); if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block'; if (chatInput) chatInput.disabled = false; if (chatSendBtn) chatSendBtn.disabled = false; chatInput.focus(); }
-    function handleNewChat() { currentSessionId = null; renderSidebarContent(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
-    function handleDeleteSession() { if (!currentSessionId) return; const sessionToDelete = localChatSessionsCache.find(s => s.id === currentSessionId); showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => { if (chatSessionsCollectionRef && currentSessionId) { chatSessionsCollectionRef.doc(currentSessionId).delete().then(() => { console.log("Session deleted successfully"); handleNewChat(); }).catch(e => console.error("세션 삭제 실패:", e)); } }); }
+    function selectSession(sessionId) {
+        removeContextMenu();
+        if (!sessionId) return;
+        const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
+        if (!sessionData) return;
+        currentSessionId = sessionId;
+        renderSidebarContent();
+        if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
+        if (chatMessages) chatMessages.style.display = 'flex';
+        renderChatMessages(sessionData.messages || []);
+        if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화';
+        if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block';
+        if (chatInput) chatInput.disabled = false;
+        if (chatSendBtn) chatSendBtn.disabled = false;
+        chatInput.focus();
+    }
     
+    function handleNewChat() { currentSessionId = null; renderSidebarContent(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
+    
+    // [MODIFIED] Accepts sessionId to be reusable
+    function handleDeleteSession(sessionId) {
+        if (!sessionId) return;
+        const sessionToDelete = localChatSessionsCache.find(s => s.id === sessionId);
+        if (!sessionToDelete) return;
+        
+        showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => {
+            if (chatSessionsCollectionRef) {
+                chatSessionsCollectionRef.doc(sessionId).delete().then(() => {
+                    console.log("Session deleted successfully");
+                    // If the deleted session was the active one, reset the view
+                    if (currentSessionId === sessionId) {
+                        handleNewChat();
+                    }
+                }).catch(e => console.error("세션 삭제 실패:", e));
+            }
+        });
+    }
+
     async function toggleChatPin(sessionId) {
         if (!chatSessionsCollectionRef || !sessionId) return;
         const sessionRef = chatSessionsCollectionRef.doc(sessionId);
@@ -586,7 +634,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function makePanelDraggable(panelElement) { if(!panelElement) return; const header = panelElement.querySelector('.panel-header'); if(!header) return; let isDragging = false, offset = { x: 0, y: 0 }; const onMouseMove = (e) => { if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; } }; const onMouseUp = () => { isDragging = false; panelElement.classList.remove('is-dragging'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }; header.addEventListener('mousedown', e => { if (e.target.closest('button, input, .close-btn, #delete-session-btn, #chat-mode-selector')) return; isDragging = true; panelElement.classList.add('is-dragging'); offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); }); }
     function togglePanel(panelElement, forceShow = null) { if (!panelElement) return; const show = forceShow !== null ? forceShow : panelElement.style.display !== 'flex'; panelElement.style.display = show ? 'flex' : 'none'; }
     function setupNavigator() { const scrollNav = document.getElementById('scroll-nav'); if (!scrollNav || !learningContent) return; const headers = learningContent.querySelectorAll('h2, #section-4 h3, #section-5 h3, #section-6 h3'); if (headers.length === 0) { scrollNav.style.display = 'none'; if(wrapper) wrapper.classList.add('toc-hidden'); return; } scrollNav.style.display = 'block'; if(wrapper) wrapper.classList.remove('toc-hidden'); const navList = document.createElement('ul'); headers.forEach((header, index) => { let targetElement = header.closest('.content-section'); if (targetElement && !targetElement.id) targetElement.id = `nav-target-${index}`; if (targetElement) { const listItem = document.createElement('li'); const link = document.createElement('a'); let navText = header.textContent.trim().replace(/\[|\]|🤓|⏳|📖/g, '').trim(); link.textContent = navText.substring(0, 25); link.href = `#${targetElement.id}`; if (header.tagName === 'H3') { link.style.paddingLeft = '25px'; link.style.fontSize = '0.9em'; } listItem.appendChild(link); navList.appendChild(listItem); } }); scrollNav.innerHTML = '<h3>학습 내비게이션</h3>'; scrollNav.appendChild(navList); const links = scrollNav.querySelectorAll('a'); const observer = new IntersectionObserver(entries => { entries.forEach(entry => { const id = entry.target.getAttribute('id'); const navLink = scrollNav.querySelector(`a[href="#${id}"]`); if (navLink && entry.isIntersecting && entry.intersectionRatio > 0.5) { links.forEach(l => l.classList.remove('active')); navLink.classList.add('active'); } }); }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 }); headers.forEach(header => { const target = header.closest('.content-section'); if (target) observer.observe(target); }); }
-    function handleTextSelection(e) { if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu')) return; const selection = window.getSelection(); const selectedText = selection.toString().trim(); removeContextMenu(); if (selectedText.length > 3) { lastSelectedText = selectedText; const range = selection.getRangeAt(0); const rect = range.getBoundingClientRect(); const popover = selectionPopover; let top = rect.top + window.scrollY - popover.offsetHeight - 10; let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2); popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`; popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`; popover.style.display = 'flex'; } else if (!e.target.closest('#selection-popover')) { selectionPopover.style.display = 'none'; } }
+    function handleTextSelection(e) { if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu, .session-context-menu')) return; const selection = window.getSelection(); const selectedText = selection.toString().trim(); removeContextMenu(); if (selectedText.length > 3) { lastSelectedText = selectedText; const range = selection.getRangeAt(0); const rect = range.getBoundingClientRect(); const popover = selectionPopover; let top = rect.top + window.scrollY - popover.offsetHeight - 10; let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2); popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`; popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`; popover.style.display = 'flex'; } else if (!e.target.closest('#selection-popover')) { selectionPopover.style.display = 'none'; } }
     function handlePopoverAskAi() { if (!lastSelectedText || !chatInput) return; togglePanel(chatPanel, true); handleNewChat(); setTimeout(() => { chatInput.value = `"${lastSelectedText}"\n\n이 내용에 대해 더 자세히 설명해줄래?`; chatInput.style.height = (chatInput.scrollHeight) + 'px'; chatInput.focus(); }, 100); selectionPopover.style.display = 'none'; }
     function handlePopoverAddNote() { if (!lastSelectedText) return; addNote(`> ${lastSelectedText}\n\n`); selectionPopover.style.display = 'none'; }
     function openPromptModal() { if (customPromptInput) customPromptInput.value = customPrompt; if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; }
@@ -620,7 +668,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Event Listeners
-        document.addEventListener('click', handleTextSelection);
+        document.addEventListener('click', (e) => {
+            handleTextSelection(e);
+            if (!e.target.closest('.session-context-menu, .project-context-menu')) {
+                removeContextMenu();
+            }
+        });
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
         if (themeToggle) { themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light'); }); if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); }
@@ -630,7 +683,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => { togglePanel(notesAppPanel); if(notesAppPanel.style.display === 'flex') renderNoteList(); });
         if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
         if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
-        if (deleteSessionBtn) deleteSessionBtn.addEventListener('click', handleDeleteSession);
+        if (deleteSessionBtn) deleteSessionBtn.addEventListener('click', () => handleDeleteSession(currentSessionId));
         if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
         if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
         if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
@@ -651,10 +704,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
         
-        // Event Delegation for Sidebar
+        // --- [REFINED] Event Delegation for Sidebar ---
         if (sessionListContainer) {
             sessionListContainer.addEventListener('click', (e) => {
-                removeContextMenu(); // Close context menu if clicking elsewhere in the container
+                // Close project context menu if clicking elsewhere
+                if (!e.target.closest('.project-context-menu')) {
+                    const existingProjectMenu = sessionListContainer.querySelector('.project-context-menu');
+                    if (existingProjectMenu) removeContextMenu();
+                }
 
                 const sessionItem = e.target.closest('.session-item');
                 if (sessionItem) {
@@ -675,14 +732,24 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (actionsButton) {
                         e.stopPropagation();
                         showProjectContextMenu(projectId, actionsButton);
-                    } else {
+                    } else if (!e.target.closest('input')) { // Don't toggle if clicking the rename input
                         toggleProjectExpansion(projectId);
                     }
                     return;
                 }
             });
 
-            // Drag and Drop Logic
+            // --- [NEW] Session Context Menu (Right-click) ---
+            sessionListContainer.addEventListener('contextmenu', (e) => {
+                const sessionItem = e.target.closest('.session-item');
+                if (sessionItem) {
+                    e.preventDefault();
+                    removeContextMenu();
+                    showSessionContextMenu(sessionItem.dataset.sessionId, e.clientX, e.clientY);
+                }
+            });
+
+            // --- [REFINED] Drag and Drop Logic ---
             let draggedItem = null;
             sessionListContainer.addEventListener('dragstart', (e) => {
                 if (e.target.classList.contains('session-item')) {
@@ -694,52 +761,100 @@ document.addEventListener('DOMContentLoaded', function () {
                     e.preventDefault();
                 }
             });
+
             sessionListContainer.addEventListener('dragend', () => {
                 if(draggedItem) {
                     draggedItem.classList.remove('is-dragging');
                     draggedItem = null;
                 }
-                document.querySelectorAll('.project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
+                document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => {
+                    el.classList.remove('drag-over', 'drag-target-area');
+                });
             });
+
             sessionListContainer.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 const targetProjectHeader = e.target.closest('.project-header');
-                document.querySelectorAll('.project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
-                if (targetProjectHeader && draggedItem) {
+                
+                // Clear all previous highlights
+                document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => {
+                    el.classList.remove('drag-over', 'drag-target-area');
+                });
+
+                if (!draggedItem) return;
+
+                const sourceSessionId = draggedItem.dataset.sessionId;
+                const sourceSession = localChatSessionsCache.find(s => s.id === sourceSessionId);
+
+                if (targetProjectHeader) { // Dragging over a project
                     const targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId;
-                    const sourceSessionId = draggedItem.dataset.sessionId;
-                    const sourceSession = localChatSessionsCache.find(s => s.id === sourceSessionId);
                     if (sourceSession && sourceSession.projectId !== targetProjectId) {
                         e.dataTransfer.dropEffect = 'move';
                         targetProjectHeader.classList.add('drag-over');
                     } else {
                          e.dataTransfer.dropEffect = 'none';
                     }
-                } else {
-                    e.dataTransfer.dropEffect = 'none';
+                } else { // Dragging over the general area (for dropping out)
+                     if (sourceSession && sourceSession.projectId) { // Only if it's in a project
+                        e.dataTransfer.dropEffect = 'move';
+                        sessionListContainer.classList.add('drag-target-area');
+                    } else {
+                        e.dataTransfer.dropEffect = 'none';
+                    }
                 }
             });
+            
+            sessionListContainer.addEventListener('dragleave', (e) => {
+                 if (e.target === sessionListContainer) {
+                    sessionListContainer.classList.remove('drag-target-area');
+                }
+            });
+
             sessionListContainer.addEventListener('drop', async (e) => {
                 e.preventDefault();
-                document.querySelectorAll('.project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
+                 document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => {
+                    el.classList.remove('drag-over', 'drag-target-area');
+                });
+
+                if (!draggedItem) return;
+
+                const sessionId = e.dataTransfer.getData('text/plain');
                 const targetProjectHeader = e.target.closest('.project-header');
-                if (targetProjectHeader && draggedItem) {
-                    const sessionId = e.dataTransfer.getData('text/plain');
-                    const projectId = targetProjectHeader.closest('.project-container').dataset.projectId;
-                    const sourceSession = localChatSessionsCache.find(s => s.id === sessionId);
-                    if (sourceSession && projectId && sourceSession.projectId !== projectId) {
-                        try {
-                            await chatSessionsCollectionRef.doc(sessionId).update({ 
-                                projectId: projectId,
+                
+                let targetProjectId = null;
+                let shouldUpdate = false;
+                
+                const sourceSession = localChatSessionsCache.find(s => s.id === sessionId);
+                if (!sourceSession) return;
+
+                if (targetProjectHeader) { // Dropped on a project
+                    targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId;
+                    if (sourceSession.projectId !== targetProjectId) {
+                        shouldUpdate = true;
+                    }
+                } else { // Dropped outside a project
+                    if (sourceSession.projectId) { // Only update if it was in a project
+                        targetProjectId = null;
+                        shouldUpdate = true;
+                    }
+                }
+
+                if (shouldUpdate) {
+                    try {
+                        const updates = {
+                             projectId: targetProjectId,
+                             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        await chatSessionsCollectionRef.doc(sessionId).update(updates);
+                        
+                        // Also update the target project's timestamp to bring it to top
+                        if (targetProjectId) {
+                            await projectsCollectionRef.doc(targetProjectId).update({
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                             });
-                            // Also update the project's updatedAt timestamp
-                            await projectsCollectionRef.doc(projectId).update({
-                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        } catch (error) {
-                            console.error("Failed to move session:", error);
                         }
+                    } catch (error) {
+                        console.error("Failed to move session:", error);
                     }
                 }
             });
@@ -749,6 +864,157 @@ document.addEventListener('DOMContentLoaded', function () {
         if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
     }
 
-    // --- 5. Run Initialization ---
+    // --- 5. [NEW] Session Context Menu & Related Functions ---
+
+    function showSessionContextMenu(sessionId, x, y) {
+        const session = localChatSessionsCache.find(s => s.id === sessionId);
+        if (!session) return;
+    
+        removeContextMenu();
+    
+        const menu = document.createElement('div');
+        menu.className = 'session-context-menu'; // A new specific class for session menus
+    
+        // Move To Submenu
+        let moveToSubMenuHTML = localProjectsCache
+            .map(p => `<button class="context-menu-item" data-project-id="${p.id}" ${session.projectId === p.id ? 'disabled' : ''}>${p.name}</button>`)
+            .join('');
+        
+        const moveToMenu = `
+            <div class="context-submenu-container">
+                <button class="context-menu-item" data-action="move-to">
+                    <span>프로젝트로 이동</span>
+                    <span class="submenu-arrow">▶</span>
+                </button>
+                <div class="context-submenu">
+                    <button class="context-menu-item" data-project-id="null" ${!session.projectId ? 'disabled' : ''}>[일반 대화로 이동]</button>
+                    <div class="context-menu-separator"></div>
+                    ${moveToSubMenuHTML}
+                </div>
+            </div>
+        `;
+
+        const createdAt = session.createdAt?.toDate()?.toLocaleString('ko-KR') || 'N/A';
+        const updatedAt = session.updatedAt?.toDate()?.toLocaleString('ko-KR') || 'N/A';
+    
+        menu.innerHTML = `
+            <button class="context-menu-item" data-action="rename">이름 변경</button>
+            ${moveToMenu}
+            <button class="context-menu-item" data-action="pin">${session.isPinned ? '고정 해제' : '고정하기'}</button>
+            <div class="context-menu-separator"></div>
+            <button class="context-menu-item" data-action="delete">삭제</button>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item disabled">생성: ${createdAt}</div>
+            <div class="context-menu-item disabled">수정: ${updatedAt}</div>
+        `;
+    
+        // Position and display menu
+        document.body.appendChild(menu);
+        const menuWidth = menu.offsetWidth;
+        const menuHeight = menu.offsetHeight;
+        const bodyWidth = document.body.clientWidth;
+        const bodyHeight = document.body.clientHeight;
+    
+        menu.style.left = `${x + menuWidth > bodyWidth ? x - menuWidth : x}px`;
+        menu.style.top = `${y + menuHeight > bodyHeight ? y - menuHeight : y}px`;
+        menu.style.display = 'block';
+    
+        currentOpenContextMenu = menu;
+    
+        // Add event listeners for menu actions
+        menu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const target = e.target.closest('.context-menu-item');
+            if (!target || target.disabled) return;
+    
+            const action = target.dataset.action;
+            const projectId = target.dataset.projectId;
+
+            if (action === 'rename') {
+                startSessionRename(sessionId);
+            } else if (action === 'pin') {
+                toggleChatPin(sessionId);
+            } else if (action === 'delete') {
+                handleDeleteSession(sessionId);
+            } else if (projectId !== undefined) {
+                 moveSessionToProject(sessionId, projectId === 'null' ? null : projectId);
+            }
+    
+            removeContextMenu();
+        });
+    }
+
+    async function moveSessionToProject(sessionId, newProjectId) {
+        const session = localChatSessionsCache.find(s => s.id === sessionId);
+        if (!session || session.projectId === newProjectId) return;
+    
+        try {
+            await chatSessionsCollectionRef.doc(sessionId).update({
+                projectId: newProjectId,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            // Update the new project's timestamp as well
+            if (newProjectId) {
+                 await projectsCollectionRef.doc(newProjectId).update({
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                 });
+            }
+        } catch (error) {
+            console.error("Error moving session:", error);
+            alert("세션 이동에 실패했습니다.");
+        }
+    }
+    
+    function startSessionRename(sessionId) {
+        const sessionItem = document.querySelector(`.session-item[data-session-id="${sessionId}"]`);
+        if (!sessionItem) return;
+        const titleSpan = sessionItem.querySelector('.session-item-title');
+        if (!titleSpan) return;
+    
+        const originalTitle = titleSpan.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'project-title-input'; // Reuse project rename style
+        input.value = originalTitle;
+    
+        titleSpan.replaceWith(input);
+        input.focus();
+        input.select();
+    
+        const finishEditing = () => {
+            const newTitle = input.value.trim();
+            if (newTitle && newTitle !== originalTitle) {
+                renameSession(sessionId, newTitle);
+            } else {
+                 renderSidebarContent(); // Restore original if empty or unchanged
+            }
+        };
+    
+        input.addEventListener('blur', finishEditing);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                input.blur();
+            } else if (e.key === 'Escape') {
+                input.value = originalTitle; // Revert on escape
+                input.blur();
+            }
+        });
+    }
+
+    async function renameSession(sessionId, newTitle) {
+        if (!newTitle || !sessionId) return;
+        try {
+            await chatSessionsCollectionRef.doc(sessionId).update({
+                title: newTitle,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (error) {
+            console.error("Error renaming session:", error);
+            alert("세션 이름 변경에 실패했습니다.");
+        }
+    }
+
+
+    // --- 6. Run Initialization ---
     initialize();
 });
