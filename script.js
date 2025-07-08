@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.3 (Hybrid Event Handler)
+Version: 9.4 (Mousedown Event Fix)
 Architect: [Username] & System Architect Ailey
-Description: Implemented a robust hybrid event handling model to fix critical sidebar bugs. Static elements ('New Chat', 'New Project') now have direct event listeners for maximum stability. Dynamic content (session list, project headers) is handled via a correctly scoped event delegation on its container. This resolves all previously reported functional failures.
+Description: Resolved a persistent button failure issue by replacing 'click' event listeners with 'mousedown' on the 'New Chat' and 'New Project' buttons. This ensures immediate function execution upon user press, bypassing potential event lifecycle interruptions.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -461,8 +461,6 @@ document.addEventListener('DOMContentLoaded', function () {
             makePanelDraggable(notesAppPanel);
         });
 
-        // --- [REFACTORED] Hybrid Event Listeners ---
-
         // Global listeners
         document.addEventListener('click', hideSessionContextMenu);
         document.addEventListener('mouseup', handleTextSelection);
@@ -497,13 +495,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
         if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
         
-        // --- Corrected Hybrid Event Listeners for Chat Sidebar ---
+        // --- [FINAL CORRECTED] Event Listeners for Chat Sidebar ---
 
-        // 1. Direct listeners for static buttons
-        if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
-        if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
+        // 1. Direct 'mousedown' listeners for static buttons to ensure immediate response
+        if (newChatBtn) newChatBtn.addEventListener('mousedown', handleNewChat);
+        if (newProjectBtn) newProjectBtn.addEventListener('mousedown', createNewProject);
 
-        // 2. Event delegation for dynamically generated content in the list container
+        // 2. 'click' event delegation for dynamically generated content (more stable for complex items)
         if (sessionListContainer) {
             sessionListContainer.addEventListener('click', (e) => {
                 const sessionItem = e.target.closest('.session-item');
