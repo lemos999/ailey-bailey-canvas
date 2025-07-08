@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.5 (Gemini Model Selector)
+Version: 9.6 (Model Selector Hotfix)
 Architect: [Username] & System Architect Ailey
-Description: Added styles for the new Gemini API model selector dropdown in the chat panel header, ensuring consistency with both light and dark themes. Adjusted header layout for proper alignment.
+Description: Corrected a CSS selector specificity issue that caused the new model selector to be hidden. The layout of the chat panel header is now fixed and displays all elements correctly.
 */
 
 :root {
@@ -299,7 +299,8 @@ body:not(.dark-mode) .context-submenu {
     align-items: center;
     gap: 15px; /* Added gap */
 }
-#chat-main-view .panel-header > div:first-of-type > div {
+/* [CORRECTED] This selector now correctly targets ONLY the button container */
+#chat-main-view .panel-header > div:first-of-type > div:last-of-type {
     margin-left: auto; /* Push buttons to the right */
 }
 
