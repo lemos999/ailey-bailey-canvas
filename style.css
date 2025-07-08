@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.5 (BYOK - Bring Your Own Key & Token Management UI)
+Version: 9.6 (Dynamic Reasoning UI Styles)
 Architect: [Username] & System Architect Ailey
-Description: Added styles for the new API settings modal. This includes the API key input with verification status, model selector, token limit inputs, and the cumulative token usage display with a reset button.
+Description: Added styles for the new dynamic "Thinking..." indicator and the collapsible AI reasoning block. Includes styles for the closed state with summary animation and the expanded state with a typewriter effect.
 */
 
 :root {
@@ -351,18 +351,31 @@ body:not(.dark-mode) .chat-message.ai { background-color: var(--chat-ai-bg-light
 .chat-timestamp { font-size: 0.75em; color: var(--sub-text-color-dark); margin-top: 5px; text-align: right; }
 body:not(.dark-mode) .chat-timestamp { color: var(--sub-text-color-light); }
 .chat-message.user .chat-timestamp { text-align: left; }
-.chat-message.quiz-problem { border: 2px dashed var(--h2-border-dark); background-color: rgba(185, 156, 122, 0.1); position: relative; padding-top: 30px; }
-body:not(.dark-mode) .chat-message.quiz-problem { border-color: var(--h2-border-light); }
-.chat-message.quiz-problem::before { content: '🧠 오늘의 문제'; position: absolute; top: 5px; left: 15px; font-size: 0.8em; font-weight: bold; color: var(--h2-color-dark); }
-body:not(.dark-mode) .chat-message.quiz-problem::before { color: var(--h2-color-light); }
-.chat-message.quiz-solution { border: 1px solid var(--border-color-dark); margin-top: 10px; }
-body:not(.dark-mode) .chat-message.quiz-solution { border-color: var(--border-color-light); }
-.solution-header { font-weight: bold; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border-color-dark); }
-body:not(.dark-mode) .solution-header { border-bottom-color: var(--border-color-light); }
-.solution-header.correct { color: var(--correct-color-dark); }
-body:not(.dark-mode) .solution-header.correct { color: var(--correct-color); }
-.solution-header.incorrect { color: var(--incorrect-color-dark); }
-body:not(.dark-mode) .solution-header.incorrect { color: var(--incorrect-color); }
+
+/* [NEW] Loading Indicator Styles */
+.loading-container { align-self: flex-start; display: flex; align-items: center; gap: 8px; font-style: italic; color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .loading-container { color: var(--sub-text-color-light); }
+.typing-indicator { display: flex; gap: 4px; }
+.typing-indicator span { width: 8px; height: 8px; border-radius: 50%; background-color: currentColor; animation: bounce 1.2s infinite ease-in-out; }
+.typing-indicator span:nth-of-type(2) { animation-delay: -0.2s; }
+.typing-indicator span:nth-of-type(3) { animation-delay: -0.4s; }
+@keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+
+/* [NEW] Reasoning Block Styles */
+.reasoning-block { border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+body:not(.dark-mode) .reasoning-block { background-color: var(--quote-bg-light); border: 1px solid var(--border-color-light); }
+body.dark-mode .reasoning-block { background-color: var(--quote-bg-dark); border: 1px solid var(--border-color-dark); }
+.reasoning-header { padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; user-select: none; }
+.reasoning-header .toggle-icon { transition: transform 0.3s ease; }
+.reasoning-block.expanded .toggle-icon { transform: rotate(90deg); }
+.reasoning-summary { font-style: italic; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.5s; }
+.reasoning-summary.blinking-cursor::after { content: '|'; animation: blink-caret 0.75s step-end infinite; }
+@keyframes blink-caret { from, to { opacity: 1; } 50% { opacity: 0; } }
+.reasoning-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, padding 0.4s ease-out; padding: 0 15px; line-height: 1.7; font-size: 0.95em; }
+.reasoning-content.expanded { max-height: 1000px; padding: 15px; border-top: 1px solid; }
+body:not(.dark-mode) .reasoning-content.expanded { border-top-color: var(--border-color-light); }
+body.dark-mode .reasoning-content.expanded { border-top-color: var(--border-color-dark); }
+
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; align-items: center; }
 body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
 body:not(.dark-mode) .chat-input-form { border-top-color: var(--border-color-light); }
@@ -374,7 +387,6 @@ body:not(.dark-mode) #chat-input { background-color: #fff; color: var(--text-col
 body.dark-mode #chat-send-btn { color: var(--header-color-dark); }
 body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
 #chat-input:disabled, #chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.loading-indicator { font-style: italic; opacity: 0.7; }
 .send-to-note-btn { background: none; border: 1px solid; border-radius: 10px; padding: 3px 8px; font-size: 0.8em; cursor: pointer; margin-top: 8px; display: block; }
 body:dark-mode .send-to-note-btn { border-color: var(--sub-text-color-dark); color: var(--sub-text-color-dark); }
 body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-light); color: var(--sub-text-color-light); }
@@ -586,4 +598,4 @@ body:not(:dark-mode) #quiz-submit-btn { background-color: var(--h2-color-light);
 
 /* Prompt Modal */
 #prompt-modal-overlay textarea { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
-body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }```
+body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }
