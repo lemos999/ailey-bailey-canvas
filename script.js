@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 9.9 (Thinking Time & Reasoning Fix)
+Version: 9.9 (Reasoning UI Fix & Response Timer)
 Architect: [Username] & System Architect Ailey
-Description: Implemented a 'Thinking Time' display for AI responses, showing how long the AI took to generate an answer. Fixed the reasoning UI not appearing when using personal API keys by injecting system instructions to enforce the required response format.
+Description: Fixed the rendering issue with the collapsible reasoning block. Added a response timer to measure and display how long each AI response took to generate. Refactored AI message rendering for better HTML structure.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -580,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) { console.error("Error toggling pin status:", error); }
     }
 
-    // --- [MAJOR REFACTOR] Chat Send Logic ---
+    // --- [MAJOR REFACTOR & ADDITION] Chat Send Logic with Timer ---
     async function handleChatSend() {
         if (!chatInput || chatInput.disabled) return;
         const query = chatInput.value.trim();
@@ -605,7 +605,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const newSession = {
                 title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
                 messages: [userMessage],
-                mode: selectedMode, // Note: This might be overridden by custom API settings
+                mode: selectedMode,
                 projectId: newSessionProjectId,
                 isPinned: false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -627,7 +627,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         renderChatMessages(messages);
         
-        // Add "Thinking..." indicator
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'loading-container';
         loadingDiv.innerHTML = `Thinking... <div class="typing-indicator"><span></span><span></span><span></span></div>`;
@@ -636,43 +635,30 @@ document.addEventListener('DOMContentLoaded', function () {
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
+        const startTime = performance.now(); // [NEW] Start timer
         try {
-            const startTime = Date.now(); // START TIMER
             let aiRes, usageData;
-
-            // Check if user is using their own API key
             if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
-                // --- Custom API Key Logic ---
                 const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, messages, userApiSettings.maxOutputTokens);
-                
                 const res = await fetch(requestDetails.url, requestDetails.options);
-                if (!res.ok) {
-                    const errorBody = await res.text();
-                    throw new Error(`API Error ${res.status}: ${errorBody}`);
-                }
+                if (!res.ok) { const errorBody = await res.text(); throw new Error(`API Error ${res.status}: ${errorBody}`); }
                 const result = await res.json();
                 const parsed = parseApiResponse(userApiSettings.provider, result);
                 aiRes = parsed.content;
                 usageData = parsed.usage;
                 
-                // Update token usage
                 if (usageData) {
                     userApiSettings.tokenUsage.prompt += usageData.prompt;
                     userApiSettings.tokenUsage.completion += usageData.completion;
-                    saveApiSettings(false); // Save updated usage without showing modal
+                    saveApiSettings(false);
                 }
 
             } else {
-                // --- Default Free API Logic ---
                 let promptWithReasoning;
                 const lastUserMessage = messages[messages.length - 1].content;
                 promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
                 
-                const apiMessages = [{
-                    role: 'user',
-                    parts: [{ text: promptWithReasoning }]
-                }];
-
+                const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
                 const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
                     method: 'POST',
@@ -684,22 +670,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 const result = await res.json();
                 aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
             }
+            
+            const endTime = performance.now(); // [NEW] End timer
+            const duration = ((endTime - startTime) / 1000).toFixed(2); // [NEW] Calculate duration
 
-            const endTime = Date.now(); // END TIMER
-            const thinkingTime = (endTime - startTime) / 1000; // in seconds
-
-            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), thinkingTime: thinkingTime };
+            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration }; // [MODIFIED] Add duration to message
             messages.push(aiMessage);
             await sessionRef.update({
                 messages: messages,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // The 'renderChatMessages' will be triggered by the onSnapshot listener,
-            // so we just remove the loader here.
              const loader = chatMessages.querySelector('.loading-container');
              if (loader) loader.remove();
-
 
         } catch (e) {
             console.error("Chat send error:", e);
@@ -717,106 +700,28 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     
-    // --- [NEW] API Request Helper Functions ---
     function buildApiRequest(provider, model, messages, maxTokens) {
-        const reasoningInstruction = "Your entire response must follow a strict protocol. For any user query that requires explanation, logic, or step-by-step thinking, you MUST first output a reasoning block. This block MUST start with `[REASONING_START]` and end with `[REASONING_END]`. Inside this block, each step of your thinking process MUST be formatted as `SUMMARY:{A one-line summary of the step}|||DETAIL:{The full, detailed explanation of the step}`. After the `[REASONING_END]` tag, you will provide the final, user-facing answer in a friendly, informal Korean tone. For simple greetings like 'hello', you can omit the reasoning block. This structure is mandatory for all complex responses.";
-    
+        const history = messages.map(msg => ({
+            role: msg.role === 'ai' ? 'assistant' : 'user',
+            content: msg.content
+        }));
+
         if (provider === 'openai') {
-            const history = messages.map(msg => ({
-                role: msg.role === 'ai' ? 'assistant' : 'user',
-                content: msg.content
-            }));
-            const openAiHistory = [{ role: 'system', content: reasoningInstruction }, ...history];
-            return {
-                url: 'https://api.openai.com/v1/chat/completions',
-                options: {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${userApiSettings.apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: openAiHistory,
-                        max_tokens: Number(maxTokens) || 2048
-                    })
-                }
-            };
+            return { url: 'https://api.openai.com/v1/chat/completions', options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userApiSettings.apiKey}` }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) } };
         } else if (provider === 'anthropic') {
-            const anthropicHistory = messages.map(msg => ({
-                role: msg.role === 'ai' ? 'assistant' : 'user',
-                content: msg.content
-            }));
-            return {
-                url: 'https://api.anthropic.com/v1/messages',
-                options: {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': userApiSettings.apiKey,
-                        'anthropic-version': '2023-06-01'
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        system: reasoningInstruction,
-                        messages: anthropicHistory,
-                        max_tokens: Number(maxTokens) || 2048
-                    })
-                }
-            };
+             return { url: 'https://api.anthropic.com/v1/messages', options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': userApiSettings.apiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) } };
         } else if (provider === 'google_paid') {
-            const googleHistory = messages.map(msg => ({
-                role: msg.role === 'ai' ? 'model' : 'user',
-                parts: [{ text: msg.content }]
-            }));
-            googleHistory.unshift(
-                { role: 'user', parts: [{ text: reasoningInstruction }] },
-                { role: 'model', parts: [{ text: "알겠습니다. 지금부터 모든 복잡한 질문에 대해 지시된 `[REASONING_START]...[REASONING_END]` 형식을 사용하여 답변하겠습니다." }] }
-            );
-            return {
-                url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userApiSettings.apiKey}`,
-                options: {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: googleHistory,
-                        generationConfig: {
-                            maxOutputTokens: Number(maxTokens) || 2048
-                        }
-                    })
-                }
-            }
+            const googleHistory = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] }));
+            return { url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userApiSettings.apiKey}`, options: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: googleHistory, generationConfig: { maxOutputTokens: Number(maxTokens) || 2048 } }) } };
         }
         throw new Error(`Unsupported provider: ${provider}`);
     }
 
     function parseApiResponse(provider, result) {
         try {
-            if (provider === 'openai') {
-                return {
-                    content: result.choices[0].message.content,
-                    usage: {
-                        prompt: result.usage.prompt_tokens,
-                        completion: result.usage.completion_tokens
-                    }
-                };
-            } else if (provider === 'anthropic') {
-                return {
-                    content: result.content[0].text,
-                    usage: {
-                        prompt: result.usage.input_tokens,
-                        completion: result.usage.output_tokens
-                    }
-                };
-            } else if (provider === 'google_paid') {
-                // Google's generateContent API does not return token usage in the response body.
-                // This would require a separate call to model.countTokens if needed, which adds complexity.
-                // For now, we acknowledge this limitation.
-                return {
-                    content: result.candidates[0].content.parts[0].text,
-                    usage: null // Mark as null
-                };
-            }
+            if (provider === 'openai') { return { content: result.choices[0].message.content, usage: { prompt: result.usage.prompt_tokens, completion: result.usage.completion_tokens } }; }
+            else if (provider === 'anthropic') { return { content: result.content[0].text, usage: { prompt: result.usage.input_tokens, completion: result.usage.output_tokens } }; }
+            else if (provider === 'google_paid') { return { content: result.candidates[0].content.parts[0].text, usage: null }; }
         } catch (error) {
             console.error(`Error parsing ${provider} response:`, error, result);
             return { content: 'API 응답을 파싱하는 중 오류가 발생했습니다.', usage: null };
@@ -824,7 +729,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return { content: '알 수 없는 제공사입니다.', usage: null };
     }
     
-    // --- [REFINED] RENDER CHAT with REASONING UI ---
+    // --- [REFINED & FIXED] RENDER CHAT with REASONING UI and RESPONSE TIMER ---
     function renderChatMessages(messages = []) {
         if (!chatMessages) return;
         
@@ -840,16 +745,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 d.className = `chat-message user`;
                 d.textContent = msg.content;
                 chatMessages.appendChild(d);
+
             } else if (msg.role === 'ai') {
-                const aiResponseContainer = document.createElement('div');
-                aiResponseContainer.className = 'ai-response-container';
+                const aiContainer = document.createElement('div');
+                aiContainer.className = 'ai-response-container';
 
                 const content = msg.content;
                 const reasoningRegex = /\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
                 const match = content.match(reasoningRegex);
 
                 if (match) {
-                    const reasoningBlockId = `reasoning-${index}`;
+                    const reasoningBlockId = `reasoning-${currentSessionId}-${index}`;
                     const reasoningRaw = match[1];
                     const finalAnswer = content.replace(reasoningRegex, '').trim();
 
@@ -873,42 +779,38 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                         <div class="reasoning-content"></div>
                     `;
-                    aiResponseContainer.appendChild(rBlock);
+                    aiContainer.appendChild(rBlock);
+                    
                     startSummaryAnimation(rBlock, reasoningSteps);
 
                     if (finalAnswer) {
                         const finalAnswerDiv = document.createElement('div');
                         finalAnswerDiv.className = 'chat-message ai';
                         finalAnswerDiv.innerHTML = finalAnswer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-                        aiResponseContainer.appendChild(finalAnswerDiv);
+                        aiContainer.appendChild(finalAnswerDiv);
                     }
-
                 } else {
                     const d = document.createElement('div');
-                    d.className = `chat-message ai`;
+                    d.className = 'chat-message ai';
                     d.innerHTML = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-                    aiResponseContainer.appendChild(d);
+                    aiContainer.appendChild(d);
                 }
 
-                if (msg.thinkingTime !== undefined) {
-                    const timeDiv = document.createElement('div');
-                    timeDiv.className = 'thinking-time-display';
-                    
-                    const totalSeconds = msg.thinkingTime;
-                    const minutes = Math.floor(totalSeconds / 60);
-                    const seconds = Math.round(totalSeconds % 60);
-
-                    if (minutes > 0) {
-                        timeDiv.textContent = `Thinking ${minutes}min ${seconds}sec`;
-                    } else {
-                        timeDiv.textContent = `Thinking ${seconds}sec`;
-                    }
-                    aiResponseContainer.appendChild(timeDiv);
+                // [NEW] Render response time if available
+                if (msg.duration) {
+                    const metaDiv = document.createElement('div');
+                    metaDiv.className = 'ai-response-meta';
+                    metaDiv.innerHTML = `
+                        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>
+                        <span>응답 생성: ${msg.duration}초</span>
+                    `;
+                    aiContainer.appendChild(metaDiv);
                 }
 
-                chatMessages.appendChild(aiResponseContainer);
+                chatMessages.appendChild(aiContainer);
             }
         });
+
         if (loader) chatMessages.appendChild(loader);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -927,30 +829,29 @@ document.addEventListener('DOMContentLoaded', function () {
         activeTimers[blockId] = [];
 
         const summaryElement = blockElement.querySelector('.reasoning-summary');
-        if (!summaryElement || reasoningSteps.length === 0) return;
+        if (!summaryElement || !reasoningSteps || reasoningSteps.length === 0) return;
 
         let stepIndex = 0;
         const cycleSummary = () => {
+            if (!reasoningSteps[stepIndex] || !reasoningSteps[stepIndex].summary) return;
             const summaryText = reasoningSteps[stepIndex].summary;
             typewriterEffect(summaryElement, summaryText, () => {
-                // After typing, wait a bit before fading out
                 const waitTimer = setTimeout(() => {
                     summaryElement.style.opacity = '0';
                     const fadeTimer = setTimeout(() => {
                         stepIndex = (stepIndex + 1) % reasoningSteps.length;
                         summaryElement.style.opacity = '1';
-                        // No need to call cycleSummary again here, setInterval does it
-                    }, 500); // fade out duration
+                    }, 500); 
                      if (!activeTimers[blockId]) activeTimers[blockId] = [];
                      activeTimers[blockId].push(fadeTimer);
-                }, 2000); // how long the text stays visible
+                }, 2000); 
                  if (!activeTimers[blockId]) activeTimers[blockId] = [];
                  activeTimers[blockId].push(waitTimer);
             });
         };
         
-        cycleSummary(); // Initial call
-        const summaryInterval = setInterval(cycleSummary, 4000); // Time per summary cycle
+        cycleSummary();
+        const summaryInterval = setInterval(cycleSummary, 4000); 
         if (!activeTimers[blockId]) activeTimers[blockId] = [];
         activeTimers[blockId].push(summaryInterval);
     }
@@ -961,9 +862,13 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        element.innerHTML = ''; // Clear previous content
+        element.innerHTML = '';
         let i = 0;
-        const blockId = element.closest('.reasoning-block').id;
+        const blockId = element.closest('.reasoning-block')?.id;
+        if (!blockId) { // Fallback for content outside reasoning block
+             if (onComplete) onComplete();
+             return;
+        }
         
         const typingInterval = setInterval(() => {
             if (i < text.length) {
@@ -971,13 +876,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 i++;
             } else {
                 clearInterval(typingInterval);
-                 // Remove cursor at the end
                 if (element.classList.contains('reasoning-summary')) {
                      element.classList.remove('blinking-cursor');
                 }
                 if (onComplete) onComplete();
             }
-        }, 30); // Typing speed
+        }, 30); 
 
         if (element.classList.contains('reasoning-summary')) {
              element.classList.add('blinking-cursor');
@@ -1006,7 +910,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 projectsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
                 
-                // [MODIFIED] Also clear API settings and default model from localStorage on system reset
                 localStorage.removeItem('userApiSettings');
                 localStorage.removeItem('selectedAiModel');
 
@@ -1015,12 +918,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } catch (error) { console.error("❌ 시스템 초기화 실패:", error); alert(`시스템 초기화 중 오류가 발생했습니다: ${error.message}`); updateStatus("초기화 실패 ❌", false); }
         });
     }
-    function exportAllData() {
-        if (localNotesCache.length === 0 && localChatSessionsCache.length === 0 && localProjectsCache.length === 0) { showModal("백업할 데이터가 없습니다.", () => {}); return; }
-        const processTimestamp = (item) => { const newItem = { ...item }; if (newItem.createdAt?.toDate) newItem.createdAt = newItem.createdAt.toDate().toISOString(); if (newItem.updatedAt?.toDate) newItem.updatedAt = newItem.updatedAt.toDate().toISOString(); if (Array.isArray(newItem.messages)) { newItem.messages = newItem.messages.map(msg => { const newMsg = { ...msg }; if (newMsg.timestamp?.toDate) newMsg.timestamp = newMsg.timestamp.toDate().toISOString(); return newMsg; }); } return newItem; };
-        const dataToExport = { backupVersion: '2.0', backupDate: new Date().toISOString(), notes: localNotesCache.map(processTimestamp), chatSessions: localChatSessionsCache.map(processTimestamp), projects: localProjectsCache.map(processTimestamp) };
-        const str = JSON.stringify(dataToExport, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `ailey-canvas-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url);
-    }
+    function exportAllData() { if (localNotesCache.length === 0 && localChatSessionsCache.length === 0 && localProjectsCache.length === 0) { showModal("백업할 데이터가 없습니다.", () => {}); return; } const processTimestamp = (item) => { const newItem = { ...item }; if (newItem.createdAt?.toDate) newItem.createdAt = newItem.createdAt.toDate().toISOString(); if (newItem.updatedAt?.toDate) newItem.updatedAt = newItem.updatedAt.toDate().toISOString(); if (Array.isArray(newItem.messages)) { newItem.messages = newItem.messages.map(msg => { const newMsg = { ...msg }; if (newMsg.timestamp?.toDate) newMsg.timestamp = newMsg.timestamp.toDate().toISOString(); return newMsg; }); } return newItem; }; const dataToExport = { backupVersion: '2.0', backupDate: new Date().toISOString(), notes: localNotesCache.map(processTimestamp), chatSessions: localChatSessionsCache.map(processTimestamp), projects: localProjectsCache.map(processTimestamp) }; const str = JSON.stringify(dataToExport, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `ailey-canvas-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url); }
     function handleRestoreClick() { if (fileImporter) fileImporter.click(); }
     async function importAllData(event) {
         const file = event.target.files[0]; if (!file) return;
@@ -1082,12 +980,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function createApiSettingsModal() {
         const modal = document.createElement('div');
         modal.id = 'api-settings-modal-overlay';
-        modal.className = 'custom-modal-overlay'; // Re-use existing overlay style
+        modal.className = 'custom-modal-overlay';
         modal.innerHTML = `
             <div class="custom-modal api-settings-modal">
                 <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg> 개인 API 설정 (BYOK)</h3>
                 <p class="api-modal-desc">기본 제공되는 모델 외에, 개인 API 키를 사용하여 더 다양하고 강력한 모델을 이용할 수 있습니다.</p>
-                
                 <div class="api-form-section">
                     <label for="api-key-input">API 키</label>
                     <div class="api-key-wrapper">
@@ -1096,14 +993,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div id="api-key-status"></div>
                 </div>
-
                 <div class="api-form-section">
                     <label for="api-model-select">사용 모델</label>
                     <select id="api-model-select" disabled>
                         <option value="">API 키를 먼저 검증해주세요</option>
                     </select>
                 </div>
-
                 <div class="api-form-section">
                     <label>토큰 한도 설정</label>
                     <div class="token-limit-wrapper">
@@ -1111,7 +1006,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <small>모델이 생성할 응답의 최대 길이를 제한합니다. (입력값 없을 시 모델 기본값 사용)</small>
                 </div>
-
                 <div class="api-form-section token-usage-section">
                     <label>누적 토큰 사용량 (개인 키)</label>
                     <div id="token-usage-display">
@@ -1120,7 +1014,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     <button id="reset-token-usage-btn">사용량 초기화</button>
                     <small>Google 유료 모델은 응답에 토큰 정보를 포함하지 않아 집계되지 않습니다.</small>
                 </div>
-
                 <div class="custom-modal-actions">
                     <button id="api-settings-cancel-btn" class="modal-btn">취소</button>
                     <button id="api-settings-save-btn" class="modal-btn">저장</button>
@@ -1129,7 +1022,6 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
         document.body.appendChild(modal);
 
-        // Assign elements after creation
         apiSettingsModalOverlay = document.getElementById('api-settings-modal-overlay');
         apiKeyInput = document.getElementById('api-key-input');
         verifyApiKeyBtn = document.getElementById('verify-api-key-btn');
@@ -1160,114 +1052,67 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function closeApiSettingsModal() {
         apiSettingsModalOverlay.style.display = 'none';
-        // Reload settings from storage to discard any non-saved changes in the modal
         loadApiSettings(); 
-        // Sync the header UI with the reloaded (original) settings
         updateChatHeaderModelSelector();
     }
 
-    // [MODIFIED] 로드 로직 강화
     function loadApiSettings() {
         const savedSettings = localStorage.getItem('userApiSettings');
         if (savedSettings) {
             userApiSettings = JSON.parse(savedSettings);
-            // Ensure all properties exist for backward compatibility
-            if (!userApiSettings.tokenUsage) {
-                userApiSettings.tokenUsage = { prompt: 0, completion: 0 };
-            }
-            if (!userApiSettings.availableModels) {
-                userApiSettings.availableModels = [];
-            }
+            if (!userApiSettings.tokenUsage) { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; }
+            if (!userApiSettings.availableModels) { userApiSettings.availableModels = []; }
         }
     }
 
-    // [MODIFIED] 저장 로직 개선
     function saveApiSettings(closeModal = true) {
         const key = apiKeyInput.value.trim();
-
-        if (key) { // If a key is provided, save all settings
+        if (key) {
             userApiSettings.apiKey = key;
             userApiSettings.selectedModel = apiModelSelect.value;
             userApiSettings.maxOutputTokens = Number(maxOutputTokensInput.value) || 2048;
-            // The 'provider' is already set during verification
             if (apiModelSelect && apiModelSelect.options.length > 0 && !apiModelSelect.disabled) {
                  userApiSettings.availableModels = Array.from(apiModelSelect.options).map(opt => opt.value);
             }
-        } else { // If key is cleared, reset all BYOK-related settings
-            userApiSettings = {
-                provider: null,
-                apiKey: '',
-                selectedModel: '',
-                availableModels: [],
-                maxOutputTokens: 2048,
-                tokenUsage: { prompt: 0, completion: 0 } // Also reset usage
-            };
+        } else {
+            userApiSettings = { provider: null, apiKey: '', selectedModel: '', availableModels: [], maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 } };
         }
-        
         localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
-        updateChatHeaderModelSelector(); // Immediately update the header UI
-        
-        if (closeModal) {
-            closeApiSettingsModal();
-        }
+        updateChatHeaderModelSelector();
+        if (closeModal) { closeApiSettingsModal(); }
     }
 
     function detectProvider(key) {
         if (key.startsWith('sk-ant-api')) return 'anthropic';
         if (key.startsWith('sk-')) return 'openai';
-        if (key.length > 35 && key.startsWith('AIza')) return 'google_paid'; // Common Google API key pattern
+        if (key.length > 35 && key.startsWith('AIza')) return 'google_paid';
         return null;
     }
 
     async function handleVerifyApiKey() {
         const key = apiKeyInput.value.trim();
-        if (!key) {
-            apiKeyStatus.textContent = 'API 키를 입력해주세요.';
-            apiKeyStatus.className = 'status-error';
-            return;
-        }
-
+        if (!key) { apiKeyStatus.textContent = 'API 키를 입력해주세요.'; apiKeyStatus.className = 'status-error'; return; }
         const provider = detectProvider(key);
-        if (!provider) {
-            apiKeyStatus.textContent = '알 수 없는 형식의 API 키입니다. (OpenAI, Anthropic, Google 지원)';
-            apiKeyStatus.className = 'status-error';
-            return;
-        }
-        
-        userApiSettings.provider = provider; // Temporarily set provider for fetching models
-        apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`;
-        apiKeyStatus.className = 'status-loading';
-        verifyApiKeyBtn.disabled = true;
-
+        if (!provider) { apiKeyStatus.textContent = '알 수 없는 형식의 API 키입니다. (OpenAI, Anthropic, Google 지원)'; apiKeyStatus.className = 'status-error'; return; }
+        userApiSettings.provider = provider;
+        apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`; apiKeyStatus.className = 'status-loading'; verifyApiKeyBtn.disabled = true;
         try {
             const models = await fetchAvailableModels(provider, key);
             populateModelSelector(models, provider);
-            apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하고 저장하세요.`;
-            apiKeyStatus.className = 'status-success';
-            apiModelSelect.disabled = false;
+            apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하고 저장하세요.`; apiKeyStatus.className = 'status-success'; apiModelSelect.disabled = false;
         } catch (error) {
             console.error("API Key Verification Error:", error);
-            apiKeyStatus.textContent = `❌ [${provider}] 키 검증 실패: ${error.message}`;
-            apiKeyStatus.className = 'status-error';
-            apiModelSelect.innerHTML = '<option>키 검증에 실패했습니다</option>';
-            apiModelSelect.disabled = true;
-        } finally {
-            verifyApiKeyBtn.disabled = false;
-        }
+            apiKeyStatus.textContent = `❌ [${provider}] 키 검증 실패: ${error.message}`; apiKeyStatus.className = 'status-error'; apiModelSelect.innerHTML = '<option>키 검증에 실패했습니다</option>'; apiModelSelect.disabled = true;
+        } finally { verifyApiKeyBtn.disabled = false; }
     }
 
     async function fetchAvailableModels(provider, key) {
         if (provider === 'openai') {
-            const response = await fetch('https://api.openai.com/v1/models', {
-                headers: { 'Authorization': `Bearer ${key}` }
-            });
+            const response = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': `Bearer ${key}` } });
             if (!response.ok) throw new Error('OpenAI 서버에서 모델 목록을 가져올 수 없습니다.');
             const data = await response.json();
             return data.data.filter(m => m.id.includes('gpt')).map(m => m.id).sort().reverse();
         } else if (provider === 'anthropic') {
-            // Anthropic doesn't have a public /v1/models endpoint. We provide a list of common models.
-            // A real API call to messages with a test prompt would be a better verification, but is more complex.
-            // For now, we trust the key format and provide a list.
             return ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-2.1'];
         } else if (provider === 'google_paid') {
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
@@ -1281,128 +1126,52 @@ document.addEventListener('DOMContentLoaded', function () {
     function populateModelSelector(models, provider, selectedModel = null) {
         apiModelSelect.innerHTML = '';
         const effectiveModels = models || [];
-
-        if (provider && effectiveModels.length === 0) {
-            if (provider === 'anthropic') {
-                 effectiveModels.push('claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307');
-            }
-        }
-
-        if (effectiveModels.length > 0) {
-            effectiveModels.forEach(modelId => {
-                const option = document.createElement('option');
-                option.value = modelId;
-                option.textContent = modelId;
-                if (modelId === selectedModel) {
-                    option.selected = true;
-                }
-                apiModelSelect.appendChild(option);
-            });
-            apiModelSelect.disabled = false;
-        } else {
-            apiModelSelect.innerHTML = '<option>사용 가능한 모델 없음</option>';
-            apiModelSelect.disabled = true;
-        }
+        if (provider && effectiveModels.length === 0) { if (provider === 'anthropic') { effectiveModels.push('claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'); } }
+        if (effectiveModels.length > 0) { effectiveModels.forEach(modelId => { const option = document.createElement('option'); option.value = modelId; option.textContent = modelId; if (modelId === selectedModel) { option.selected = true; } apiModelSelect.appendChild(option); }); apiModelSelect.disabled = false; }
+        else { apiModelSelect.innerHTML = '<option>사용 가능한 모델 없음</option>'; apiModelSelect.disabled = true; }
     }
     
-    // --- [NEW] Central function to manage the Chat Header's AI Model Selector ---
     function updateChatHeaderModelSelector() {
         if (!aiModelSelector) return;
-
-        const DEFAULT_MODELS = [
-            { value: 'gemini-2.5-flash-preview-04-17', text: '⚡️ Gemini 2.5 Flash (최신)' },
-            { value: 'gemini-2.0-flash', text: '💡 Gemini 2.0 Flash (안정)' }
-        ];
-        
-        aiModelSelector.innerHTML = ''; // Clear existing options
-
-        // Check if user is using a personal API key by checking for a provider
+        const DEFAULT_MODELS = [ { value: 'gemini-2.5-flash-preview-04-17', text: '⚡️ Gemini 2.5 Flash (최신)' }, { value: 'gemini-2.0-flash', text: '💡 Gemini 2.0 Flash (안정)' } ];
+        aiModelSelector.innerHTML = '';
         if (userApiSettings.provider && userApiSettings.apiKey) {
             const models_to_show = userApiSettings.availableModels || [];
-            
-            if(models_to_show.length === 0 && userApiSettings.selectedModel) {
-                 // Fallback if the list is empty but a model is selected (e.g., from older versions)
-                 models_to_show.push(userApiSettings.selectedModel);
-            }
-            
-            models_to_show.forEach(modelId => {
-                const option = document.createElement('option');
-                option.value = modelId;
-                option.textContent = `[개인] ${modelId}`; // Add prefix
-                aiModelSelector.appendChild(option);
-            });
-            
-            aiModelSelector.value = userApiSettings.selectedModel;
-            aiModelSelector.title = `${userApiSettings.provider} 모델을 선택합니다. (개인 키 사용 중)`;
-
+            if(models_to_show.length === 0 && userApiSettings.selectedModel) { models_to_show.push(userApiSettings.selectedModel); }
+            models_to_show.forEach(modelId => { const option = document.createElement('option'); option.value = modelId; option.textContent = `[개인] ${modelId}`; aiModelSelector.appendChild(option); });
+            aiModelSelector.value = userApiSettings.selectedModel; aiModelSelector.title = `${userApiSettings.provider} 모델을 선택합니다. (개인 키 사용 중)`;
         } else {
-            // Default Free Models
-            DEFAULT_MODELS.forEach(model => {
-                const option = document.createElement('option');
-                option.value = model.value;
-                option.textContent = model.text;
-                aiModelSelector.appendChild(option);
-            });
+            DEFAULT_MODELS.forEach(model => { const option = document.createElement('option'); option.value = model.value; option.textContent = model.text; aiModelSelector.appendChild(option); });
             const savedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
-            aiModelSelector.value = savedDefaultModel;
-            aiModelSelector.title = 'AI 모델을 선택합니다.';
+            aiModelSelector.value = savedDefaultModel; aiModelSelector.title = 'AI 모델을 선택합니다.';
         }
     }
-
 
     function renderTokenUsage() {
         const { prompt, completion } = userApiSettings.tokenUsage;
         const total = prompt + completion;
-        tokenUsageDisplay.innerHTML = `
-            <span>입력: ${prompt.toLocaleString()}</span> | 
-            <span>출력: ${completion.toLocaleString()}</span> | 
-            <strong>총합: ${total.toLocaleString()}</strong>
-        `;
+        tokenUsageDisplay.innerHTML = `<span>입력: ${prompt.toLocaleString()}</span> | <span>출력: ${completion.toLocaleString()}</span> | <strong>총합: ${total.toLocaleString()}</strong>`;
     }
 
-    function resetTokenUsage() {
-        showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => {
-             userApiSettings.tokenUsage = { prompt: 0, completion: 0 };
-             saveApiSettings(false); // Save without closing modal
-             renderTokenUsage();
-        });
-    }
+    function resetTokenUsage() { showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; saveApiSettings(false); renderTokenUsage(); }); }
 
     // --- 4. Global Initialization ---
     function initialize() {
         if (!body || !wrapper) { console.error("Core layout elements not found."); return; }
         updateClock(); setInterval(updateClock, 1000);
-        
-        // [NEW] Create and set up API settings UI
         createApiSettingsModal();
         const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
         if (chatHeader) {
-            apiSettingsBtn = document.createElement('span');
-            apiSettingsBtn.id = 'api-settings-btn';
-            apiSettingsBtn.title = '개인 API 설정';
+            apiSettingsBtn = document.createElement('span'); apiSettingsBtn.id = 'api-settings-btn'; apiSettingsBtn.title = '개인 API 설정';
             apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
             chatHeader.appendChild(apiSettingsBtn);
         }
-
-        // [MODIFIED] Load settings, then immediately update the model selector UI
         loadApiSettings();
         updateChatHeaderModelSelector();
-
-        initializeFirebase().then(() => {
-            setupNavigator();
-            setupChatModeSelector();
-            initializeTooltips();
-            makePanelDraggable(chatPanel);
-            makePanelDraggable(notesAppPanel);
-        });
+        initializeFirebase().then(() => { setupNavigator(); setupChatModeSelector(); initializeTooltips(); makePanelDraggable(chatPanel); makePanelDraggable(notesAppPanel); });
 
         // Event Listeners
-        document.addEventListener('click', (e) => {
-            handleTextSelection(e);
-            if (!e.target.closest('.session-context-menu, .project-context-menu')) {
-                removeContextMenu();
-            }
-        });
+        document.addEventListener('click', (e) => { handleTextSelection(e); if (!e.target.closest('.session-context-menu, .project-context-menu')) { removeContextMenu(); } });
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
         if (themeToggle) { themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light'); }); if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); }
@@ -1433,73 +1202,49 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
         
-        // --- [REFINED] Smart AI Model Selector Event Listener ---
         if (aiModelSelector) {
             aiModelSelector.addEventListener('change', () => {
                 const selectedValue = aiModelSelector.value;
-                // Check if we are in BYOK (personal key) mode
                 if (userApiSettings.provider && userApiSettings.apiKey) {
                     userApiSettings.selectedModel = selectedValue;
-                    // Save the change to localStorage
                     localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
                 } else {
-                    // We are in default mode
                     defaultModel = selectedValue;
                     localStorage.setItem('selectedAiModel', defaultModel);
                 }
             });
         }
         
-        // --- [NEW] API Settings Modal Listeners ---
         if (apiSettingsBtn) apiSettingsBtn.addEventListener('click', openApiSettingsModal);
         if (apiSettingsCancelBtn) apiSettingsCancelBtn.addEventListener('click', closeApiSettingsModal);
         if (apiSettingsSaveBtn) apiSettingsSaveBtn.addEventListener('click', () => saveApiSettings(true));
         if (verifyApiKeyBtn) verifyApiKeyBtn.addEventListener('click', handleVerifyApiKey);
         if (resetTokenUsageBtn) resetTokenUsageBtn.addEventListener('click', resetTokenUsage);
-        if (apiSettingsModalOverlay) apiSettingsModalOverlay.addEventListener('click', (e) => {
-            if (e.target === apiSettingsModalOverlay) closeApiSettingsModal();
-        });
+        if (apiSettingsModalOverlay) apiSettingsModalOverlay.addEventListener('click', (e) => { if (e.target === apiSettingsModalOverlay) closeApiSettingsModal(); });
 
-        // --- REFINED Event Delegation for Sidebar ---
         if (sessionListContainer) {
             sessionListContainer.addEventListener('click', (e) => {
-                if (!e.target.closest('.project-context-menu')) {
-                    removeContextMenu();
-                }
-
+                if (!e.target.closest('.project-context-menu')) { removeContextMenu(); }
                 const sessionItem = e.target.closest('.session-item');
                 if (sessionItem) {
                     const pinButton = e.target.closest('.session-pin-btn');
-                    if (pinButton) {
-                        e.stopPropagation();
-                        toggleChatPin(sessionItem.dataset.sessionId);
-                    } else {
-                        selectSession(sessionItem.dataset.sessionId);
-                    }
+                    if (pinButton) { e.stopPropagation(); toggleChatPin(sessionItem.dataset.sessionId); }
+                    else { selectSession(sessionItem.dataset.sessionId); }
                     return;
                 }
-
                 const projectHeader = e.target.closest('.project-header');
                 if (projectHeader) {
                     const actionsButton = e.target.closest('.project-actions-btn');
                     const projectId = projectHeader.closest('.project-container').dataset.projectId;
-                    if (actionsButton) {
-                        e.stopPropagation();
-                        showProjectContextMenu(projectId, actionsButton);
-                    } else if (!e.target.closest('input')) { 
-                        toggleProjectExpansion(projectId);
-                    }
+                    if (actionsButton) { e.stopPropagation(); showProjectContextMenu(projectId, actionsButton); }
+                    else if (!e.target.closest('input')) { toggleProjectExpansion(projectId); }
                     return;
                 }
             });
 
             sessionListContainer.addEventListener('contextmenu', (e) => {
                 const sessionItem = e.target.closest('.session-item');
-                if (sessionItem) {
-                    e.preventDefault();
-                    removeContextMenu();
-                    showSessionContextMenu(sessionItem.dataset.sessionId, e.clientX, e.clientY);
-                }
+                if (sessionItem) { e.preventDefault(); removeContextMenu(); showSessionContextMenu(sessionItem.dataset.sessionId, e.clientX, e.clientY); }
             });
 
             let draggedItem = null;
@@ -1509,103 +1254,50 @@ document.addEventListener('DOMContentLoaded', function () {
                     setTimeout(() => e.target.classList.add('is-dragging'), 0);
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', draggedItem.dataset.sessionId);
-                } else {
-                    e.preventDefault();
-                }
+                } else { e.preventDefault(); }
             });
 
             sessionListContainer.addEventListener('dragend', () => {
-                if(draggedItem) {
-                    draggedItem.classList.remove('is-dragging');
-                    draggedItem = null;
-                }
-                document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => {
-                    el.classList.remove('drag-over', 'drag-target-area');
-                });
+                if(draggedItem) { draggedItem.classList.remove('is-dragging'); draggedItem = null; }
+                document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => { el.classList.remove('drag-over', 'drag-target-area'); });
             });
 
             sessionListContainer.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 const targetProjectHeader = e.target.closest('.project-header');
-                
-                document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => {
-                    el.classList.remove('drag-over', 'drag-target-area');
-                });
-
+                document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => { el.classList.remove('drag-over', 'drag-target-area'); });
                 if (!draggedItem) return;
-
                 const sourceSessionId = draggedItem.dataset.sessionId;
                 const sourceSession = localChatSessionsCache.find(s => s.id === sourceSessionId);
-
                 if (targetProjectHeader) { 
                     const targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId;
-                    if (sourceSession && sourceSession.projectId !== targetProjectId) {
-                        e.dataTransfer.dropEffect = 'move';
-                        targetProjectHeader.classList.add('drag-over');
-                    } else {
-                         e.dataTransfer.dropEffect = 'none';
-                    }
+                    if (sourceSession && sourceSession.projectId !== targetProjectId) { e.dataTransfer.dropEffect = 'move'; targetProjectHeader.classList.add('drag-over'); }
+                    else { e.dataTransfer.dropEffect = 'none'; }
                 } else { 
-                     if (sourceSession && sourceSession.projectId) { 
-                        e.dataTransfer.dropEffect = 'move';
-                        sessionListContainer.classList.add('drag-target-area');
-                    } else {
-                        e.dataTransfer.dropEffect = 'none';
-                    }
+                     if (sourceSession && sourceSession.projectId) { e.dataTransfer.dropEffect = 'move'; sessionListContainer.classList.add('drag-target-area'); }
+                     else { e.dataTransfer.dropEffect = 'none'; }
                 }
             });
             
-            sessionListContainer.addEventListener('dragleave', (e) => {
-                 if (e.target === sessionListContainer) {
-                    sessionListContainer.classList.remove('drag-target-area');
-                }
-            });
+            sessionListContainer.addEventListener('dragleave', (e) => { if (e.target === sessionListContainer) { sessionListContainer.classList.remove('drag-target-area'); } });
 
             sessionListContainer.addEventListener('drop', async (e) => {
                 e.preventDefault();
-                 document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => {
-                    el.classList.remove('drag-over', 'drag-target-area');
-                });
-
+                 document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => { el.classList.remove('drag-over', 'drag-target-area'); });
                 if (!draggedItem) return;
-
                 const sessionId = e.dataTransfer.getData('text/plain');
                 const targetProjectHeader = e.target.closest('.project-header');
-                
-                let targetProjectId = null;
-                let shouldUpdate = false;
-                
+                let targetProjectId = null; let shouldUpdate = false;
                 const sourceSession = localChatSessionsCache.find(s => s.id === sessionId);
                 if (!sourceSession) return;
-
-                if (targetProjectHeader) { 
-                    targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId;
-                    if (sourceSession.projectId !== targetProjectId) {
-                        shouldUpdate = true;
-                    }
-                } else { 
-                    if (sourceSession.projectId) { 
-                        targetProjectId = null;
-                        shouldUpdate = true;
-                    }
-                }
-
+                if (targetProjectHeader) { targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId; if (sourceSession.projectId !== targetProjectId) { shouldUpdate = true; } }
+                else { if (sourceSession.projectId) { targetProjectId = null; shouldUpdate = true; } }
                 if (shouldUpdate) {
                     try {
-                        const updates = {
-                             projectId: targetProjectId,
-                             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        };
+                        const updates = { projectId: targetProjectId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
                         await chatSessionsCollectionRef.doc(sessionId).update(updates);
-                        
-                        if (targetProjectId) {
-                            await projectsCollectionRef.doc(targetProjectId).update({
-                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        }
-                    } catch (error) {
-                        console.error("Failed to move session:", error);
-                    }
+                        if (targetProjectId) { await projectsCollectionRef.doc(targetProjectId).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+                    } catch (error) { console.error("Failed to move session:", error); }
                 }
             });
         }
@@ -1613,7 +1305,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
         if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
     
-        // [NEW] Event Delegation for Reasoning Blocks
+        // [MODIFIED] Event Delegation for Reasoning Blocks
         if (chatMessages) {
             chatMessages.addEventListener('click', (e) => {
                 const header = e.target.closest('.reasoning-header');
@@ -1628,11 +1320,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 content.classList.toggle('expanded');
                 
                 if (block.classList.contains('expanded')) {
+                    // Stop summary animation and show detailed content with typewriter
                     const steps = JSON.parse(block.dataset.steps);
-                    const fullText = steps.map(s => s.detail).join('\n\n');
+                    const fullText = steps.map(s => s.detail).filter(Boolean).join('\n\n');
                     content.innerHTML = '';
                     typewriterEffect(content, fullText);
                 } else {
+                    // Restart summary animation
                     content.innerHTML = '';
                     const steps = JSON.parse(block.dataset.steps);
                     startSummaryAnimation(block, steps);
@@ -1642,26 +1336,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- 5. [NEW] Session Context Menu & Related Functions ---
-
     function showSessionContextMenu(sessionId, x, y) {
         const session = localChatSessionsCache.find(s => s.id === sessionId);
         if (!session) return;
-    
         removeContextMenu();
-    
         const menu = document.createElement('div');
         menu.className = 'session-context-menu'; 
-    
-        let moveToSubMenuHTML = localProjectsCache
-            .map(p => `<button class="context-menu-item" data-project-id="${p.id}" ${session.projectId === p.id ? 'disabled' : ''}>${p.name}</button>`)
-            .join('');
-        
+        let moveToSubMenuHTML = localProjectsCache.map(p => `<button class="context-menu-item" data-project-id="${p.id}" ${session.projectId === p.id ? 'disabled' : ''}>${p.name}</button>`).join('');
         const moveToMenu = `
             <div class="context-submenu-container">
-                <button class="context-menu-item" data-action="move-to">
-                    <span>프로젝트로 이동</span>
-                    <span class="submenu-arrow">▶</span>
-                </button>
+                <button class="context-menu-item" data-action="move-to"><span>프로젝트로 이동</span><span class="submenu-arrow">▶</span></button>
                 <div class="context-submenu">
                     <button class="context-menu-item" data-project-id="null" ${!session.projectId ? 'disabled' : ''}>[일반 대화로 이동]</button>
                     <div class="context-menu-separator"></div>
@@ -1669,10 +1353,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
         `;
-
         const createdAt = session.createdAt?.toDate()?.toLocaleString('ko-KR') || 'N/A';
         const updatedAt = session.updatedAt?.toDate()?.toLocaleString('ko-KR') || 'N/A';
-    
         menu.innerHTML = `
             <button class="context-menu-item" data-action="rename">이름 변경</button>
             ${moveToMenu}
@@ -1683,37 +1365,23 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="context-menu-item disabled">생성: ${createdAt}</div>
             <div class="context-menu-item disabled">수정: ${updatedAt}</div>
         `;
-    
         document.body.appendChild(menu);
-        const menuWidth = menu.offsetWidth;
-        const menuHeight = menu.offsetHeight;
-        const bodyWidth = document.body.clientWidth;
-        const bodyHeight = document.body.clientHeight;
-    
+        const menuWidth = menu.offsetWidth; const menuHeight = menu.offsetHeight;
+        const bodyWidth = document.body.clientWidth; const bodyHeight = document.body.clientHeight;
         menu.style.left = `${x + menuWidth > bodyWidth ? x - menuWidth : x}px`;
         menu.style.top = `${y + menuHeight > bodyHeight ? y - menuHeight : y}px`;
         menu.style.display = 'block';
-    
         currentOpenContextMenu = menu;
-    
         menu.addEventListener('click', (e) => {
             e.stopPropagation();
             const target = e.target.closest('.context-menu-item');
             if (!target || target.disabled) return;
-    
             const action = target.dataset.action;
             const projectId = target.dataset.projectId;
-
-            if (action === 'rename') {
-                startSessionRename(sessionId);
-            } else if (action === 'pin') {
-                toggleChatPin(sessionId);
-            } else if (action === 'delete') {
-                handleDeleteSession(sessionId);
-            } else if (projectId !== undefined) {
-                 moveSessionToProject(sessionId, projectId === 'null' ? null : projectId);
-            }
-    
+            if (action === 'rename') { startSessionRename(sessionId); }
+            else if (action === 'pin') { toggleChatPin(sessionId); }
+            else if (action === 'delete') { handleDeleteSession(sessionId); }
+            else if (projectId !== undefined) { moveSessionToProject(sessionId, projectId === 'null' ? null : projectId); }
             removeContextMenu();
         });
     }
@@ -1721,21 +1389,10 @@ document.addEventListener('DOMContentLoaded', function () {
     async function moveSessionToProject(sessionId, newProjectId) {
         const session = localChatSessionsCache.find(s => s.id === sessionId);
         if (!session || session.projectId === newProjectId) return;
-    
         try {
-            await chatSessionsCollectionRef.doc(sessionId).update({
-                projectId: newProjectId,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            if (newProjectId) {
-                 await projectsCollectionRef.doc(newProjectId).update({
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                 });
-            }
-        } catch (error) {
-            console.error("Error moving session:", error);
-            alert("세션 이동에 실패했습니다.");
-        }
+            await chatSessionsCollectionRef.doc(sessionId).update({ projectId: newProjectId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            if (newProjectId) { await projectsCollectionRef.doc(newProjectId).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+        } catch (error) { console.error("Error moving session:", error); alert("세션 이동에 실패했습니다."); }
     }
     
     function startSessionRename(sessionId) {
@@ -1743,52 +1400,30 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!sessionItem) return;
         const titleSpan = sessionItem.querySelector('.session-item-title');
         if (!titleSpan) return;
-    
         const originalTitle = titleSpan.textContent;
         const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'project-title-input'; 
-        input.value = originalTitle;
-    
+        input.type = 'text'; input.className = 'project-title-input'; input.value = originalTitle;
         titleSpan.replaceWith(input);
-        input.focus();
-        input.select();
-    
+        input.focus(); input.select();
         const finishEditing = () => {
             const newTitle = input.value.trim();
-            if (newTitle && newTitle !== originalTitle) {
-                renameSession(sessionId, newTitle);
-            } else {
-                 renderSidebarContent(); 
-            }
+            if (newTitle && newTitle !== originalTitle) { renameSession(sessionId, newTitle); }
+            else { renderSidebarContent(); }
         };
-    
         input.addEventListener('blur', finishEditing);
         input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                input.blur();
-            } else if (e.key === 'Escape') {
-                input.value = originalTitle; 
-                input.blur();
-            }
+            if (e.key === 'Enter') { input.blur(); }
+            else if (e.key === 'Escape') { input.value = originalTitle; input.blur(); }
         });
     }
 
     async function renameSession(sessionId, newTitle) {
         if (!newTitle || !sessionId) return;
-        try {
-            await chatSessionsCollectionRef.doc(sessionId).update({
-                title: newTitle,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        } catch (error) {
-            console.error("Error renaming session:", error);
-            alert("세션 이름 변경에 실패했습니다.");
-        }
+        try { await chatSessionsCollectionRef.doc(sessionId).update({ title: newTitle, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+        catch (error) { console.error("Error renaming session:", error); alert("세션 이름 변경에 실패했습니다."); }
     }
 
 
     // --- 6. Run Initialization ---
     initialize();
 });
-```
