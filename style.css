@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.0 (Project Folders & SVG Icon System)
+Version: 9.1 (Context Menu Implementation)
 Architect: [Username] & System Architect Ailey
-Description: Overhauled the entire UI with a consistent SVG icon system. Added comprehensive styles for the new chat project folders, including accordion UI, context menus, and drag-and-drop visual feedback.
+Description: Replaced all drag-and-drop styles with new, comprehensive CSS rules for the right-click context menu. This includes base menu styling, item hover effects, and support for nested submenus for project selection.
 */
 
 :root {
@@ -99,6 +99,62 @@ body:not(.dark-mode) .tool-button { background-color: #fff; color: #4B4237; }
 #selection-popover button:hover { background-color: #5f5f5f; }
 #selection-popover button svg { fill: currentColor; }
 
+/* --- [NEW] CONTEXT MENU STYLES --- */
+.custom-context-menu {
+    position: absolute;
+    z-index: 1500;
+    display: none;
+    min-width: 180px;
+    padding: 5px 0;
+    border-radius: 8px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+}
+body.dark-mode .custom-context-menu { background-color: #2c2c2c; border: 1px solid #444; }
+body:not(.dark-mode) .custom-context-menu { background-color: #FDF8F0; border: 1px solid var(--border-color-light); }
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 15px;
+    font-size: 0.95em;
+    cursor: pointer;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    color: inherit;
+}
+body.dark-mode .context-menu-item:hover { background-color: var(--strong-bg-dark); }
+body:not(.dark-mode) .context-menu-item:hover { background-color: var(--strong-bg-light); }
+.context-menu-item svg { fill: currentColor; }
+
+.context-menu-divider { height: 1px; margin: 5px 0; }
+body.dark-mode .context-menu-divider { background-color: var(--border-color-dark); }
+body:not(.dark-mode) .context-menu-divider { background-color: var(--border-color-light); }
+
+.context-menu-item.has-submenu { justify-content: space-between; }
+.context-menu-item.has-submenu::after {
+    content: '▶';
+    font-size: 0.7em;
+    opacity: 0.7;
+}
+
+.submenu {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    display: none;
+    padding: 5px 0;
+    border-radius: 8px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+    min-width: 160px;
+}
+body.dark-mode .submenu { background-color: #2c2c2c; border: 1px solid #444; }
+body:not(.dark-mode) .submenu { background-color: #FDF8F0; border: 1px solid var(--border-color-light); }
+
+.has-submenu:hover > .submenu { display: block; }
+
 
 .draggable-panel { position: fixed; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: none; flex-direction: column; resize: both; overflow: auto; transition: background-color 0.3s; z-index: 1100; }
 .draggable-panel.is-dragging { z-index: 1200; }
@@ -140,7 +196,6 @@ body.dark-mode .session-group-header { color: var(--sub-text-color-dark); }
 body:not(.dark-mode) .session-group-header { color: var(--sub-text-color-light); }
 
 .session-item { padding: 12px 10px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; transition: background-color 0.2s; font-size: 0.95em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: space-between; align-items: center; position: relative; }
-.session-item.is-dragging { opacity: 0.5; background-color: var(--h2-border-dark); }
 body.dark-mode .session-item:hover { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .session-item:hover { background-color: var(--quote-bg-light); }
 .session-item.active { font-weight: bold; }
@@ -156,13 +211,11 @@ body:not(.dark-mode) .session-pin-btn { color: var(--sub-text-color-light); }
 .session-pin-btn.pinned-active { color: var(--pin-color); }
 .session-pin-btn svg { fill: currentColor; }
 
-/* --- [NEW] CHAT PROJECT STYLES --- */
+/* --- CHAT PROJECT STYLES --- */
 .project-container { margin-bottom: 10px; }
 .project-header { display: flex; align-items: center; padding: 10px 5px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; position: relative; }
 body.dark-mode .project-header:hover { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .project-header:hover { background-color: var(--quote-bg-light); }
-.project-header.drag-over { background-color: var(--h2-border-dark); border: 2px dashed var(--header-color-dark); }
-body:not(.dark-mode) .project-header.drag-over { background-color: var(--h2-border-light); border-color: var(--header-color-light); }
 
 .project-toggle-icon { transition: transform 0.2s ease-in-out; margin-right: 5px; line-height: 0; }
 .project-toggle-icon.expanded { transform: rotate(90deg); }
