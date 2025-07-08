@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script.js
-Version: 8.1 (Backup & Restore Hotfix)
+Version: 8.2 (Chat Session Enhancement)
 Architect: [Username] & System Architect Ailey
-Description: Fixed a critical bug in the data restore functionality. The 'importAllData' function has been enhanced to correctly handle Firestore Timestamp objects from older backup files, preventing app freezes. The 'exportAllData' function now standardizes timestamps to ISO strings for better compatibility.
+Description: Implemented major UX improvements for chat session management. Sessions are now automatically grouped by time (Today, Yesterday, etc.), can be pinned to the top, and are searchable by title.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatSessionTitle = document.getElementById('chat-session-title');
     const deleteSessionBtn = document.getElementById('delete-session-btn');
     const chatWelcomeMessage = document.getElementById('chat-welcome-message');
+    const searchSessionsInput = document.getElementById('search-sessions-input'); // [NEW]
 
     // -- Backup & Restore UI Elements
     const restoreDataBtn = document.getElementById('restore-data-btn');
@@ -126,11 +127,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- Chat Session Management ---
+    // --- [MODIFIED] Chat Session Management ---
     function listenToChatSessions() {
         if (!chatSessionsCollectionRef) return;
         if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
-        unsubscribeFromChatSessions = chatSessionsCollectionRef.orderBy("updatedAt", "desc").onSnapshot(snapshot => {
+        // The orderBy is now handled in renderSessionList for more complex sorting
+        unsubscribeFromChatSessions = chatSessionsCollectionRef.onSnapshot(snapshot => {
             localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderSessionList();
             if (currentSessionId) {
@@ -138,16 +140,150 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (currentSessionData) {
                     renderChatMessages(currentSessionData.messages || []);
                 } else {
+                    // If current session was deleted, reset the view
                     handleNewChat();
                 }
             }
         }, error => console.error("Chat session listener error:", error));
     }
-    function renderSessionList() { if (!sessionList) return; sessionList.innerHTML = ''; localChatSessionsCache.forEach(session => { const item = document.createElement('div'); item.className = 'session-item'; item.dataset.sessionId = session.id; if (session.id === currentSessionId) { item.classList.add('active'); } item.innerHTML = `<div class="session-item-title">${session.title || '새 대화'}</div>`; item.addEventListener('click', () => selectSession(session.id)); sessionList.appendChild(item); }); }
+
+    // [NEW] Helper function to get time-based group for a session
+    function getRelativeTimeGroup(sessionDate) {
+        if (!sessionDate) return '오래된 대화';
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const checkDate = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate());
+
+        if (checkDate.getTime() === today.getTime()) return '오늘';
+        if (checkDate.getTime() === yesterday.getTime()) return '어제';
+        if (checkDate > sevenDaysAgo) return '최근 7일';
+        if (checkDate > thirtyDaysAgo) return '최근 30일';
+        return '오래된 대화';
+    }
+    
+    // [REWRITTEN] Renders session list with searching, pinning, and grouping
+    function renderSessionList() {
+        if (!sessionList) return;
+
+        const searchTerm = searchSessionsInput ? searchSessionsInput.value.toLowerCase() : '';
+
+        // 1. Filter by search term
+        const filteredSessions = localChatSessionsCache.filter(session =>
+            session.title && session.title.toLowerCase().includes(searchTerm)
+        );
+
+        // 2. Sort: Pinned items first, then by date
+        filteredSessions.sort((a, b) => {
+            const aPinned = a.isPinned || false;
+            const bPinned = b.isPinned || false;
+            const aTime = a.updatedAt?.toMillis() || 0;
+            const bTime = b.updatedAt?.toMillis() || 0;
+
+            if (aPinned !== bPinned) {
+                return bPinned - aPinned; // true (1) comes before false (0)
+            }
+            return bTime - aTime; // Newest first
+        });
+
+        // 3. Group by time
+        const groupedSessions = {
+            '고정됨': [],
+            '오늘': [],
+            '어제': [],
+            '최근 7일': [],
+            '최근 30일': [],
+            '오래된 대화': []
+        };
+
+        filteredSessions.forEach(session => {
+            if (session.isPinned) {
+                groupedSessions['고정됨'].push(session);
+            } else {
+                const group = getRelativeTimeGroup(session.updatedAt?.toDate());
+                if (groupedSessions[group]) {
+                    groupedSessions[group].push(session);
+                }
+            }
+        });
+
+        // 4. Render HTML
+        sessionList.innerHTML = '';
+        const groupOrder = ['고정됨', '오늘', '어제', '최근 7일', '최근 30일', '오래된 대화'];
+        let hasContent = false;
+
+        groupOrder.forEach(groupName => {
+            const sessionsInGroup = groupedSessions[groupName];
+            if (sessionsInGroup && sessionsInGroup.length > 0) {
+                hasContent = true;
+                const header = document.createElement('div');
+                header.className = 'session-group-header';
+                header.textContent = groupName;
+                sessionList.appendChild(header);
+
+                sessionsInGroup.forEach(session => {
+                    const item = document.createElement('div');
+                    item.className = 'session-item';
+                    item.dataset.sessionId = session.id;
+                    if (session.id === currentSessionId) {
+                        item.classList.add('active');
+                    }
+                    
+                    const title = document.createElement('div');
+                    title.className = 'session-item-title';
+                    title.textContent = session.title || '새 대화';
+
+                    const pinBtn = document.createElement('button');
+                    pinBtn.className = 'session-pin-btn';
+                    pinBtn.dataset.sessionId = session.id;
+                    pinBtn.title = session.isPinned ? '고정 해제' : '고정하기';
+                    pinBtn.textContent = '📌';
+                    if (session.isPinned) {
+                        pinBtn.classList.add('pinned-active');
+                    }
+                    
+                    item.appendChild(title);
+                    item.appendChild(pinBtn);
+                    sessionList.appendChild(item);
+                });
+            }
+        });
+
+        if (!hasContent && searchTerm) {
+            sessionList.innerHTML = '<div class="session-group-header">검색 결과 없음</div>';
+        } else if (!hasContent) {
+             sessionList.innerHTML = '<div class="session-group-header">대화 기록 없음</div>';
+        }
+    }
+
+
     function selectSession(sessionId) { if (!sessionId) return; const sessionData = localChatSessionsCache.find(s => s.id === sessionId); if (!sessionData) return; currentSessionId = sessionId; renderSessionList(); if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; renderChatMessages(sessionData.messages || []); if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block'; if (chatInput) chatInput.disabled = false; if (chatSendBtn) chatSendBtn.disabled = false; chatInput.focus(); }
     function handleNewChat() { currentSessionId = null; renderSessionList(); if (chatMessages) { chatMessages.innerHTML = ''; chatMessages.style.display = 'none'; } if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'flex'; if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; if (chatInput) { chatInput.disabled = false; chatInput.value = ''; } if (chatSendBtn) chatSendBtn.disabled = false; }
     function handleDeleteSession() { if (!currentSessionId) return; const sessionToDelete = localChatSessionsCache.find(s => s.id === currentSessionId); showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => { if (chatSessionsCollectionRef && currentSessionId) { chatSessionsCollectionRef.doc(currentSessionId).delete().then(() => { console.log("Session deleted successfully"); handleNewChat(); }).catch(e => console.error("세션 삭제 실패:", e)); } }); }
-    async function handleChatSend() { if (!chatInput || chatInput.disabled) return; const query = chatInput.value.trim(); if (!query) return; chatInput.disabled = true; chatSendBtn.disabled = true; const userMessage = { role: 'user', content: query, timestamp: new Date() }; let sessionRef; let messages = []; try { if (!currentSessionId) { if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; const newSession = { title: query.substring(0, 40) + (query.length > 40 ? '...' : ''), messages: [userMessage], mode: selectedMode, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), }; sessionRef = await chatSessionsCollectionRef.add(newSession); currentSessionId = sessionRef.id; messages = newSession.messages; renderSessionList(); } else { sessionRef = chatSessionsCollectionRef.doc(currentSessionId); const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); messages = [...(currentSessionData.messages || []), userMessage]; await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } renderChatMessages(messages); const loadingDiv = document.createElement('div'); loadingDiv.className = 'chat-message ai'; loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>'; if (chatMessages) { chatMessages.appendChild(loadingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; } const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] })); const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: apiMessages }) }); if (!res.ok) throw new Error(`${res.status}`); const result = await res.json(); let aiRes = "답변 생성 중 오류... 😥"; if (result.candidates?.[0].content.parts[0]) { aiRes = result.candidates[0].content.parts[0].text; } const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() }; messages.push(aiMessage); await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { console.error("Chat send error:", e); const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() }; if (sessionRef) { const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); const errorMessages = [...(currentSessionData?.messages || []), errorMessage]; await sessionRef.update({ messages: errorMessages }); } } finally { chatInput.disabled = false; chatSendBtn.disabled = false; chatInput.value = ''; chatInput.style.height = 'auto'; chatInput.focus(); } }
+    
+    // [NEW] Function to toggle pin status of a chat session
+    async function toggleChatPin(sessionId) {
+        if (!chatSessionsCollectionRef || !sessionId) return;
+        const sessionRef = chatSessionsCollectionRef.doc(sessionId);
+        const currentSession = localChatSessionsCache.find(s => s.id === sessionId);
+        if (!currentSession) return;
+
+        const newPinStatus = !(currentSession.isPinned || false);
+        try {
+            await sessionRef.update({ isPinned: newPinStatus });
+            // The onSnapshot listener will automatically re-render the list
+        } catch (error) {
+            console.error("Error toggling pin status:", error);
+        }
+    }
+
+    async function handleChatSend() { if (!chatInput || chatInput.disabled) return; const query = chatInput.value.trim(); if (!query) return; chatInput.disabled = true; chatSendBtn.disabled = true; const userMessage = { role: 'user', content: query, timestamp: new Date() }; let sessionRef; let messages = []; try { if (!currentSessionId) { if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none'; if (chatMessages) chatMessages.style.display = 'flex'; const newSession = { title: query.substring(0, 40) + (query.length > 40 ? '...' : ''), messages: [userMessage], mode: selectedMode, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), isPinned: false }; sessionRef = await chatSessionsCollectionRef.add(newSession); currentSessionId = sessionRef.id; messages = newSession.messages; renderSessionList(); } else { sessionRef = chatSessionsCollectionRef.doc(currentSessionId); const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); messages = [...(currentSessionData.messages || []), userMessage]; await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } renderChatMessages(messages); const loadingDiv = document.createElement('div'); loadingDiv.className = 'chat-message ai'; loadingDiv.innerHTML = '<div class="loading-indicator">AI가 답변을 생성하고 있습니다...</div>'; if (chatMessages) { chatMessages.appendChild(loadingDiv); chatMessages.scrollTop = chatMessages.scrollHeight; } const apiMessages = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] })); const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: apiMessages }) }); if (!res.ok) throw new Error(`${res.status}`); const result = await res.json(); let aiRes = "답변 생성 중 오류... 😥"; if (result.candidates?.[0].content.parts[0]) { aiRes = result.candidates[0].content.parts[0].text; } const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date() }; messages.push(aiMessage); await sessionRef.update({ messages: messages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (e) { console.error("Chat send error:", e); const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() }; if (sessionRef) { const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId); const errorMessages = [...(currentSessionData?.messages || []), errorMessage]; await sessionRef.update({ messages: errorMessages }); } } finally { chatInput.disabled = false; chatSendBtn.disabled = false; chatInput.value = ''; chatInput.style.height = 'auto'; chatInput.focus(); } }
     function renderChatMessages(messages = []) { if (!chatMessages) return; chatMessages.innerHTML = ''; if (messages.length === 0 && currentSessionId) { } messages.forEach(msg => { const d = document.createElement('div'); d.className = `chat-message ${msg.role}`; let c = msg.content; if (c.startsWith('[PROBLEM_GENERATED]')) { d.classList.add('quiz-problem'); c = c.replace('[PROBLEM_GENERATED]', '').trim(); } else if (c.startsWith('[CORRECT]')) { d.classList.add('quiz-solution', 'correct'); const h = document.createElement('div'); h.className = 'solution-header correct'; h.textContent = '✅ 정답입니다!'; d.appendChild(h); c = c.replace('[CORRECT]', '').trim(); } else if (c.startsWith('[INCORRECT]')) { d.classList.add('quiz-solution', 'incorrect'); const h = document.createElement('div'); h.className = 'solution-header incorrect'; h.textContent = '❌ 오답입니다.'; d.appendChild(h); c = c.replace('[INCORRECT]', '').trim(); } const cd = document.createElement('div'); cd.innerHTML = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); d.appendChild(cd); if (msg.timestamp) { const t = document.createElement('div'); t.className = 'chat-timestamp'; const timestampDate = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp); t.textContent = timestampDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.appendChild(t); } if (msg.role === 'ai') { const b = document.createElement('button'); b.className = 'send-to-note-btn'; b.textContent = '메모로 보내기'; b.onclick = e => { addNote(`[AI 러닝메이트] ${cd.textContent}`); e.target.textContent = '✅'; e.target.disabled = true; }; cd.appendChild(b); } chatMessages.appendChild(d); }); chatMessages.scrollTop = chatMessages.scrollHeight; }
     function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭 💬' }, { id: 'deep_learning', t: '심화 학습 🧠' }, { id: 'custom', t: '커스텀 ⚙️' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = m.t; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatQuizState = 'idle'; lastQuestion = ''; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
 
@@ -416,6 +552,30 @@ document.addEventListener('DOMContentLoaded', function () {
         if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
         if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
         if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
+        
+        // [NEW] Event listener for chat session search
+        if (searchSessionsInput) {
+            searchSessionsInput.addEventListener('input', renderSessionList);
+        }
+
+        // [MODIFIED] Event listener for chat session list using event delegation
+        if (sessionList) {
+            sessionList.addEventListener('click', (e) => {
+                const pinButton = e.target.closest('.session-pin-btn');
+                if (pinButton) {
+                    const sessionId = pinButton.dataset.sessionId;
+                    toggleChatPin(sessionId);
+                    return; // Prevent session selection
+                }
+
+                const sessionItem = e.target.closest('.session-item');
+                if (sessionItem) {
+                    const sessionId = sessionItem.dataset.sessionId;
+                    selectSession(sessionId);
+                }
+            });
+        }
+        
         if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
         if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
     }
