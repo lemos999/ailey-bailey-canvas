@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style.css
-Version: 9.4 (Advanced Sidebar & Session Context Menu)
+Version: 9.5 (BYOK - Bring Your Own Key & Token Management UI)
 Architect: [Username] & System Architect Ailey
-Description: Added comprehensive styles for the new session context menu (right-click menu), including submenus for moving sessions. Styled new group headers for 'Projects' and 'General Chats' in the sidebar. Added visual feedback for drag-and-drop target areas when moving a session out of a project.
+Description: Added styles for the new API settings modal. This includes the API key input with verification status, model selector, token limit inputs, and the cumulative token usage display with a reset button.
 */
 
 :root {
@@ -135,7 +135,6 @@ body.dark-mode .sidebar-button-group button:hover { background-color: #D4B28C; }
 body:not(.dark-mode) .sidebar-button-group button:hover { background-color: #A88A68; }
 
 #session-list-container { flex-grow: 1; overflow-y: auto; padding: 0 10px 10px 10px; }
-/* [NEW] Style for drag-out target area */
 #session-list-container.drag-target-area {
     background-color: rgba(135, 116, 92, 0.1);
     border: 2px dashed var(--h2-border-light);
@@ -145,7 +144,6 @@ body.dark-mode #session-list-container.drag-target-area {
     border-color: var(--h2-border-dark);
 }
 
-/* [MODIFIED] Grouping header styles for date and session type */
 .date-group-header, .session-group-header { 
     font-size: 0.8em;
     font-weight: bold;
@@ -205,7 +203,6 @@ body:not(.dark-mode) .project-title-input { outline-color: var(--header-color-li
 .project-header:hover .project-actions-btn, .project-actions-btn.active { opacity: 1; }
 .project-actions-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
 
-/* [MODIFIED] Universal Context Menu Styles */
 .project-context-menu, .session-context-menu {
     position: absolute;
     background-color: var(--container-bg-dark);
@@ -258,7 +255,6 @@ body:not(.dark-mode) .context-menu-separator {
     background-color: var(--border-color-light);
 }
 
-/* [NEW] Submenu styles */
 .context-submenu-container {
     position: relative;
 }
@@ -266,7 +262,7 @@ body:not(.dark-mode) .context-menu-separator {
     display: none;
     position: absolute;
     left: 100%;
-    top: -6px; /* Align with parent item */
+    top: -6px; 
     background-color: var(--container-bg-dark);
     border: 1px solid var(--border-color-dark);
     border-radius: 6px;
@@ -287,15 +283,28 @@ body:not(.dark-mode) .context-submenu {
 
 
 .sessions-in-project { padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
-.sessions-in-project.expanded { max-height: 500px; /* Adjust as needed */ }
+.sessions-in-project.expanded { max-height: 500px; }
 
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
-#chat-main-view .panel-header { /* gap is now set on the inner div */ }
+#chat-main-view .panel-header { }
 #chat-session-title { font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #delete-session-btn { display: none; background: none; border: none; line-height: 0; }
 #delete-session-btn svg { fill: currentColor; }
 
-/* [NEW] AI Model Selector Style */
+/* [NEW] API Settings Button */
+#api-settings-btn {
+    cursor: pointer;
+    margin-left: 10px;
+    line-height: 0;
+    transition: transform 0.2s ease-in-out;
+}
+#api-settings-btn:hover {
+    transform: scale(1.15) rotate(20deg);
+}
+#api-settings-btn svg {
+    fill: currentColor;
+}
+
 #ai-model-selector {
     padding: 4px 8px;
     font-size: 0.9em;
@@ -304,7 +313,7 @@ body:not(.dark-mode) .context-submenu {
     font-family: 'Gowun Batang', serif;
     cursor: pointer;
     transition: all 0.2s;
-    flex-shrink: 0; /* Prevents selector from shrinking too much */
+    flex-shrink: 0; 
 }
 body:not(.dark-mode) #ai-model-selector {
     background-color: var(--quote-bg-light);
@@ -420,8 +429,143 @@ body:not(.dark-mode) .custom-modal { background-color: var(--bg-color-light); }
 body.dark-mode .custom-modal { background-color: var(--container-bg-dark); }
 .custom-modal-actions { margin-top: 20px; display: flex; justify-content: center; gap: 15px; }
 .modal-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; }
-#modal-confirm-btn, #prompt-save-btn { background-color: #8C6D46; color: white; }
-#modal-cancel-btn, #prompt-cancel-btn { background-color: #888; color: white; }
+#modal-confirm-btn, #prompt-save-btn, #api-settings-save-btn { background-color: #8C6D46; color: white; }
+#modal-cancel-btn, #prompt-cancel-btn, #api-settings-cancel-btn { background-color: #888; color: white; }
+
+/* [NEW] API Settings Modal Styles */
+.api-settings-modal {
+    max-width: 650px;
+    text-align: left;
+}
+.api-settings-modal h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+.api-modal-desc {
+    font-size: 0.9em;
+    text-align: center;
+    margin-bottom: 30px;
+    opacity: 0.8;
+}
+.api-form-section {
+    margin-bottom: 25px;
+}
+.api-form-section label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 1em;
+}
+.api-form-section small {
+    font-size: 0.8em;
+    opacity: 0.7;
+    display: block;
+    margin-top: 5px;
+}
+.api-key-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.api-settings-modal input[type="text"],
+.api-settings-modal input[type="password"],
+.api-settings-modal input[type="number"],
+.api-settings-modal select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color-dark);
+    background-color: var(--bg-color-dark);
+    color: var(--text-color-dark);
+    font-family: 'Gowun Batang', serif;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+body:not(.dark-mode) .api-settings-modal input,
+body:not(.dark-mode) .api-settings-modal select {
+    border-color: var(--border-color-light);
+    background-color: white;
+    color: var(--text-color-light);
+}
+.api-key-wrapper input {
+    flex-grow: 1;
+}
+#verify-api-key-btn {
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background-color: var(--h2-color-dark);
+    color: white;
+    white-space: nowrap;
+    font-family: 'Gowun Batang', serif;
+}
+body:not(.dark-mode) #verify-api-key-btn {
+    background-color: var(--h2-color-light);
+}
+#verify-api-key-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+#api-key-status {
+    font-size: 0.85em;
+    margin-top: 8px;
+    min-height: 1.2em;
+    font-weight: bold;
+}
+.status-loading { color: var(--h2-color-dark); }
+body:not(.dark-mode) .status-loading { color: var(--h2-color-light); }
+.status-success { color: var(--correct-color-dark); }
+body:not(.dark-mode) .status-success { color: var(--correct-color); }
+.status-error { color: var(--incorrect-color-dark); }
+body:not(.dark-mode) .status-error { color: var(--incorrect-color); }
+
+.token-limit-wrapper {
+    max-width: 250px;
+}
+
+.token-usage-section {
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+body:not(.dark-mode) .token-usage-section {
+    background-color: var(--quote-bg-light);
+}
+body.dark-mode .token-usage-section {
+    background-color: var(--quote-bg-dark);
+}
+#token-usage-display {
+    font-size: 1.1em;
+    margin-bottom: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+#token-usage-display strong {
+    color: var(--header-color-dark);
+}
+body:not(.dark-mode) #token-usage-display strong {
+    color: var(--header-color-light);
+}
+#reset-token-usage-btn {
+    background: none;
+    border: 1px solid;
+    color: inherit;
+    font-size: 0.8em;
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+#reset-token-usage-btn:hover {
+    opacity: 1;
+}
 
 /* Quiz Modal Styles */
 #quiz-modal-overlay { background: rgba(0,0,0,0.7); }
@@ -442,4 +586,4 @@ body:not(:dark-mode) #quiz-submit-btn { background-color: var(--h2-color-light);
 
 /* Prompt Modal */
 #prompt-modal-overlay textarea { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
-body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }
+body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }```
