@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentQuizData = null;
     let currentOpenContextMenu = null;
     let newlyCreatedProjectId = null;
+let isAwaitingAiResponse = false; // [FIX] Prevents re-render race condition during AI response fetching.
     const activeTimers = {}; // [MODIFIED] Manages all dynamic intervals, crucial for stopping animations.
 
     // --- [REFINED] API Settings State ---
@@ -516,21 +517,27 @@ document.addEventListener('DOMContentLoaded', function () {
             if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
             unsubscribeFromChatSessions = chatSessionsCollectionRef.onSnapshot(snapshot => {
                 localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // If the AI is responding, the UI is being controlled locally by handleChatSend.
+                // We prevent the listener from re-rendering the chat window and causing a flicker.
+                // The sidebar can still be updated to reflect the new session title immediately.
+                if (isAwaitingAiResponse) {
+                    renderSidebarContent();
+                    resolve();
+                    return;
+                }
+
                 renderSidebarContent();
                 if (currentSessionId) {
                     const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
                     if (!currentSessionData) {
                         handleNewChat();
                     } else {
-                        // Pass the entire session data to render messages
                         renderChatMessages(currentSessionData);
                     }
                 }
                 resolve();
             }, error => {
-                console.error("Chat session listener error:", error);
-                resolve();
-            });
         });
     }
 
@@ -586,34 +593,72 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- [MAJOR REFACTOR & ADDITION] Chat Send Logic with State-Based Rendering ---
     async function handleChatSend() {
-        if (!chatInput || chatInput.disabled) return;
-        const query = chatInput.value.trim();
-        if (!query) return;
+    if (!chatInput || chatInput.disabled) return;
+    const query = chatInput.value.trim();
+    if (!query) return;
 
-        chatInput.value = '';
-        chatInput.style.height = 'auto';
-        chatInput.disabled = true;
-        chatSendBtn.disabled = true;
+    isAwaitingAiResponse = true; // --- LOCK UI UPDATES ---
 
-        const userMessage = { role: 'user', content: query, timestamp: new Date() };
-        const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
-        let sessionRef;
-        let currentMessages = [];
-        let isNewSession = false;
+    // --- IMMEDIATE UI UPDATE (Local State) ---
+    const userMessage = { role: 'user', content: query, timestamp: new Date() };
+    const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
+    let isNewSession = !currentSessionId;
 
-        if (!currentSessionId) {
-            isNewSession = true;
+    const currentSessionData = isNewSession ? null : localChatSessionsCache.find(s => s.id === currentSessionId);
+    const messagesForDisplay = [...(currentSessionData?.messages || []), userMessage, loadingMessage];
+
+    if (isNewSession) {
+        if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
+        if (chatMessages) chatMessages.style.display = 'flex';
+    }
+    renderChatMessages({ messages: messagesForDisplay });
+
+    chatInput.disabled = true;
+    chatSendBtn.disabled = true;
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+
+    let sessionRef;
+    const startTime = performance.now();
+    try {
+        // --- API CALL & RESPONSE GATHERING ---
+        let aiRes, usageData;
+        const historyForApi = currentSessionData?.messages || [];
+
+        if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
+            const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, [...historyForApi, userMessage], userApiSettings.maxOutputTokens);
+            const res = await fetch(requestDetails.url, requestDetails.options);
+            if (!res.ok) { const errorBody = await res.text(); throw new Error(`API Error ${res.status}: ${errorBody}`); }
+            const result = await res.json();
+            const parsed = parseApiResponse(userApiSettings.provider, result);
+            aiRes = parsed.content;
+            usageData = parsed.usage;
+            if (usageData) { userApiSettings.tokenUsage.prompt += usageData.prompt; userApiSettings.tokenUsage.completion += usageData.completion; saveApiSettings(false); }
+        } else {
+             const promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${query}"`;
+            const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
+            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: apiMessages })
+            });
+            if (!res.ok) throw new Error(`Google API Error ${res.status}`);
+            const result = await res.json();
+            aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
+        }
+
+        const endTime = performance.now();
+        const duration = ((endTime - startTime) / 1000).toFixed(2);
+        const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
+
+        // --- BATCHED FIRESTORE UPDATE ---
+        if (isNewSession) {
             const activeProject = document.querySelector('.project-header.active-drop-target');
             const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
-            if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-            if (chatMessages) chatMessages.style.display = 'flex';
-            currentMessages = [userMessage, loadingMessage];
-            // Render immediately with loading state
-            renderChatMessages({ messages: currentMessages });
-            
             const newSession = {
                 title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-                messages: [userMessage], // Start with only the user message in Firestore
+                messages: [userMessage, aiMessage],
                 mode: selectedMode,
                 projectId: newSessionProjectId,
                 isPinned: false,
@@ -624,74 +669,44 @@ document.addEventListener('DOMContentLoaded', function () {
             currentSessionId = sessionRef.id;
         } else {
             sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
-            const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-            currentMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
-            // Render immediately with loading state
-            renderChatMessages({ messages: currentMessages });
-            
             await sessionRef.update({
-                messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
+                messages: firebase.firestore.FieldValue.arrayUnion(userMessage, aiMessage),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
-        
-        const startTime = performance.now();
-        try {
-            let aiRes, usageData;
-            // The API call logic remains the same
-             const historyForApi = isNewSession ? [userMessage] : localChatSessionsCache.find(s => s.id === currentSessionId)?.messages || [userMessage];
-
-            if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
-                const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
-                const res = await fetch(requestDetails.url, requestDetails.options);
-                if (!res.ok) { const errorBody = await res.text(); throw new Error(`API Error ${res.status}: ${errorBody}`); }
-                const result = await res.json();
-                const parsed = parseApiResponse(userApiSettings.provider, result);
-                aiRes = parsed.content;
-                usageData = parsed.usage;
-                if (usageData) { userApiSettings.tokenUsage.prompt += usageData.prompt; userApiSettings.tokenUsage.completion += usageData.completion; saveApiSettings(false); }
-            } else {
-                let promptWithReasoning;
-                const lastUserMessage = historyForApi[historyForApi.length - 1].content;
-                promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
-                const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
-                const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: apiMessages })
-                });
-                if (!res.ok) throw new Error(`Google API Error ${res.status}`);
-                const result = await res.json();
-                aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
-            }
-            
-            const endTime = performance.now();
-            const duration = ((endTime - startTime) / 1000).toFixed(2);
-            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
-            
-            await sessionRef.update({
-                messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
+    } catch (e) {
+        console.error("Chat send error:", e);
+        const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
+        if (currentSessionId) {
+             sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
+             await sessionRef.update({ messages: firebase.firestore.FieldValue.arrayUnion(errorMessage) });
+        } else if (isNewSession && sessionRef) {
+             await sessionRef.update({ messages: firebase.firestore.FieldValue.arrayUnion(errorMessage) });
+        } else {
+            const errorSession = {
+                title: query.substring(0, 30) + "... (오류)",
+                messages: [userMessage, errorMessage],
+                mode: selectedMode,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            // The listener will pick up the change and re-render automatically.
-
-        } catch (e) {
-            console.error("Chat send error:", e);
-            const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
-            await sessionRef.update({ 
-                messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
-            });
-        } finally {
-            chatInput.disabled = false;
-            chatSendBtn.disabled = false;
-            chatInput.focus();
-            if (isNewSession) {
-                renderSidebarContent();
-            }
+            };
+            sessionRef = await chatSessionsCollectionRef.add(errorSession);
+            currentSessionId = sessionRef.id;
+        }
+    } finally {
+        isAwaitingAiResponse = false; // --- UNLOCK UI UPDATES ---
+        chatInput.disabled = false;
+        chatSendBtn.disabled = false;
+        chatInput.focus();
+        
+        // Manually trigger a re-render with the final state from the cache,
+        // which was updated by the (now unblocked) listener.
+        const finalSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+        if (finalSessionData) {
+            renderChatMessages(finalSessionData);
         }
     }
+}
     
     function buildApiRequest(provider, model, messages, maxTokens) {
         const history = messages.map(msg => ({
