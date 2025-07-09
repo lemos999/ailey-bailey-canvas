@@ -578,14 +578,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!currentSession) return;
         try {
             await sessionRef.update({ 
-                isPinned: !(currentSession.isPinned || false),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
-            });
-        } catch (error) { console.error("Error toggling pin status:", error); }
-    }
-
-    // --- [MAJOR REFACTOR & ADDITION] Chat Send Logic with State-Based Rendering ---
-    async function handleChatSend() {
+            async function handleChatSend() {
         if (!chatInput || chatInput.disabled) return;
         const query = chatInput.value.trim();
         if (!query) return;
@@ -596,63 +589,28 @@ document.addEventListener('DOMContentLoaded', function () {
         chatSendBtn.disabled = true;
 
         const userMessage = { role: 'user', content: query, timestamp: new Date() };
-        const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
         let sessionRef;
-        let currentMessages = [];
-        let isNewSession = false;
+        let isNewSession = !currentSessionId;
 
-        if (!currentSessionId) {
-            isNewSession = true;
+        // Get or create session reference
+        if (isNewSession) {
             const activeProject = document.querySelector('.project-header.active-drop-target');
             const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
-            if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-            if (chatMessages) chatMessages.style.display = 'flex';
-            currentMessages = [userMessage, loadingMessage];
-            // Render immediately with loading state
-            renderChatMessages({ messages: currentMessages });
-            
-            const newSession = {
+            const newSessionPayload = {
                 title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-                messages: [userMessage], // Start with only the user message in Firestore
+                messages: [userMessage],
                 mode: selectedMode,
                 projectId: newSessionProjectId,
                 isPinned: false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-// --- [MAJOR REFACTOR & ADDITION] Chat Send Logic with 2-Step API Call ---
-    async function handleChatSend() {
-        if (!chatInput || chatInput.disabled) return;
-        const query = chatInput.value.trim();
-        if (!query) return;
-
-        chatInput.value = '';
-        chatInput.style.height = 'auto';
-        chatInput.disabled = true;
-        chatSendBtn.disabled = true;
-
-        const userMessage = { role: 'user', content: query, timestamp: new Date() };
-        let sessionRef;
-        let isNewSession = false;
-
-        // --- Step 1: Initialize Session and UI ---
-        const tempAiMessageId = `ai-response-${Date.now()}`;
-        if (!currentSessionId) {
-            isNewSession = true;
-            const newSession = {
-                title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-                messages: [userMessage],
-                mode: selectedMode, // Assuming selectedMode is globally managed
-                projectId: document.querySelector('.project-header.active-drop-target')?.closest('.project-container').dataset.projectId || null,
-                isPinned: false,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            sessionRef = await chatSessionsCollectionRef.add(newSession);
+            sessionRef = await chatSessionsCollectionRef.add(newSessionPayload);
             currentSessionId = sessionRef.id;
-            renderSidebarContent();
+            renderSidebarContent(); // Update sidebar immediately
             if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
             if (chatMessages) chatMessages.style.display = 'flex';
+            renderChatMessages({ messages: [userMessage] }); // Render only user message
         } else {
             sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
             await sessionRef.update({
@@ -660,335 +618,375 @@ document.addEventListener('DOMContentLoaded', function () {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
-        
-        // Add user message to UI
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = `chat-message user`;
-        userMessageDiv.textContent = userMessage.content;
-        chatMessages.appendChild(userMessageDiv);
 
-        // Add live reasoning placeholder to UI
-        const liveReasoningPlaceholder = document.createElement('div');
-        liveReasoningPlaceholder.id = tempAiMessageId;
-        liveReasoningPlaceholder.className = 'live-reasoning-container';
-        liveReasoningPlaceholder.innerHTML = `
-            <div class="live-reasoning-header">
-                <div class="blinking-dot"></div>
-                <span>AI가 생각하는 중...</span>
+        // Create placeholder DOM elements for the AI response
+        const aiContainer = document.createElement('div');
+        aiContainer.className = 'ai-response-container';
+        const rBlock = document.createElement('div');
+        rBlock.className = 'reasoning-block';
+        rBlock.style.display = 'none'; // Initially hidden
+        rBlock.innerHTML = `
+            <div class="reasoning-header">
+                <span class="toggle-icon">▶</span>
+                <span>AI의 추론 과정...</span>
             </div>
+            <div class="reasoning-content"></div>
         `;
-        chatMessages.appendChild(liveReasoningPlaceholder);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-// --- [MAJOR REFACTOR & ADDITION] Chat Send Logic with 2-Step API Call ---
-    async function handleChatSend() {
-        if (!chatInput || chatInput.disabled) return;
-        const query = chatInput.value.trim();
-        if (!query) return;
+        const finalAnswerDiv = document.createElement('div');
+        finalAnswerDiv.className = 'chat-message ai';
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'ai-response-meta';
+        aiContainer.append(rBlock, finalAnswerDiv, metaDiv);
+        chatMessages.appendChild(aiContainer);
 
-        chatInput.value = '';
-        chatInput.style.height = 'auto';
-        chatInput.disabled = true;
-        chatSendBtn.disabled = true;
+        const startTime = performance.now();
+        let fullResponseText = "";
 
-        const userMessage = { role: 'user', content: query, timestamp: new Date() };
-        let sessionRef;
-        let isNewSession = false;
-
-        // --- Step 1: Initialize Session and UI ---
-        const tempAiMessageId = `ai-response-${Date.now()}`;
-        if (!currentSessionId) {
-            isNewSession = true;
-            const activeProject = document.querySelector('.project-header.active-drop-target');
-            const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
-
-            const newSession = {
-                title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-                messages: [userMessage],
-                mode: selectedMode,
-                projectId: newSessionProjectId,
-                isPinned: false,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            try {
-                sessionRef = await chatSessionsCollectionRef.add(newSession);
-                currentSessionId = sessionRef.id;
-            } catch (e) {
-                console.error("Error creating new session:", e);
-                chatInput.disabled = false;
-                chatSendBtn.disabled = false;
-                return;
-            }
-        } else {
-            sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
-            await sessionRef.update({
-                messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        
-        // Add user message and AI placeholder to UI immediately
-        if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-        if (chatMessages) chatMessages.style.display = 'flex';
-        
-        const userMessageDiv = createMessageDiv(userMessage);
-        chatMessages.appendChild(userMessageDiv);
-
-        const liveReasoningPlaceholder = document.createElement('div');
-        liveReasoningPlaceholder.id = tempAiMessageId;
-        liveReasoningPlaceholder.className = 'live-reasoning-container';
-        liveReasoningPlaceholder.innerHTML = `
-            <div class="live-reasoning-header">
-                <div class="blinking-dot"></div>
-                <span>AI가 생각하는 중...</span>
-            </div>
-        `;
-        chatMessages.appendChild(liveReasoningPlaceholder);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-
-        // --- Step 2: API Call #1 - Get Reasoning Steps ---
         try {
-            const reasoningPrompt = `
-                [M-CHAT-STEP1_REASONING]
-                The user's query is: "${query}".
-                Based on this query, please provide your internal reasoning steps to construct a high-quality answer. The steps should be a logical flow of thought.
-                Output ONLY a JSON object with a single key "reasoningSteps" which is an array of strings.
-                Example: {"reasoningSteps": ["First, I will analyze the user's core question.", "Then, I will identify key concepts.", "Finally, I will structure the answer clearly."]}
-            `;
-            
-            // This is a simplified representation. In a real scenario, this would use a robust API handling function.
-            // For now, we will simulate the API call and response.
-            // const res1 = await callApi(reasoningPrompt);
-            // const reasoningData = JSON.parse(res1);
-            
-            // SIMULATED RESPONSE for demonstration
-            const reasoningData = {
-                reasoningSteps: [
-                    "사용자의 질문 의도 파악하기",
-                    "핵심 개념 정의 및 연관 정보 수집",
-                    "답변의 구조 설계 (서론, 본론, 결론)",
-                    "Ailey 코칭 페르소나에 맞춰 문체 다듬기",
-                    "최종 답변 생성 및 검토"
-                ]
-            };
-            const reasoningSteps = reasoningData.reasoningSteps || ["답변을 준비하고 있습니다..."];
-            
-            // --- Step 3: Start Streaming Reasoning & Simultaneously Fire API Call #2 ---
-            const finalAnswerPromise = getFinalAnswer(query, reasoningSteps);
-            await streamReasoningSteps(tempAiMessageId, reasoningSteps);
-            
-            // --- Step 4: Process Final Answer ---
-            const startTime = performance.now();
-            const finalAnswer = await finalAnswerPromise;
+            // Use the Google AI streaming API
+            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
+            const promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]your reasoning here[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${query}"`;
+            const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
+
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:streamGenerateContent?key=...`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: apiMessages })
+            });
+
+            if (!res.ok) throw new Error(`API Error ${res.status}: ${await res.text()}`);
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            finalAnswerDiv.classList.add('is-streaming');
+
+            // Read from the stream
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                // The response is a stream of JSON objects, sometimes multiple per chunk
+                const jsonChunks = buffer.match(/\{[^\}]+\}/g);
+
+                if (jsonChunks) {
+                    for (const jsonChunk of jsonChunks) {
+                        try {
+                            const json = JSON.parse(jsonChunk);
+                            const chunkText = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                            fullResponseText += chunkText;
+                            
+                            // Live DOM update based on streamed content
+                            const reasoningMatch = fullResponseText.match(/\[REASONING_START\]([\s\S]*?)(\[REASONING_END\])?/);
+                            if (reasoningMatch) {
+                                rBlock.style.display = 'block';
+                                const reasoningContent = reasoningMatch[1];
+                                const reasoningEnded = reasoningMatch[2];
+
+                                rBlock.querySelector('.reasoning-content').innerText = reasoningContent;
+                                
+                                if (!reasoningEnded) {
+                                    rBlock.querySelector('.reasoning-content').classList.add('is-streaming');
+                                    finalAnswerDiv.classList.remove('is-streaming');
+                                } else {
+                                    rBlock.querySelector('.reasoning-content').classList.remove('is-streaming');
+                                    finalAnswerDiv.classList.add('is-streaming');
+                                }
+
+                                const finalAnswerContent = fullResponseText.split('[REASONING_END]')[1] || '';
+                                finalAnswerDiv.innerText = finalAnswerContent.trim();
+
+                            } else {
+                                finalAnswerDiv.innerText = fullResponseText;
+                            }
+
+                        } catch (e) {
+                           // Ignore parsing errors for incomplete JSON
+                        }
+                    }
+                    buffer = ''; // Clear buffer after processing
+                }
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Final cleanup after stream ends
+            finalAnswerDiv.classList.remove('is-streaming');
+            rBlock.querySelector('.reasoning-content').classList.remove('is-streaming');
+
             const endTime = performance.now();
             const duration = ((endTime - startTime) / 1000).toFixed(2);
-
-            const aiMessage = { role: 'ai', content: finalAnswer, timestamp: new Date(), duration: duration };
-
-            // Replace the live reasoning placeholder with the final message
-            const finalMessageContainer = document.getElementById(tempAiMessageId);
-            if (finalMessageContainer) {
-                 renderSingleMessage(aiMessage, finalMessageContainer);
-            }
+            metaDiv.innerHTML = `
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>
+                <span>응답 생성: ${duration}초</span>
+            `;
             
+            const aiMessage = { role: 'ai', content: fullResponseText, timestamp: new Date(), duration: duration };
             await sessionRef.update({
                 messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
         } catch (e) {
-            console.error("Chat send error:", e);
-            const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
-             const errorContainer = document.getElementById(tempAiMessageId);
-             if (errorContainer) {
-                 renderSingleMessage(errorMessage, errorContainer);
-             }
-            if(sessionRef) {
-                await sessionRef.update({ 
-                    messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
-                });
-            }
+            console.error("Chat send/stream error:", e);
+            finalAnswerDiv.innerText = `스트리밍 중 오류가 발생했습니다: ${e.message}`;
         } finally {
             chatInput.disabled = false;
             chatSendBtn.disabled = false;
             chatInput.focus();
-            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-    }
-
-    // [NEW] Helper for API Call #2
-    async function getFinalAnswer(query, reasoningSteps) {
-        // SIMULATED API call for demonstration
-        await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000)); // Simulate network latency
-        
-        const synthesisPrompt = `
-            [M-CHAT-STEP2_SYNTHESIS]
-            The user's original query was: "${query}".
-            My thought process to answer this is: ${JSON.stringify(reasoningSteps)}.
-            Based on this thought process, please provide the final, user-facing answer in Ailey's persona. The answer should be helpful, clear, and encouraging.
-        `;
-        
-        // SIMULATED RESPONSE
-        return `흥미로운 질문이야! 😊 너의 질문인 "${query}"에 대해 나의 생각 과정을 거쳐 답변을 준비해봤어.
-
-        **1단계: 핵심 파악**
-        먼저, 네가 궁금해하는 것의 핵심이 무엇인지 파악했어.
-
-        **2단계: 정보 탐색 및 구조화**
-        그 다음, 관련 정보를 찾고 어떻게 설명하면 네가 가장 이해하기 쉬울지 고민하며 답변의 뼈대를 만들었지.
-
-        **3단계: 친절한 설명으로 완성**
-        마지막으로, Ailey 코칭 스타일로 내용을 다듬어서 최종 답변을 완성했어!
-
-        이런 과정을 거쳐서 나온 답변이야. 궁금한 점이 있다면 언제든지 다시 물어봐줘!`;
-    }
-
-    // [NEW] Helper to stream reasoning steps into the UI
-    async function streamReasoningSteps(containerId, steps) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-
-        const header = container.querySelector('.live-reasoning-header span');
-        if(header) header.textContent = '실시간 추론 중';
-
-        for (const step of steps) {
-            await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 400)); // variable delay
-            const stepDiv = document.createElement('div');
-            stepDiv.className = 'live-reasoning-step';
-            container.appendChild(stepDiv);
-            await typewriterEffect(stepDiv, `→ ${step}`);
-            if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        // Add a final "generating" message
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const finalStepDiv = document.createElement('div');
-        finalStepDiv.className = 'live-reasoning-step generating';
-        container.appendChild(finalStepDiv);
-        await typewriterEffect(finalStepDiv, '최종 답변을 생성하는 중...');
-        if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    // [NEW] Helper to create a message div
-    function createMessageDiv(msg) {
-        const messageContainer = document.createElement('div');
-        if (msg.role === 'user') {
-            messageContainer.className = `chat-message user`;
-            messageContainer.textContent = msg.content;
-        } else if (msg.role === 'ai') {
-            // This case might be used if we need to render AI messages differently in the future
-            // For now, renderSingleMessage handles the container population.
-            messageContainer.className = 'ai-response-wrapper'; // Use wrapper class
-            renderSingleMessage(msg, messageContainer);
-        }
-        return messageContainer;
-    }
-
-    // --- [REFINED & FIXED] RENDER CHAT with STATE-BASED REASONING UI ---
-    function renderChatMessages(sessionData) {
-        if (!chatMessages || !sessionData) return;
-        
-        const messages = sessionData.messages || [];
-        // Clear timers associated with the previous session's animations
-        Object.values(activeTimers).forEach(clearInterval);
-        for (const key in activeTimers) {
-            delete activeTimers[key];
-        }
-
-        chatMessages.innerHTML = '';
-
-        messages.forEach((msg) => {
-             const messageDiv = createMessageDiv(msg);
-             chatMessages.appendChild(messageDiv);
-        });
-
-        if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    // [NEW] Renders a single AI message, used for both initial load and live updates
-    function renderSingleMessage(msg, container) {
-        container.innerHTML = ''; // Clear previous content (like placeholder)
-        container.className = 'ai-response-wrapper'; // Ensure correct wrapper class
-        
-        const aiContainer = document.createElement('div');
-        aiContainer.className = 'ai-response-container';
-        
-        const content = msg.content || '';
-
-        // This regex now only applies to legacy messages if they exist.
-        // New messages won't have this format.
-        const reasoningRegex = /\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
-        const match = content.match(reasoningRegex);
-
-        if (match) {
-            // Legacy rendering for old messages with embedded reasoning
-            const reasoningRaw = match[1];
-            const finalAnswer = content.replace(reasoningRegex, '').trim();
-
-            const rBlock = document.createElement('div');
-            rBlock.className = 'reasoning-block'; // The old, collapsible block
-            rBlock.innerHTML = `
-                <div class="reasoning-header">
-                    <span class="toggle-icon">▶</span>
-                    <span>AI의 추론 과정 (과거 기록)</span>
-                </div>
-                <div class="reasoning-content"><pre><code>${reasoningRaw.trim()}</code></pre></div>
-            `;
-            rBlock.addEventListener('click', function() {
-                this.classList.toggle('expanded');
-                const content = this.querySelector('.reasoning-content');
-                content.style.maxHeight = this.classList.contains('expanded') ? content.scrollHeight + "px" : null;
+    }() };
+            await sessionRef.update({ 
+                messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
             });
-
-            aiContainer.appendChild(rBlock);
-
-            if (finalAnswer) {
-                const finalAnswerDiv = document.createElement('div');
-                finalAnswerDiv.className = 'chat-message ai';
-                finalAnswerDiv.innerHTML = DOMPurify.sanitize(finalAnswer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'));
-                aiContainer.appendChild(finalAnswerDiv);
+        } finally {
+            chatInput.disabled = false;
+            chatSendBtn.disabled = false;
+            chatInput.focus();
+            if (isNewSession) {
+                renderSidebarContent();
             }
-        } else {
-            // Standard rendering for new messages
-            const d = document.createElement('div');
-            d.className = 'chat-message ai';
-            d.innerHTML = DOMPurify.sanitize(content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'));
-            aiContainer.appendChild(d);
         }
-
-        if (msg.duration) {
-            const metaDiv = document.createElement('div');
-            metaDiv.className = 'ai-response-meta';
-            metaDiv.innerHTML = `
-                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>
-                <span>응답 생성: ${msg.duration}초</span>
-            `;
-            aiContainer.appendChild(metaDiv);
-        }
-
-        container.appendChild(aiContainer);
     }
     
-    // [MODIFIED] Independent Typewriter Effect
-    function typewriterEffect(element, text) {
-        return new Promise(resolve => {
-            if (!element || !text) {
-                resolve();
-                return;
-            }
-            element.innerHTML = '';
-            let i = 0;
-            const typingInterval = setInterval(() => {
-                if (i < text.length) {
-                    element.innerHTML += text.charAt(i);
-                    i++;
+    function buildApiRequest(provider, model, messages, maxTokens) {
+        const history = messages.map(msg => ({
+            role: msg.role === 'ai' ? 'assistant' : 'user',
+            content: msg.content
+        }));
+
+        if (provider === 'openai') {
+            return { url: 'https://api.openai.com/v1/chat/completions', options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userApiSettings.apiKey}` }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) } };
+        } else if (provider === 'anthropic') {
+             return { url: 'https://api.anthropic.com/v1/messages', options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': userApiSettings.apiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) } };
+        } else if (provider === 'google_paid') {
+            const googleHistory = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] }));
+            return { url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userApiSettings.apiKey}`, options: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: googleHistory, generationConfig: { maxOutputTokens: Number(maxTokens) || 2048 } }) } };
+        }
+        throw new Error(`Unsupported provider: ${provider}`);
+    }
+
+    function parseApiResponse(provider, result) {
+        try {
+            if (provider === 'openai') { return { content: result.choices[0].message.content, usage: { prompt: result.usage.prompt_tokens, completion: result.usage.completion_tokens } }; }
+            else if (provider === 'anthropic') { return { content: result.content[0].text, usage: { prompt: result.usage.input_tokens, completion: result.usage.output_tokens } }; }
+            else if (provider === 'google_paid') { retufunction renderChatMessages(sessionData) {
+        if (!chatMessages || !sessionData) return;
+        const messages = sessionData.messages || [];
+        chatMessages.innerHTML = '';
+
+        messages.forEach((msg, index) => {
+            if (msg.role === 'user') {
+                const d = document.createElement('div');
+                d.className = `chat-message user`;
+                d.textContent = msg.content;
+                chatMessages.appendChild(d);
+            } else if (msg.role === 'ai') {
+                const aiContainer = document.createElement('div');
+                aiContainer.className = 'ai-response-container';
+
+                const content = msg.content;
+                const reasoningRegex = /\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
+                const match = content.match(reasoningRegex);
+
+                if (match) {
+                    const reasoningContentText = match[1].trim();
+                    const finalAnswerText = content.replace(reasoningRegex, '').trim();
+
+                    const rBlock = document.createElement('div');
+                    rBlock.className = 'reasoning-block';
+                    // Store full reasoning text for the expand/collapse event handler
+                    rBlock.dataset.reasoningText = reasoningContentText;
+
+                    rBlock.innerHTML = `
+                        <div class="reasoning-header">
+                            <span class="toggle-icon">▶</span>
+                            <span>AI의 추론 과정...</span>
+                        </div>
+                        <div class="reasoning-content"></div>
+                    `;
+                    aiContainer.appendChild(rBlock);
+
+                    if (finalAnswerText) {
+                        const finalAnswerDiv = document.createElement('div');
+                        finalAnswerDiv.className = 'chat-message ai';
+                        finalAnswerDiv.innerHTML = finalAnswerText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                        aiContainer.appendChild(finalAnswerDiv);
+                    }
                 } else {
-                    clearInterval(typingInterval);
-                    resolve();
+                    const d = document.createElement('div');
+                    d.className = 'chat-message ai';
+                    d.innerHTML = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                    aiContainer.appendChild(d);
                 }
-            }, 20); // Faster typing speed
+
+                if (msg.duration) {
+                    const metaDiv = document.createElement('div');
+                    metaDiv.className = 'ai-response-meta';
+                    metaDiv.innerHTML = `
+                        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>
+                        <span>응답 생성: ${msg.duration}초</span>
+                    `;
+                    aiContainer.appendChild(metaDiv);
+                }
+                chatMessages.appendChild(aiContainer);
+            }
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }      } else {
+                clearInterval(typingInterval);
+                element.classList.remove('blinking-cursor');
+                if (onComplete) onComplete();
+            }
+        }, 30); 
+
+        if (blockId && activeTimers[blockId]) {
+            activeTimers[blockId].push(typingInterval);
+        } else {
+            // Fallback for elements not in a managed block, though this is less ideal.
+            // Consider creating a global timer manager if needed.
+        }
+    }
+
+
+    function setupChatModeSelector() { if (!chatModeSelector) return; chatModeSelector.innerHTML = ''; const modes = [{ id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, { id: 'deep_learning', t: '심화 학습', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,14A4,4 0 0,1 8,10H10A2,2 0 0,0 12,12A2,2 0 0,0 14,10H16A4,4 0 0,1 12,14M7.5,15.6C8.8,17.2 10.3,18 12,18C13.7,18 15.2,17.2 16.5,15.6C15.2,14.8 13.7,14 12,14C10.3,14 8.8,14.8 7.5,15.6Z" /></svg>' }, { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }]; modes.forEach(m => { const b = document.createElement('button'); b.dataset.mode = m.id; b.innerHTML = `${m.i}<span>${m.t}</span>`; if (m.id === selectedMode) b.classList.add('active'); b.addEventListener('click', () => { selectedMode = m.id; chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); if (selectedMode === 'custom') openPromptModal(); }); chatModeSelector.appendChild(b); }); }
+
+    // --- System Reset, Backup, Restore ---
+    async function handleSystemReset() {
+        const message = "정말로 이 캔버스의 모든 프로젝트, 채팅, 메모 기록을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.";
+        showModal(message, async () => {
+            if (!db || !currentUser) { alert("초기화 실패: DB 연결을 확인해주세요."); return; }
+            updateStatus("시스템 초기화 중...", true);
+            const batch = db.batch();
+            try {
+                const notesSnapshot = await notesCollection.get();
+                notesSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+                const chatsSnapshot = await chatSessionsCollectionRef.get();
+                chatsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+                const projectsSnapshot = await projectsCollectionRef.get();
+                projectsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                
+                localStorage.removeItem('userApiSettings');
+                localStorage.removeItem('selectedAiModel');
+
+                alert("✅ 모든 데이터가 성공적으로 삭제되었습니다. 페이지를 새로고침하여 시스템을 다시 시작합니다.");
+                location.reload();
+            } catch (error) { console.error("❌ 시스템 초기화 실패:", error); alert(`시스템 초기화 중 오류가 발생했습니다: ${error.message}`); updateStatus("초기화 실패 ❌", false); }
         });
     }
+    function exportAllData() { if (localNotesCache.length === 0 && localChatSessionsCache.length === 0 && localProjectsCache.length === 0) { showModal("백업할 데이터가 없습니다.", () => {}); return; } const processTimestamp = (item) => { const newItem = { ...item }; if (newItem.createdAt?.toDate) newItem.createdAt = newItem.createdAt.toDate().toISOString(); if (newItem.updatedAt?.toDate) newItem.updatedAt = newItem.updatedAt.toDate().toISOString(); if (Array.isArray(newItem.messages)) { newItem.messages = newItem.messages.map(msg => { const newMsg = { ...msg }; if (newMsg.timestamp?.toDate) newMsg.timestamp = newMsg.timestamp.toDate().toISOString(); return newMsg; }); } return newItem; }; const dataToExport = { backupVersion: '2.0', backupDate: new Date().toISOString(), notes: localNotesCache.map(processTimestamp), chatSessions: localChatSessionsCache.map(processTimestamp), projects: localProjectsCache.map(processTimestamp) }; const str = JSON.stringify(dataToExport, null, 2); const blob = new Blob([str], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `ailey-canvas-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url); }
+    function handleRestoreClick() { if (fileImporter) fileImporter.click(); }
+    async function importAllData(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.backupVersion !== '2.0') { throw new Error("호환되지 않는 백업 파일 버전입니다."); }
+                const message = `파일에서 ${data.projects?.length||0}개의 프로젝트, ${data.chatSessions?.length||0}개의 채팅, ${data.notes?.length||0}개의 메모를 발견했습니다. 현재 데이터를 덮어씁니다. 계속하시겠습니까?`;
+                showModal(message, async () => {
+                    try {
+                        updateStatus('복원 중...', true);
+                        const batch = db.batch();
+                        const toFirestoreTimestamp = ts => ts ? firebase.firestore.Timestamp.fromDate(new Date(ts)) : firebase.firestore.FieldValue.serverTimestamp();
+                        (data.notes || []).forEach(note => { const { id, ...dataToWrite } = note; dataToWrite.createdAt = toFirestoreTimestamp(note.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(note.updatedAt); batch.set(notesCollection.doc(id), dataToWrite); });
+                        (data.chatSessions || []).forEach(session => { const { id, ...dataToWrite } = session; dataToWrite.createdAt = toFirestoreTimestamp(session.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(session.updatedAt); if(dataToWrite.messages) dataToWrite.messages.forEach(m=>m.timestamp=toFirestoreTimestamp(m.timestamp)); batch.set(chatSessionsCollectionRef.doc(id), dataToWrite); });
+                        (data.projects || []).forEach(project => { const { id, ...dataToWrite } = project; dataToWrite.createdAt = toFirestoreTimestamp(project.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(project.updatedAt); batch.set(projectsCollectionRef.doc(id), dataToWrite); });
+                        await batch.commit();
+                        updateStatus('복원 완료 ✓', true);
+                        showModal("데이터 복원이 완료되었습니다. 페이지를 새로고침합니다.", () => location.reload());
+                    } catch (error) { console.error("데이터 복원 실패:", error); updateStatus('복원 실패 ❌', false); showModal(`데이터 복원 중 오류: ${error.message}`, () => {}); }
+                });
+            } catch (error) { console.error("File parsing error:", error); showModal(`파일 읽기 오류: ${error.message}`, () => {}); }
+            finally { event.target.value = null; }
+        };
+        reader.readAsText(file);
+    }
+    
+    // --- Utilities, Notes, and Other Functions ---
+    function updateClock() { const clockElement = document.getElementById('real-time-clock'); if (!clockElement) return; const now = new Date(); const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; clockElement.textContent = now.toLocaleString('ko-KR', options); }
+    function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(canvasId).then(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" /></svg>'; setTimeout(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" /></svg>'; }, 1500); }); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
+    function initializeTooltips() { document.querySelectorAll('.keyword-chip[data-tooltip]').forEach(chip => { if (chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = chip.dataset.tooltip; } }); document.querySelectorAll('.content-section strong[data-tooltip]').forEach(highlight => { if(!highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = highlight.dataset.tooltip; highlight.appendChild(tooltipElement); } }); }
+    function makePanelDraggable(panelElement) { if(!panelElement) return; const header = panelElement.querySelector('.panel-header'); if(!header) return; let isDragging = false, offset = { x: 0, y: 0 }; const onMouseMove = (e) => { if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; } }; const onMouseUp = () => { isDragging = false; panelElement.classList.remove('is-dragging'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }; header.addEventListener('mousedown', e => { if (e.target.closest('button, input, select, .close-btn, #delete-session-btn, #chat-mode-selector, #api-settings-btn')) return; isDragging = true; panelElement.classList.add('is-dragging'); offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); }); }
+    function togglePanel(panelElement, forceShow = null) { if (!panelElement) return; const show = forceShow !== null ? forceShow : panelElement.style.display !== 'flex'; panelElement.style.display = show ? 'flex' : 'none'; }
+    function setupNavigator() { const scrollNav = document.getElementById('scroll-nav'); if (!scrollNav || !learningContent) return; const headers = learningContent.querySelectorAll('h2, #section-4 h3, #section-5 h3, #section-6 h3'); if (headers.length === 0) { scrollNav.style.display = 'none'; if(wrapper) wrapper.classList.add('toc-hidden'); return; } scrollNav.style.display = 'block'; if(wrapper) wrapper.classList.remove('toc-hidden'); const navList = document.createElement('ul'); headers.forEach((header, index) => { let targetElement = header.closest('.content-section'); if (targetElement && !targetElement.id) targetElement.id = `nav-target-${index}`; if (targetElement) { const listItem = document.createElement('li'); const link = document.createElement('a'); let navText = header.textContent.trim().replace(/\[|\]|🤓|⏳|📖/g, '').trim(); link.textContent = navText.substring(0, 25); link.href = `#${targetElement.id}`; if (header.tagName === 'H3') { link.style.paddingLeft = '25px'; link.style.fontSize = '0.9em'; } listItem.appendChild(link); navList.appendChild(listItem); } }); scrollNav.innerHTML = '<h3>학습 내비게이션</h3>'; scrollNav.appendChild(navList); const links = scrollNav.querySelectorAll('a'); const observer = new IntersectionObserver(entries => { entries.forEach(entry => { const id = entry.target.getAttribute('id'); const navLink = scrollNav.querySelector(`a[href="#${id}"]`); if (navLink && entry.isIntersecting && entry.intersectionRatio > 0.5) { links.forEach(l => l.classList.remove('active')); navLink.classList.add('active'); } }); }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 }); headers.forEach(header => { const target = header.closest('.content-section'); if (target) observer.observe(target); }); }
+    function handleTextSelection(e) { if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu, .session-context-menu')) return; const selection = window.getSelection(); const selectedText = selection.toString().trim(); removeContextMenu(); if (selectedText.length > 3) { lastSelectedText = selectedText; const range = selection.getRangeAt(0); const rect = range.getBoundingClientRect(); const popover = selectionPopover; let top = rect.top + window.scrollY - popover.offsetHeight - 10; let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2); popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`; popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`; popover.style.display = 'flex'; } else if (!e.target.closest('#selection-popover')) { selectionPopover.style.display = 'none'; } }
+    function handlePopoverAskAi() { if (!lastSelectedText || !chatInput) return; togglePanel(chatPanel, true); handleNewChat(); setTimeout(() => { chatInput.value = `"${lastSelectedText}"\n\n이 내용에 대해 더 자세히 설명해줄래?`; chatInput.style.height = (chatInput.scrollHeight) + 'px'; chatInput.focus(); }, 100); selectionPopover.style.display = 'none'; }
+    function handlePopoverAddNote() { if (!lastSelectedText) return; addNote(`> ${lastSelectedText}\n\n`); selectionPopover.style.display = 'none'; }
+    function openPromptModal() { if (customPromptInput) customPromptInput.value = customPrompt; if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; }
+    function closePromptModal() { if (promptModalOverlay) promptModalOverlay.style.display = 'none'; }
+    function saveCustomPrompt() { if (customPromptInput) { customPrompt = customPromptInput.value; localStorage.setItem('customTutorPrompt', customPrompt); closePromptModal(); } }
+    function showModal(message, onConfirm) { if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return; modalMessage.textContent = message; customModal.style.display = 'flex'; modalConfirmBtn.onclick = () => { onConfirm(); customModal.style.display = 'none'; }; modalCancelBtn.onclick = () => { customModal.style.display = 'none'; }; }
+    function listenToNotes() { return new Promise(resolve => { if (!notesCollection) return resolve(); if (unsubscribeFromNotes) unsubscribeFromNotes(); unsubscribeFromNotes = notesCollection.orderBy("updatedAt", "desc").onSnapshot(s => { localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList(); resolve(); }, e => {console.error("노트 수신 오류:", e); resolve();}); }); }
+    function renderNoteList() { if (!notesList || !searchInput) return; const term = searchInput.value.toLowerCase(); const filtered = localNotesCache.filter(n => n.title?.toLowerCase().includes(term) || n.content?.toLowerCase().includes(term)); filtered.sort((a,b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0)); notesList.innerHTML = filtered.length === 0 ? '<div>표시할 메모가 없습니다.</div>' : ''; filtered.forEach(n => { const i = document.createElement('div'); i.className = 'note-item'; i.dataset.id = n.id; if (n.isPinned) i.classList.add('pinned'); i.innerHTML = `<div class="note-item-content"><div class="note-item-title">${n.title||'무제'}</div><div class="note-item-date">${n.updatedAt?.toDate().toLocaleString('ko-KR')||'날짜 없음'}</div></div><div class="note-item-actions"><button class="item-action-btn pin-btn ${n.isPinned?'pinned-active':''}" title="고정"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg></button><button class="item-action-btn delete-btn" title="삭제"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg></button></div>`; notesList.appendChild(i); }); }
+    async function addNote(content = '') { if (!notesCollection) return; try { const ref = await notesCollection.add({ title: '새 메모', content: content, isPinned: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); openNoteEditor(ref.id); } catch (e) { console.error("새 메모 추가 실패:", e); } }
+    function saveNote() { if (debounceTimer) clearTimeout(debounceTimer); if (!currentNoteId || !notesCollection) return; const data = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; notesCollection.doc(currentNoteId).update(data).then(() => updateStatus('저장됨 ✓', true)).catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); }); }
+    function handleDeleteRequest(id) { showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => { if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e)); }); }
+    async function togglePin(id) { if (!notesCollection) return; const note = localNotesCache.find(n => n.id === id); if (note) await notesCollection.doc(id).update({ isPinned: !note.isPinned }); }
+    function switchView(view) { if (view === 'editor') { if(noteListView) noteListView.classList.remove('active'); if(noteEditorView) noteEditorView.classList.add('active'); } else { if(noteEditorView) noteEditorView.classList.remove('active'); if(noteListView) noteListView.classList.add('active'); currentNoteId = null; } }
+    function openNoteEditor(id) { const note = localNotesCache.find(n => n.id === id); if (note && noteTitleInput && noteContentTextarea) { currentNoteId = id; noteTitleInput.value = note.title || ''; noteContentTextarea.value = note.content || ''; switchView('editor'); } }
+    function updateStatus(msg, success) { if (!autoSaveStatus) return; autoSaveStatus.textContent = msg; autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral'; setTimeout(() => { autoSaveStatus.textContent = ''; }, 3000); }
+    function applyFormat(fmt) { if (!noteContentTextarea) return; const s = noteContentTextarea.selectionStart, e = noteContentTextarea.selectionEnd, t = noteContentTextarea.value.substring(s, e); const m = fmt === 'bold' ? '**' : (fmt === 'italic' ? '*' : '`'); noteContentTextarea.value = `${noteContentTextarea.value.substring(0,s)}${m}${t}${m}${noteContentTextarea.value.substring(e)}`; noteContentTextarea.focus(); }
+    async function startQuiz() { if (!quizModalOverlay) return; const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', '); if (!k) { showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); return; } if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>'; if (quizResults) quizResults.innerHTML = ''; quizModalOverlay.style.display = 'flex'; try { const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); currentQuizData = JSON.parse(res); renderQuiz(currentQuizData); } catch (e) { if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; } }
+    function renderQuiz(data) { if (!quizContainer || !data.questions) return; quizContainer.innerHTML = ''; data.questions.forEach((q, i) => { const b = document.createElement('div'); b.className = 'quiz-question-block'; const p = document.createElement('p'); p.textContent = `${i + 1}. ${q.q}`; const o = document.createElement('div'); o.className = 'quiz-options'; q.o.forEach(opt => { const l = document.createElement('label'); const r = document.createElement('input'); r.type = 'radio'; r.name = `q-${i}`; r.value = opt; l.append(r,` ${opt}`); o.appendChild(l); }); b.append(p, o); quizContainer.appendChild(b); }); }
+
+    
+    // --- [REFINED] API Settings & Dynamic Model Selector Functions ---
+    
+    function createApiSettingsModal() {
+        const modal = document.createElement('div');
+        modal.id = 'api-settings-modal-overlay';
+        modal.className = 'custom-modal-overlay';
+        modal.innerHTML = `
+            <div class="custom-modal api-settings-modal">
+                <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg> 개인 API 설정 (BYOK)</h3>
+                <p class="api-modal-desc">기본 제공되는 모델 외에, 개인 API 키를 사용하여 더 다양하고 강력한 모델을 이용할 수 있습니다.</p>
+                <div class="api-form-section">
+                    <label for="api-key-input">API 키</label>
+                    <div class="api-key-wrapper">
+                        <input type="password" id="api-key-input" placeholder="sk-..., sk-ant-..., 또는 Google API 키를 입력하세요">
+                        <button id="verify-api-key-btn">키 검증 & 모델 로드</button>
+                    </div>
+                    <div id="api-key-status"></div>
+                </div>
+                <div class="api-form-section">
+                    <label for="api-model-select">사용 모델</label>
+                    <select id="api-model-select" disabled>
+                        <option value="">API 키를 먼저 검증해주세요</option>
+                    </select>
+                </div>
+                <div class="api-form-section">
+                    <label>토큰 한도 설정</label>
+                    <div class="token-limit-wrapper">
+                        <input type="number" id="max-output-tokens-input" placeholder="최대 출력 (예: 2048)">
+                    </div>
+                    <small>모델이 생성할 응답의 최대 길이를 제한합니다. (입력값 없을 시 모델 기본값 사용)</small>
+                </div>
+                <div class="api-form-section token-usage-section">
+                    <label>누적 토큰 사용량 (개인 키)</label>
+                    <div id="token-usage-display">
+                        <span>입력: 0</span> | <span>출력: 0</span> | <strong>총합: 0</strong>
+                    </div>
+                    <button id="reset-token-usage-btn">사용량 초기화</button>
+                    <small>Google 유료 모델은 응답에 토큰 정보를 포함하지 않아 집계되지 않습니다.</small>
+                </div>
+                <div class="custom-modal-actions">
+                    <button id="api-settings-cancel-btn" class="modal-btn">취소</button>
+                    <button id="api-settings-save-btn" class="modal-btn">저장</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        apiSettingsModalOverlay = document.getElementById('api-settings-modal-overlay');
+        apiKeyInput = document.getElementById('api-key-input');
+        verifyApiKeyBtn = document.getElementById('verify-api-key-btn');
+        apiKeyStatus = document.getElementById('api-key-status');
+        apiModelSelect = document.getElementById('api-model-select');
+        maxOutputTokensInput = document.getElementById('max-output-tokens-input');
+        tokenUsageDisplay = document.getElementById('token-usage-display');
         resetTokenUsageBtn = document.getElementById('reset-token-usage-btn');
         apiSettingsSaveBtn = document.getElementById('api-settings-save-btn');
         apiSettingsCancelBtn = document.getElementById('api-settings-cancel-btn');
@@ -1258,30 +1256,26 @@ document.addEventListener('DOMContentLoaded', function () {
                         await chatSessionsCollectionRef.doc(sessionId).update(updates);
                         if (targetProjectId) { await projectsCollectionRef.doc(targetProjectId).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
                     } catch (error) { console.error("Failed to move session:", error); }
-                }
-            });
-        }
-        
-        if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
-        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
-    
-        // [MODIFIED] Event Delegation for Reasoning Blocks
-        if (chatMessages) {
+            if (chatMessages) {
             chatMessages.addEventListener('click', (e) => {
                 const header = e.target.closest('.reasoning-header');
                 if (!header) return;
 
                 const block = header.closest('.reasoning-block');
-                if (block.classList.contains('loading')) return; // Do not interact with loading blocks
+                if (block.classList.contains('loading')) return;
 
                 const content = block.querySelector('.reasoning-content');
-                const blockId = block.id;
-                
-                clearTimers(blockId);
                 block.classList.toggle('expanded');
                 content.classList.toggle('expanded');
                 
+                // Simplified logic: on expand, show full text; on collapse, clear it.
                 if (block.classList.contains('expanded')) {
+                    content.innerText = block.dataset.reasoningText || '추론 과정 데이터가 없습니다.';
+                } else {
+                    content.innerText = '';
+                }
+            });
+        }ains('expanded')) {
                     const steps = JSON.parse(block.dataset.steps);
                     const fullText = steps.map(s => s.detail).filter(Boolean).join('\n\n');
                     content.innerHTML = '';
