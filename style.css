@@ -354,11 +354,6 @@ body.dark-mode .reasoning-content.expanded { border-top-color: var(--border-colo
 /* [NEW] Loading state for the reasoning block itself */
 .reasoning-block.loading .reasoning-header { cursor: default; }
 .reasoning-block.loading .reasoning-summary { opacity: 0.7; }
-body.dark-mode .reasoning-content.expanded { border-top-color: var(--border-color-dark); }
-
-/* [NEW] Loading state for the reasoning block itself */
-.reasoning-block.loading .reasoning-header { cursor: default; }
-.reasoning-block.loading .reasoning-summary { opacity: 0.7; }
 
 
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; align-items: center; }
