@@ -344,22 +344,16 @@ body.dark-mode .reasoning-block { background-color: var(--quote-bg-dark); border
 .reasoning-header .toggle-icon { transition: transform 0.3s ease; }
 .reasoning-block.expanded .toggle-icon { transform: rotate(90deg); }
 .reasoning-summary { font-style: italic; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.5s; }
-.is-streaming::after {
-    content: '▍';
-    animation: blink-caret-streaming 1s step-end infinite;
-    display: inline-block;
-    vertical-align: baseline;
-    margin-left: 2px;
-    opacity: 1;
-}
-
-@keyframes blink-caret-streaming {
-    from, to { opacity: 1 }
-    50% { opacity: 0 }
-}
+.reasoning-summary.blinking-cursor::after { content: '|'; animation: blink-caret 0.75s step-end infinite; }
+@keyframes blink-caret { from, to { opacity: 1; } 50% { opacity: 0; } }
 .reasoning-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, padding 0.4s ease-out; padding: 0 15px; line-height: 1.7; font-size: 0.95em; }
 .reasoning-content.expanded { max-height: 1000px; padding: 15px; border-top: 1px solid; }
 body:not(.dark-mode) .reasoning-content.expanded { border-top-color: var(--border-color-light); }
+body.dark-mode .reasoning-content.expanded { border-top-color: var(--border-color-dark); }
+
+/* [NEW] Loading state for the reasoning block itself */
+.reasoning-block.loading .reasoning-header { cursor: default; }
+.reasoning-block.loading .reasoning-summary { opacity: 0.7; }
 body.dark-mode .reasoning-content.expanded { border-top-color: var(--border-color-dark); }
 
 /* [NEW] Loading state for the reasoning block itself */
