@@ -336,27 +336,56 @@ body:not(.dark-mode) .ai-response-meta { color: var(--sub-text-color-light); }
 /* [REMOVED] Old Loading Indicator Styles as it's now part of the reasoning block */
 .loading-container { display: none; } /* Kept for legacy, but should not be used */
 
-/* [MODIFIED] Reasoning Block Styles with Loading State */
-.reasoning-block { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; align-self: flex-start; }
+/* [MODIFIED] Reasoning Block Styles for Live Streaming */
+.reasoning-block { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; align-self: flex-start; transition: box-shadow 0.3s ease; }
 body:not(.dark-mode) .reasoning-block { background-color: var(--quote-bg-light); border: 1px solid var(--border-color-light); }
 body.dark-mode .reasoning-block { background-color: var(--quote-bg-dark); border: 1px solid var(--border-color-dark); }
+
+/* [NEW] Style for when the block is actively receiving a stream */
+.reasoning-block.streaming {
+    box-shadow: 0 0 15px 2px var(--h2-border-light);
+}
+body.dark-mode .reasoning-block.streaming {
+    box-shadow: 0 0 15px 2px var(--h2-border-dark);
+}
+
 .reasoning-header { padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; user-select: none; }
 .reasoning-header .toggle-icon { transition: transform 0.3s ease; }
 .reasoning-block.expanded .toggle-icon { transform: rotate(90deg); }
-.reasoning-summary { font-style: italic; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.5s; }
-.reasoning-summary.blinking-cursor::after { content: '|'; animation: blink-caret 0.75s step-end infinite; }
-@keyframes blink-caret { from, to { opacity: 1; } 50% { opacity: 0; } }
-.reasoning-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, padding 0.4s ease-out; padding: 0 15px; line-height: 1.7; font-size: 0.95em; }
+
+/* [REMOVED] Old summary logic is replaced by live content */
+.reasoning-summary { font-style: italic; opacity: 0.8; }
+
+.reasoning-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+    padding: 0 15px;
+    line-height: 1.7;
+    font-size: 0.95em;
+    white-space: pre-wrap; /* Allows streamed newlines to render correctly */
+    word-wrap: break-word;
+}
+
+/* [NEW] Blinking cursor for streaming content */
+.reasoning-content .blinking-cursor::after {
+    content: '▋';
+    animation: blink-caret 1s step-end infinite;
+    color: var(--h2-color-light);
+}
+body.dark-mode .reasoning-content .blinking-cursor::after {
+    color: var(--h2-color-dark);
+}
+
+@keyframes blink-caret {
+    from, to { opacity: 1; }
+    50% { opacity: 0; }
+}
+
 .reasoning-content.expanded { max-height: 1000px; padding: 15px; border-top: 1px solid; }
 body:not(.dark-mode) .reasoning-content.expanded { border-top-color: var(--border-color-light); }
 body.dark-mode .reasoning-content.expanded { border-top-color: var(--border-color-dark); }
 
-/* [NEW] Loading state for the reasoning block itself */
-.reasoning-block.loading .reasoning-header { cursor: default; }
-.reasoning-block.loading .reasoning-summary { opacity: 0.7; }
-
-
-.chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; align-items: center; }
 body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
 body:not(.dark-mode) .chat-input-form { border-top-color: var(--border-color-light); }
 #chat-input { flex-grow: 1; border: 1px solid; border-radius: 20px; padding: 10px 15px; resize: none; outline: none; font-family: 'Gowun Batang', serif; font-size: 1em; transition: all 0.3s; }
