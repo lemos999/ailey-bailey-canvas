@@ -586,72 +586,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- [MAJOR REFACTOR & ADDITION] Chat Send Logic with State-Based Rendering ---
     async function handleChatSend() {
-    if (!chatInput || chatInput.disabled) return;
-    const query = chatInput.value.trim();
-    if (!query) return;
+        if (!chatInput || chatInput.disabled) return;
+        const query = chatInput.value.trim();
+        if (!query) return;
 
-    // --- IMMEDIATE UI UPDATE (Local State) ---
-    const userMessage = { role: 'user', content: query, timestamp: new Date() };
-    const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
-    let isNewSession = !currentSessionId;
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        chatInput.disabled = true;
+        chatSendBtn.disabled = true;
 
-    const currentSessionData = isNewSession ? null : localChatSessionsCache.find(s => s.id === currentSessionId);
-    const messagesForDisplay = [...(currentSessionData?.messages || []), userMessage, loadingMessage];
+        const userMessage = { role: 'user', content: query, timestamp: new Date() };
+        const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
+        let sessionRef;
+        let currentMessages = [];
+        let isNewSession = false;
 
-    if (isNewSession) {
-        if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-        if (chatMessages) chatMessages.style.display = 'flex';
-    }
-    // Render the temporary state immediately, before any async operation
-    renderChatMessages({ messages: messagesForDisplay });
-
-    // Disable input and clear
-    chatInput.disabled = true;
-    chatSendBtn.disabled = true;
-    chatInput.value = '';
-    chatInput.style.height = 'auto';
-
-    let sessionRef;
-    const startTime = performance.now();
-    try {
-        // --- API CALL & RESPONSE GATHERING ---
-        let aiRes, usageData;
-        const historyForApi = currentSessionData?.messages || [];
-
-        if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
-            const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, [...historyForApi, userMessage], userApiSettings.maxOutputTokens);
-            const res = await fetch(requestDetails.url, requestDetails.options);
-            if (!res.ok) { const errorBody = await res.text(); throw new Error(`API Error ${res.status}: ${errorBody}`); }
-            const result = await res.json();
-            const parsed = parseApiResponse(userApiSettings.provider, result);
-            aiRes = parsed.content;
-            usageData = parsed.usage;
-            if (usageData) { userApiSettings.tokenUsage.prompt += usageData.prompt; userApiSettings.tokenUsage.completion += usageData.completion; saveApiSettings(false); }
-        } else {
-             const promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${query}"`;
-            const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
-            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: apiMessages })
-            });
-            if (!res.ok) throw new Error(`Google API Error ${res.status}`);
-            const result = await res.json();
-            aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
-        }
-
-        const endTime = performance.now();
-        const duration = ((endTime - startTime) / 1000).toFixed(2);
-        const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
-
-        // --- BATCHED FIRESTORE UPDATE (The Fix) ---
-        if (isNewSession) {
+        if (!currentSessionId) {
+            isNewSession = true;
             const activeProject = document.querySelector('.project-header.active-drop-target');
             const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
+            if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
+            if (chatMessages) chatMessages.style.display = 'flex';
+            currentMessages = [userMessage, loadingMessage];
+            // Render immediately with loading state
+            renderChatMessages({ messages: currentMessages });
+            
             const newSession = {
                 title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-                messages: [userMessage, aiMessage], // Both messages at once
+                messages: [userMessage], // Start with only the user message in Firestore
                 mode: selectedMode,
                 projectId: newSessionProjectId,
                 isPinned: false,
@@ -662,37 +624,74 @@ document.addEventListener('DOMContentLoaded', function () {
             currentSessionId = sessionRef.id;
         } else {
             sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
+            const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+            currentMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
+            // Render immediately with loading state
+            renderChatMessages({ messages: currentMessages });
+            
             await sessionRef.update({
-                messages: firebase.firestore.FieldValue.arrayUnion(userMessage, aiMessage), // Both messages at once
+                messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
-    } catch (e) {
-        console.error("Chat send error:", e);
-        const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
         
-        if (currentSessionId) {
-             sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
-             await sessionRef.update({ messages: firebase.firestore.FieldValue.arrayUnion(errorMessage) });
-        } else if (isNewSession && sessionRef) {
-             await sessionRef.update({ messages: firebase.firestore.FieldValue.arrayUnion(errorMessage) });
-        } else {
-            const errorSession = {
-                title: query.substring(0, 30) + "... (오류)",
-                messages: [userMessage, errorMessage],
-                mode: selectedMode,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        const startTime = performance.now();
+        try {
+            let aiRes, usageData;
+            // The API call logic remains the same
+             const historyForApi = isNewSession ? [userMessage] : localChatSessionsCache.find(s => s.id === currentSessionId)?.messages || [userMessage];
+
+            if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
+                const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
+                const res = await fetch(requestDetails.url, requestDetails.options);
+                if (!res.ok) { const errorBody = await res.text(); throw new Error(`API Error ${res.status}: ${errorBody}`); }
+                const result = await res.json();
+                const parsed = parseApiResponse(userApiSettings.provider, result);
+                aiRes = parsed.content;
+                usageData = parsed.usage;
+                if (usageData) { userApiSettings.tokenUsage.prompt += usageData.prompt; userApiSettings.tokenUsage.completion += usageData.completion; saveApiSettings(false); }
+            } else {
+                let promptWithReasoning;
+                const lastUserMessage = historyForApi[historyForApi.length - 1].content;
+                promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
+                const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
+                const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: apiMessages })
+                });
+                if (!res.ok) throw new Error(`Google API Error ${res.status}`);
+                const result = await res.json();
+                aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
+            }
+            
+            const endTime = performance.now();
+            const duration = ((endTime - startTime) / 1000).toFixed(2);
+            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
+            
+            await sessionRef.update({
+                messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            sessionRef = await chatSessionsCollectionRef.add(errorSession);
-            currentSessionId = sessionRef.id;
+            });
+
+            // The listener will pick up the change and re-render automatically.
+
+        } catch (e) {
+            console.error("Chat send error:", e);
+            const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
+            await sessionRef.update({ 
+                messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
+            });
+        } finally {
+            chatInput.disabled = false;
+            chatSendBtn.disabled = false;
+            chatInput.focus();
+            if (isNewSession) {
+                renderSidebarContent();
+            }
         }
-    } finally {
-        chatInput.disabled = false;
-        chatSendBtn.disabled = false;
-        chatInput.focus();
     }
-}
     
     function buildApiRequest(provider, model, messages, maxTokens) {
         const history = messages.map(msg => ({
@@ -1312,9 +1311,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!header) return;
 
                 const block = header.closest('.reasoning-block');
-                if (block.classList.contains('loading')) return; // Do not interact with loading blocks
+                // A final, rendered reasoning block MUST have a 'data-steps' attribute.
+                // A loading block will not. This is a more robust check than a class name.
+                if (!block.dataset.steps) {
+                    return; // It's a loading block or malformed, do not process click.
+                }
 
                 const content = block.querySelector('.reasoning-content');
+                if (!content) return; // Defensive check
+
                 const blockId = block.id;
                 
                 clearTimers(blockId);
@@ -1322,14 +1327,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 content.classList.toggle('expanded');
                 
                 if (block.classList.contains('expanded')) {
-                    const steps = JSON.parse(block.dataset.steps);
-                    const fullText = steps.map(s => s.detail).filter(Boolean).join('\n\n');
-                    content.innerHTML = '';
-                    typewriterEffect(content, fullText);
+                    // When expanding, parse the steps and show the full detail.
+                    try {
+                        const steps = JSON.parse(block.dataset.steps);
+                        const fullText = steps.map(s => `<strong>${s.summary || '단계'}:</strong><br>${s.detail || ''}`).filter(Boolean).join('<br><br>');
+                        content.innerHTML = ''; // Clear previous content
+                        typewriterEffect(content, fullText);
+                    } catch (error) {
+                        console.error("Failed to parse reasoning steps:", error);
+                        content.textContent = "추론 과정을 표시하는 중 오류가 발생했습니다.";
+                    }
                 } else {
+                    // When collapsing, clear the detailed content and restart the summary animation.
                     content.innerHTML = '';
-                    const steps = JSON.parse(block.dataset.steps);
-                    startSummaryAnimation(block, steps);
+                    try {
+                        const steps = JSON.parse(block.dataset.steps);
+                        startSummaryAnimation(block, steps);
+                    } catch (error) {
+                         console.error("Failed to parse reasoning steps for animation:", error);
+                    }
                 }
             });
         }
