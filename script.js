@@ -596,21 +596,22 @@ document.addEventListener('DOMContentLoaded', function () {
         chatSendBtn.disabled = true;
 
         const userMessage = { role: 'user', content: query, timestamp: new Date() };
-        const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
+        const loadingMessageId = `loading-${Date.now()}`;
         let sessionRef;
-        let currentMessages = [];
         let isNewSession = false;
 
+        // Step 1: Immediately render user message and a loading placeholder
         if (!currentSessionId) {
             isNewSession = true;
             const activeProject = document.querySelector('.project-header.active-drop-target');
             const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
+            
             if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
             if (chatMessages) chatMessages.style.display = 'flex';
-            currentMessages = [userMessage, loadingMessage];
-            // Render immediately with loading state
-            renderChatMessages({ messages: currentMessages });
-            
+
+            const tempMessages = [userMessage, { role: 'ai', status: 'loading', id: loadingMessageId }];
+            renderChatMessages({ messages: tempMessages });
+
             const newSession = {
                 title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
                 messages: [userMessage], // Start with only the user message in Firestore
@@ -625,10 +626,9 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
             const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-            currentMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
-            // Render immediately with loading state
-            renderChatMessages({ messages: currentMessages });
-            
+            const tempMessages = [...(currentSessionData.messages || []), userMessage, { role: 'ai', status: 'loading', id: loadingMessageId }];
+            renderChatMessages({ messages: tempMessages });
+
             await sessionRef.update({
                 messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -637,11 +637,12 @@ document.addEventListener('DOMContentLoaded', function () {
         
         const startTime = performance.now();
         try {
+            // Step 2: Fetch the AI response
             let aiRes, usageData;
-            // The API call logic remains the same
-             const historyForApi = isNewSession ? [userMessage] : localChatSessionsCache.find(s => s.id === currentSessionId)?.messages || [userMessage];
+            const historyForApi = isNewSession ? [userMessage] : localChatSessionsCache.find(s => s.id === currentSessionId)?.messages || [userMessage];
 
-            if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
+            // API call logic (remains the same as before)
+             if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
                 const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
                 const res = await fetch(requestDetails.url, requestDetails.options);
                 if (!res.ok) { const errorBody = await res.text(); throw new Error(`API Error ${res.status}: ${errorBody}`); }
@@ -668,18 +669,39 @@ document.addEventListener('DOMContentLoaded', function () {
             
             const endTime = performance.now();
             const duration = ((endTime - startTime) / 1000).toFixed(2);
-            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
+
+            // Step 3: Manually transform the UI before updating Firestore
+            const loadingBlock = document.getElementById(loadingMessageId);
+            if (!loadingBlock) {
+                 console.error('Loading placeholder not found in DOM!');
+                 throw new Error('UI consistency error.');
+            }
             
+            const reasoningRegex = /^\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
+            const match = aiRes.match(reasoningRegex);
+
+            if (match) {
+                const reasoningRaw = match[1];
+                const finalAnswer = aiRes.replace(reasoningRegex, '').trim();
+                transformLoadingToReasoningBlock(loadingBlock, reasoningRaw, finalAnswer, duration);
+            } else {
+                transformLoadingToSimpleMessage(loadingBlock, aiRes, duration);
+            }
+
+            // Step 4: Update Firestore with the final, complete message
+            const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
             await sessionRef.update({
                 messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // The listener will pick up the change and re-render automatically.
-
         } catch (e) {
             console.error("Chat send error:", e);
-            const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
+            const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date(), error: true };
+            const loadingBlock = document.getElementById(loadingMessageId);
+            if (loadingBlock) {
+                transformLoadingToErrorMessage(loadingBlock, errorMessage.content);
+            }
             await sessionRef.update({ 
                 messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
             });
@@ -721,8 +743,101 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return { content: '알 수 없는 제공사입니다.', usage: null };
     }
-    
-    // --- [REFINED & FIXED] RENDER CHAT with STATE-BASED REASONING UI ---
+
+    // --- [NEW] Helper functions to transform loading placeholders into final content ---
+    function transformLoadingToReasoningBlock(element, reasoningRaw, finalAnswer, duration) {
+        const reasoningSteps = reasoningRaw.split('SUMMARY:')
+            .filter(s => s.trim() !== '')
+            .map(step => {
+                const parts = step.split('|||DETAIL:');
+                return { summary: parts[0]?.trim(), detail: parts[1]?.trim() };
+            });
+
+        // Transform the placeholder into an AI container
+        const aiContainer = document.createElement('div');
+        aiContainer.className = 'ai-response-container';
+        
+        // Create the reasoning block
+        const rBlock = document.createElement('div');
+        rBlock.className = 'reasoning-block';
+        rBlock.id = `reasoning-${Date.now()}`;
+        rBlock.dataset.steps = JSON.stringify(reasoningSteps);
+        rBlock.innerHTML = `
+            <div class="reasoning-header">
+                <span class="toggle-icon">▶</span>
+                <span>AI의 추론 과정...</span>
+                <span class="reasoning-summary"></span>
+            </div>
+            <div class="reasoning-content"></div>
+        `;
+        aiContainer.appendChild(rBlock);
+
+        // Replace placeholder with the new container
+        element.replaceWith(aiContainer);
+        startSummaryAnimation(rBlock, reasoningSteps);
+
+        // Append final answer after a short delay
+        if (finalAnswer) {
+            setTimeout(() => {
+                const finalAnswerDiv = document.createElement('div');
+                finalAnswerDiv.className = 'chat-message ai';
+                finalAnswerDiv.innerHTML = finalAnswer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                aiContainer.appendChild(finalAnswerDiv);
+
+                // Add meta info if available
+                if (duration) {
+                    const metaDiv = document.createElement('div');
+                    metaDiv.className = 'ai-response-meta';
+                    metaDiv.innerHTML = `
+                        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>
+                        <span>응답 생성: ${duration}초</span>
+                    `;
+                    aiContainer.appendChild(metaDiv);
+                }
+                 chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 500); // Small delay to make it feel more natural
+        }
+    }
+
+    function transformLoadingToSimpleMessage(element, content, duration) {
+        const aiContainer = document.createElement('div');
+        aiContainer.className = 'ai-response-container';
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message ai';
+        messageDiv.innerHTML = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+        aiContainer.appendChild(messageDiv);
+
+        if (duration) {
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'ai-response-meta';
+            metaDiv.innerHTML = `
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>
+                <span>응답 생성: ${duration}초</span>
+            `;
+            aiContainer.appendChild(metaDiv);
+        }
+
+        element.replaceWith(aiContainer);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function transformLoadingToErrorMessage(element, errorMessage) {
+         const errorContainer = document.createElement('div');
+        errorContainer.className = 'ai-response-container';
+
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'chat-message ai';
+        errorDiv.style.backgroundColor = 'var(--incorrect-color-dark)';
+        errorDiv.style.color = 'white';
+        errorDiv.textContent = errorMessage;
+
+        errorContainer.appendChild(errorDiv);
+        element.replaceWith(errorContainer);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+
     function renderChatMessages(sessionData) {
         if (!chatMessages || !sessionData) return;
         
@@ -757,7 +872,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 aiContainer.className = 'ai-response-container';
 
                 const content = msg.content;
-                const reasoningRegex = /\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
+                const reasoningRegex = /^\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
                 const match = content.match(reasoningRegex);
 
                 if (match) {
