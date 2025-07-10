@@ -92,9 +92,6 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentSessionId = null;
     let unsubscribeFromChatSessions = null;
     let unsubscribeFromProjects = null;
-let noteProjectsCollectionRef, unsubscribeFromNoteProjects = null;
-    let localNoteProjectsCache = [];
-    let newlyCreatedNoteProjectId = null;
     let selectedMode = 'ailey_coaching';
     let defaultModel = 'gemini-2.5-flash-preview-04-17';
     let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
@@ -906,16 +903,10 @@ let noteProjectsCollectionRef, unsubscribeFromNoteProjects = null;
             try {
                 const notesSnapshot = await notesCollection.get();
                 notesSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-                
-                const noteProjectsSnapshot = await noteProjectsCollectionRef.get();
-                noteProjectsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-
                 const chatsSnapshot = await chatSessionsCollectionRef.get();
                 chatsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-
                 const projectsSnapshot = await projectsCollectionRef.get();
                 projectsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-
                 await batch.commit();
                 
                 localStorage.removeItem('userApiSettings');
@@ -935,14 +926,13 @@ let noteProjectsCollectionRef, unsubscribeFromNoteProjects = null;
             try {
                 const data = JSON.parse(e.target.result);
                 if (data.backupVersion !== '2.0') { throw new Error("호환되지 않는 백업 파일 버전입니다."); }
-                const message = `파일에서 ${data.projects?.length||0}개의 채팅 프로젝트, ${data.noteProjects?.length||0}개의 메모 프로젝트, ${data.chatSessions?.length||0}개의 채팅, ${data.notes?.length||0}개의 메모를 발견했습니다. 현재 데이터를 덮어씁니다. 계속하시겠습니까?`;
+                const message = `파일에서 ${data.projects?.length||0}개의 프로젝트, ${data.chatSessions?.length||0}개의 채팅, ${data.notes?.length||0}개의 메모를 발견했습니다. 현재 데이터를 덮어씁니다. 계속하시겠습니까?`;
                 showModal(message, async () => {
                     try {
                         updateStatus('복원 중...', true);
                         const batch = db.batch();
                         const toFirestoreTimestamp = ts => ts ? firebase.firestore.Timestamp.fromDate(new Date(ts)) : firebase.firestore.FieldValue.serverTimestamp();
                         (data.notes || []).forEach(note => { const { id, ...dataToWrite } = note; dataToWrite.createdAt = toFirestoreTimestamp(note.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(note.updatedAt); batch.set(notesCollection.doc(id), dataToWrite); });
-                        (data.noteProjects || []).forEach(project => { const { id, ...dataToWrite } = project; dataToWrite.createdAt = toFirestoreTimestamp(project.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(project.updatedAt); batch.set(noteProjectsCollectionRef.doc(id), dataToWrite); });
                         (data.chatSessions || []).forEach(session => { const { id, ...dataToWrite } = session; dataToWrite.createdAt = toFirestoreTimestamp(session.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(session.updatedAt); if(dataToWrite.messages) dataToWrite.messages.forEach(m=>m.timestamp=toFirestoreTimestamp(m.timestamp)); batch.set(chatSessionsCollectionRef.doc(id), dataToWrite); });
                         (data.projects || []).forEach(project => { const { id, ...dataToWrite } = project; dataToWrite.createdAt = toFirestoreTimestamp(project.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(project.updatedAt); batch.set(projectsCollectionRef.doc(id), dataToWrite); });
                         await batch.commit();
@@ -970,144 +960,80 @@ let noteProjectsCollectionRef, unsubscribeFromNoteProjects = null;
     function closePromptModal() { if (promptModalOverlay) promptModalOverlay.style.display = 'none'; }
     function saveCustomPrompt() { if (customPromptInput) { customPrompt = customPromptInput.value; localStorage.setItem('customTutorPrompt', customPrompt); closePromptModal(); } }
     function showModal(message, onConfirm) { if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return; modalMessage.textContent = message; customModal.style.display = 'flex'; modalConfirmBtn.onclick = () => { onConfirm(); customModal.style.display = 'none'; }; modalCancelBtn.onclick = () => { customModal.style.display = 'none'; }; }
-    function listenToNotes() {
-        return new Promise(resolve => {
-            if (!notesCollection) return resolve();
-            if (unsubscribeFromNotes) unsubscribeFromNotes();
-            unsubscribeFromNotes = notesCollection.onSnapshot(s => {
-                localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (document.getElementById('notes-app-panel')?.style.display === 'flex') {
-                    renderNoteList();
-                }
-                resolve();
-            }, e => {
-                console.error("노트 수신 오류:", e);
-                resolve();
-            });
-        });
-    }
-
+    function listenToNotes() { return new Promise(resolve => { if (!notesCollection) return resolve(); if (unsubscribeFromNotes) unsubscribeFromNotes(); unsubscribeFromNotes = notesCollection.orderBy("updatedAt", "desc").onSnapshot(s => { localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList(); resolve(); }, e => {console.error("노트 수신 오류:", e); resolve();}); }); }
     function renderNoteList() {
-        if (!notesList || !searchInput) return;
-        const searchTerm = searchInput.value.toLowerCase();
-        notesList.innerHTML = '';
-    
-        const filteredProjects = localNoteProjectsCache.filter(p => p.name?.toLowerCase().includes(searchTerm));
-        const filteredNotes = localNotesCache.filter(n => (n.title || '무제').toLowerCase().includes(searchTerm) || n.content?.toLowerCase().includes(searchTerm));
-    
-        const fragment = document.createDocumentFragment();
+    if (!notesList || !searchInput) return;
 
-        const sortedProjects = [...(searchTerm ? filteredProjects : localNoteProjectsCache)].sort((a, b) => {
-            const timeA = a.updatedAt?.toMillis() || 0;
-            const timeB = b.updatedAt?.toMillis() || 0;
-            return timeB - timeA;
-       });
+    const term = searchInput.value.toLowerCase();
+    const filteredNotes = localNotesCache.filter(n => 
+        n.title?.toLowerCase().includes(term) || 
+        n.content?.toLowerCase().includes(term)
+    );
 
-        sortedProjects.forEach(project => {
-            const notesInProject = filteredNotes
-                .filter(n => n.projectId === project.id)
-                .sort((a, b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+    notesList.innerHTML = ''; // Clear previous list
 
-            if (searchTerm && !project.name.toLowerCase().includes(searchTerm) && notesInProject.length === 0) {
-                return;
-            }
-
-            const projectContainer = createNoteProjectElement(project, notesInProject);
-            fragment.appendChild(projectContainer);
-        });
-
-        const unassignedNotes = filteredNotes
-            .filter(n => !n.projectId)
-            .sort((a,b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-        
-        if (unassignedNotes.length > 0) {
-            const groupHeader = document.createElement('div');
-            groupHeader.className = 'note-group-header';
-            groupHeader.textContent = '일반 메모';
-            fragment.appendChild(groupHeader);
-            unassignedNotes.forEach(note => fragment.appendChild(createNoteItemElement(note)));
-        }
-
-        if (fragment.children.length === 0) {
-            notesList.innerHTML = '<div>표시할 메모가 없습니다.</div>';
-        } else {
-            notesList.appendChild(fragment);
-        }
-    }
-
-    function createNoteProjectElement(project, notes) {
-        const projectContainer = document.createElement('div');
-        projectContainer.className = 'note-project-container';
-        projectContainer.dataset.projectId = project.id;
-
-        const projectHeader = document.createElement('div');
-        projectHeader.className = 'note-project-header';
-        
-        projectHeader.innerHTML = `
-            <span class="note-project-toggle-icon ${project.isExpanded ? 'expanded' : ''}">
-                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" /></svg>
-            </span>
-            <span class="note-project-icon">
-                <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2Z" /></svg>
-            </span>
-            <span class="note-project-title">${project.name}</span>
-            <button class="note-project-actions-btn" title="프로젝트 메뉴">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z" /></svg>
-            </button>
-        `;
-
-        const notesContainer = document.createElement('div');
-        notesContainer.className = `notes-in-project ${project.isExpanded ? 'expanded' : ''}`;
-        notes.forEach(note => notesContainer.appendChild(createNoteItemElement(note)));
-
-        projectContainer.appendChild(projectHeader);
-        projectContainer.appendChild(notesContainer);
-        return projectContainer;
-    }
-
-    function createNoteItemElement(note) {
-        const item = document.createElement('div');
-        item.className = 'note-item';
-        item.dataset.id = note.id;
-        item.draggable = true;
-        if (note.isPinned) item.classList.add('pinned');
-
-        item.innerHTML = `
-            <div class="note-item-content">
-                <div class="note-item-title">${note.title || '무제'}</div>
-                <div class="note-item-date">${note.updatedAt?.toDate().toLocaleString('ko-KR') || '날짜 없음'}</div>
-            </div>
-            <div class="note-item-actions">
-                <button class="item-action-btn pin-btn ${note.isPinned ? 'pinned-active' : ''}" title="고정">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>
-                </button>
-                <button class="item-action-btn delete-btn" title="삭제">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg>
-                </button>
+    if (filteredNotes.length === 0) {
+        notesList.innerHTML = `
+            <div class="notes-empty-state">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor"><path d="M17,4V10L15,8L13,10V4H6A2,2 0 0,0 4,6V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18V6A2,2 0 0,0 18,4H17Z" /></svg>
+                <h3>${term ? '검색 결과가 없습니다' : '아직 작성된 메모가 없습니다'}</h3>
+                <p>${term ? '다른 키워드로 검색해보세요.' : "'새 메모' 버튼을 눌러 생각을 기록해보세요."}</p>
             </div>`;
-        return item;
+        return;
     }
 
-    async function addNote(content = '') {
-        if (!notesCollection) return;
-        try {
-            const activeProject = document.querySelector('.note-project-header.active-drop-target');
-            const newNoteProjectId = activeProject ? activeProject.closest('.note-project-container').dataset.projectId : null;
-
-            const ref = await notesCollection.add({
-                title: '새 메모',
-                content: content,
-                isPinned: false,
-                projectId: newNoteProjectId,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            openNoteEditor(ref.id);
-        } catch (e) {
-            console.error("새 메모 추가 실패:", e);
+    // Group notes by date
+    const groupedNotes = filteredNotes.reduce((acc, note) => {
+        const timestamp = note.updatedAt || note.createdAt;
+        const group = getRelativeDateGroup(timestamp, note.isPinned);
+        if (!acc[group.label]) {
+            acc[group.label] = { key: group.key, items: [] };
         }
-    }
+        acc[group.label].items.push(note);
+        return acc;
+    }, {});
+
+    const sortedGroupLabels = Object.keys(groupedNotes).sort((a, b) => groupedNotes[a].key - groupedNotes[b].key);
     
+    const fragment = document.createDocumentFragment();
+
+    sortedGroupLabels.forEach(label => {
+        const header = document.createElement('div');
+        header.className = 'notes-date-group-header';
+        header.textContent = label;
+        fragment.appendChild(header);
+
+        const group = groupedNotes[label];
+        group.items.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+        
+        group.items.forEach(note => {
+            const item = document.createElement('div');
+            item.className = 'note-item';
+            item.dataset.id = note.id;
+            if (note.isPinned) item.classList.add('pinned');
+            
+            const previewText = (note.content || '').substring(0, 100).replace(/</g, "<").replace(/>/g, ">");
+
+            item.innerHTML = `
+                <div class="note-item-content">
+                    <div class="note-item-title">${note.title || '무제'}</div>
+                    <div class="note-item-preview">${previewText}${note.content.length > 100 ? '...' : ''}</div>
+                    <div class="note-item-date">${note.updatedAt?.toDate().toLocaleString('ko-KR') || '날짜 없음'}</div>
+                </div>
+                <div class="note-item-actions">
+                    <button class="item-action-btn pin-btn ${note.isPinned ? 'pinned-active' : ''}" title="고정">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>
+                    </button>
+                    <button class="item-action-btn delete-btn" title="삭제">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg>
+                    </button>
+                </div>`;
+            fragment.appendChild(item);
+        });
+    });
+
+    notesList.appendChild(fragment);
+}
     function saveNote() { if (debounceTimer) clearTimeout(debounceTimer); if (!currentNoteId || !notesCollection) return; const data = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; notesCollection.doc(currentNoteId).update(data).then(() => updateStatus('저장됨 ✓', true)).catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); }); }
     function handleDeleteRequest(id) { showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => { if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e)); }); }
     async function togglePin(id) { if (!notesCollection) return; const note = localNotesCache.find(n => n.id === id); if (note) await notesCollection.doc(id).update({ isPinned: !note.isPinned }); }
@@ -1115,163 +1041,6 @@ let noteProjectsCollectionRef, unsubscribeFromNoteProjects = null;
     function openNoteEditor(id) { const note = localNotesCache.find(n => n.id === id); if (note && noteTitleInput && noteContentTextarea) { currentNoteId = id; noteTitleInput.value = note.title || ''; noteContentTextarea.value = note.content || ''; switchView('editor'); } }
     function updateStatus(msg, success) { if (!autoSaveStatus) return; autoSaveStatus.textContent = msg; autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral'; setTimeout(() => { autoSaveStatus.textContent = ''; }, 3000); }
     function applyFormat(fmt) { if (!noteContentTextarea) return; const s = noteContentTextarea.selectionStart, e = noteContentTextarea.selectionEnd, t = noteContentTextarea.value.substring(s, e); const m = fmt === 'bold' ? '**' : (fmt === 'italic' ? '*' : '`'); noteContentTextarea.value = `${noteContentTextarea.value.substring(0,s)}${m}${t}${m}${noteContentTextarea.value.substring(e)}`; noteContentTextarea.focus(); }
-
-    // --- Note Project Functions ---
-    function listenToNoteProjects() {
-        return new Promise((resolve) => {
-            if (!noteProjectsCollectionRef) return resolve();
-            if (unsubscribeFromNoteProjects) unsubscribeFromNoteProjects();
-            unsubscribeFromNoteProjects = noteProjectsCollectionRef.onSnapshot(snapshot => {
-                const oldCache = [...localNoteProjectsCache];
-                localNoteProjectsCache = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true,
-                    ...doc.data()
-                }));
-                
-                renderNoteList();
-
-                if (newlyCreatedNoteProjectId) {
-                    startNoteProjectRename(newlyCreatedNoteProjectId);
-                    newlyCreatedNoteProjectId = null;
-                }
-                resolve();
-            }, error => {
-                console.error("Note Project listener error:", error);
-                resolve();
-            });
-        });
-    }
-
-    function getNewNoteProjectDefaultName() {
-        const baseName = "새 노트 프로젝트";
-        const existingNames = new Set(localNoteProjectsCache.map(p => p.name));
-        if (!existingNames.has(baseName)) {
-            return baseName;
-        }
-        let i = 2;
-        while (existingNames.has(`${baseName} ${i}`)) { i++; }
-        return `${baseName} ${i}`;
-    }
-
-    async function createNewNoteProject() {
-        if (!noteProjectsCollectionRef) return;
-        const newName = getNewNoteProjectDefaultName();
-        try {
-            const newProjectRef = await noteProjectsCollectionRef.add({
-                name: newName,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            newlyCreatedNoteProjectId = newProjectRef.id;
-        } catch (error) { console.error("Error creating new note project:", error); }
-    }
-
-    async function renameNoteProject(projectId, newName) {
-        if (!newName || !newName.trim() || !projectId || !noteProjectsCollectionRef) return;
-        try {
-            await noteProjectsCollectionRef.doc(projectId).update({ 
-                name: newName.trim(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        } catch (error) { console.error("Error renaming note project:", error); }
-    }
-
-    async function deleteNoteProject(projectId) {
-        if (!noteProjectsCollectionRef) return;
-        const project = localNoteProjectsCache.find(p => p.id === projectId);
-        if (!project) return;
-    
-        const message = `프로젝트 '${project.name}'를 삭제하시겠습니까? 프로젝트 안의 모든 노트는 '일반 메모'로 이동됩니다.`;
-        showModal(message, async () => {
-            try {
-                const batch = db.batch();
-                
-                const notesToMove = localNotesCache.filter(n => n.projectId === projectId);
-                notesToMove.forEach(note => {
-                    const noteRef = notesCollection.doc(note.id);
-                    batch.update(noteRef, { projectId: null });
-                });
-    
-                const projectRef = noteProjectsCollectionRef.doc(projectId);
-                batch.delete(projectRef);
-    
-                await batch.commit();
-            } catch (error) { console.error("Error deleting note project:", error); }
-        });
-    }
-
-    function toggleNoteProjectExpansion(projectId) {
-        const project = localNoteProjectsCache.find(p => p.id === projectId);
-        if (project) {
-            project.isExpanded = !project.isExpanded;
-            renderNoteList();
-        }
-    }
-
-    function startNoteProjectRename(projectId) {
-        const projectContainer = document.querySelector(`.note-project-container[data-project-id="${projectId}"]`);
-        if (!projectContainer) return;
-        const titleSpan = projectContainer.querySelector('.note-project-title');
-        if (!titleSpan) return;
-
-        const originalTitle = titleSpan.textContent;
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'note-project-title-input';
-        input.value = originalTitle;
-
-        titleSpan.replaceWith(input);
-        input.focus();
-        input.select();
-
-        const finishEditing = () => {
-            const newName = input.value.trim();
-            if (newName && newName !== originalTitle) {
-                 renameNoteProject(projectId, newName);
-            }
-             renderNoteList();
-        };
-
-        input.addEventListener('blur', finishEditing);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') input.blur();
-            else if (e.key === 'Escape') { input.value = originalTitle; input.blur(); }
-        });
-    }
-    
-    function showNoteProjectContextMenu(projectId, buttonElement) {
-        removeContextMenu();
-        const rect = buttonElement.getBoundingClientRect();
-        const menu = document.createElement('div');
-        menu.className = 'project-context-menu'; 
-        menu.style.position = 'fixed';
-        menu.style.top = `${rect.bottom + 2}px`;
-        menu.style.left = `${rect.left}px`;
-        menu.innerHTML = `<button data-action="rename">이름 변경</button><button data-action="delete">삭제</button>`;
-        
-        document.body.appendChild(menu);
-        menu.style.display = 'block';
-        currentOpenContextMenu = menu;
-
-        menu.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const action = e.target.dataset.action;
-            if (action === 'rename') startNoteProjectRename(projectId);
-            else if (action === 'delete') deleteNoteProject(projectId);
-            removeContextMenu();
-        });
-    }
-
-    async function moveNoteToProject(noteId, newProjectId) {
-        const note = localNotesCache.find(n => n.id === noteId);
-        if (!note || note.projectId === newProjectId || !notesCollection) return;
-        try {
-            await notesCollection.doc(noteId).update({ projectId: newProjectId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-            if (newProjectId) { await noteProjectsCollectionRef.doc(newProjectId).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
-        } catch (error) { console.error("Error moving note:", error); }
-    }
-    
     async function startQuiz() { if (!quizModalOverlay) return; const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', '); if (!k) { showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); return; } if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>'; if (quizResults) quizResults.innerHTML = ''; quizModalOverlay.style.display = 'flex'; try { const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); currentQuizData = JSON.parse(res); renderQuiz(currentQuizData); } catch (e) { if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; } }
     function renderQuiz(data) { if (!quizContainer || !data.questions) return; quizContainer.innerHTML = ''; data.questions.forEach((q, i) => { const b = document.createElement('div'); b.className = 'quiz-question-block'; const p = document.createElement('p'); p.textContent = `${i + 1}. ${q.q}`; const o = document.createElement('div'); o.className = 'quiz-options'; q.o.forEach(opt => { const l = document.createElement('label'); const r = document.createElement('input'); r.type = 'radio'; r.name = `q-${i}`; r.value = opt; l.append(r,` ${opt}`); o.appendChild(l); }); b.append(p, o); quizContainer.appendChild(b); }); }
 
@@ -1491,96 +1260,17 @@ let noteProjectsCollectionRef, unsubscribeFromNoteProjects = null;
         if (quizSubmitBtn) quizSubmitBtn.addEventListener('click', () => { if (!currentQuizData || !quizResults) return; let score = 0; if (currentQuizData.questions.some((q, i) => !document.querySelector(`input[name="q-${i}"]:checked`))) { quizResults.textContent = "모든 문제에 답해주세요!"; return; } currentQuizData.questions.forEach((q, i) => { if(document.querySelector(`input[name="q-${i}"]:checked`).value === q.a) score++; }); quizResults.textContent = `결과: ${currentQuizData.questions.length} 중 ${score} 정답!`; });
         if(quizModalOverlay) quizModalOverlay.addEventListener('click', e => { if (e.target === quizModalOverlay) quizModalOverlay.style.display = 'none'; });
         if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
-        if (document.getElementById('note-list-view')) {
-            document.getElementById('note-list-view').addEventListener('click', e => {
-                if (e.target.closest('#add-new-note-project-btn')) {
-                    createNewNoteProject();
-                    return;
-                }
-                const projectHeader = e.target.closest('.note-project-header');
-                if (projectHeader) {
-                    const projectId = projectHeader.closest('.note-project-container').dataset.projectId;
-                    if (e.target.closest('.note-project-actions-btn')) {
-                        e.stopPropagation();
-                        showNoteProjectContextMenu(projectId, e.target.closest('.note-project-actions-btn'));
-                    } else if (!e.target.closest('input')) {
-                        toggleNoteProjectExpansion(projectId);
-                    }
-                    return;
-                }
-                const noteItem = e.target.closest('.note-item');
-                if (noteItem) {
-                    const noteId = noteItem.dataset.id;
-                    if (e.target.closest('.delete-btn')) {
-                        handleDeleteRequest(noteId);
-                    } else if (e.target.closest('.pin-btn')) {
-                        togglePin(noteId);
-                    } else {
-                        openNoteEditor(noteId);
-                    }
-                    return;
-                }
-            });
-        }
+        if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
+        if (searchInput) searchInput.addEventListener('input', renderNoteList);
+        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportAllData);
+        if (restoreDataBtn) restoreDataBtn.addEventListener('click', handleRestoreClick);
+        if (fileImporter) fileImporter.addEventListener('change', importAllData);
+        if (systemResetBtn) systemResetBtn.addEventListener('click', handleSystemReset);
+        const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
+        if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
+        if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
+        if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
-if (notesList) {
-            let draggedNote = null;
-            notesList.addEventListener('dragstart', e => {
-                if (e.target.classList.contains('note-item')) {
-                    draggedNote = e.target;
-                    setTimeout(() => e.target.classList.add('is-dragging'), 0);
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', draggedNote.dataset.id);
-                } else {
-                    e.preventDefault();
-                }
-            });
-
-            notesList.addEventListener('dragend', () => {
-                if (draggedNote) {
-                    draggedNote.classList.remove('is-dragging');
-                    draggedNote = null;
-                }
-                document.querySelectorAll('.note-project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
-            });
-            
-            notesList.addEventListener('dragover', e => {
-                e.preventDefault();
-                const targetProjectHeader = e.target.closest('.note-project-header');
-                document.querySelectorAll('.note-project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
-                if (!draggedNote) return;
-
-                const sourceNoteId = draggedNote.dataset.id;
-                const sourceNote = localNotesCache.find(n => n.id === sourceNoteId);
-
-                if (targetProjectHeader) {
-                    const targetProjectId = targetProjectHeader.closest('.note-project-container').dataset.projectId;
-                    if (sourceNote && sourceNote.projectId !== targetProjectId) {
-                        e.dataTransfer.dropEffect = 'move';
-                        targetProjectHeader.classList.add('drag-over');
-                    } else {
-                        e.dataTransfer.dropEffect = 'none';
-                    }
-                } else {
-                    // Logic for dragging out of a project can be added here if needed
-                }
-            });
-
-            notesList.addEventListener('drop', async (e) => {
-                e.preventDefault();
-                document.querySelectorAll('.note-project-header.drag-over').forEach(el => el.classList.remove('drag-over'));
-                if (!draggedNote) return;
-
-                const noteId = e.dataTransfer.getData('text/plain');
-                const targetProjectHeader = e.target.closest('.note-project-header');
-                let targetProjectId = null;
-                
-                if (targetProjectHeader) {
-                    targetProjectId = targetProjectHeader.closest('.note-project-container').dataset.projectId;
-                    await moveNoteToProject(noteId, targetProjectId);
-                }
-            });
-        }
         
         if (aiModelSelector) {
             aiModelSelector.addEventListener('change', () => {
@@ -1656,6 +1346,28 @@ if (notesList) {
                 } else { 
                      if (sourceSession && sourceSession.projectId) { e.dataTransfer.dropEffect = 'move'; sessionListContainer.classList.add('drag-target-area'); }
                      else { e.dataTransfer.dropEffect = 'none'; }
+                }
+            });
+            
+            sessionListContainer.addEventListener('dragleave', (e) => { if (e.target === sessionListContainer) { sessionListContainer.classList.remove('drag-target-area'); } });
+
+            sessionListContainer.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                 document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => { el.classList.remove('drag-over', 'drag-target-area'); });
+                if (!draggedItem) return;
+                const sessionId = e.dataTransfer.getData('text/plain');
+                const targetProjectHeader = e.target.closest('.project-header');
+                let targetProjectId = null; let shouldUpdate = false;
+                const sourceSession = localChatSessionsCache.find(s => s.id === sessionId);
+                if (!sourceSession) return;
+                if (targetProjectHeader) { targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId; if (sourceSession.projectId !== targetProjectId) { shouldUpdate = true; } }
+                else { if (sourceSession.projectId) { targetProjectId = null; shouldUpdate = true; } }
+                if (shouldUpdate) {
+                    try {
+                        const updates = { projectId: targetProjectId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+                        await chatSessionsCollectionRef.doc(sessionId).update(updates);
+                        if (targetProjectId) { await projectsCollectionRef.doc(targetProjectId).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+                    } catch (error) { console.error("Failed to move session:", error); }
                 }
             });
             
