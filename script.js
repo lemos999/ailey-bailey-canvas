@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const noteTitleInput = document.getElementById('note-title-input');
     const noteContentTextarea = document.getElementById('note-content-textarea');
     const autoSaveStatus = document.getElementById('auto-save-status');
+    const noteTagFilterBar = document.getElementById('note-tag-filter-bar');
+    const noteContentRendered = document.getElementById('note-content-rendered');
+    const noteEditorContainer = document.getElementById('note-editor-container');
     const formatToolbar = document.querySelector('.format-toolbar');
     const linkTopicBtn = document.getElementById('link-topic-btn');
     const exportNotesBtn = document.getElementById('export-notes-btn');
@@ -85,6 +88,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let unsubscribeFromNotes = null;
     let debounceTimer = null;
     let lastSelectedText = '';
+    let currentNoteFilterTag = null;
+    let isEditingNote = false;
 
     // --- CHAT & PROJECT STATE ---
     let localChatSessionsCache = [];
@@ -1225,6 +1230,26 @@ document.addEventListener('DOMContentLoaded', function () {
         noteContentTextAreaEl.selectionEnd = e + prefix.length;
     }
 
+    function initializeNoteEditorListeners() {
+        if (noteEditorContainer) {
+            noteEditorContainer.addEventListener('dblclick', (e) => {
+                // 더블 클릭 시 편집 모드로 전환 (텍스트 영역이 아닌 렌더링 영역에서만)
+                if (e.target.closest('#note-content-rendered')) {
+                    setEditingState(true);
+                }
+            });
+        }
+        const noteContentTextAreaEl = document.querySelector('.note-content-textarea');
+        if (noteContentTextAreaEl) {
+            noteContentTextAreaEl.addEventListener('blur', () => {
+                // 포커스를 잃으면 자동으로 읽기 모드로 전환하고, 최신 내용을 렌더링
+                setEditingState(false);
+                const currentNote = localNotesCache.find(n => n.id === currentNoteId);
+                if(currentNote) renderNoteContent(currentNote);
+            });
+        }
+    }
+
     function handleQuizSubmit() {
         if (!currentQuizData || !quizResults) return;
         let score = 0;
@@ -1268,6 +1293,7 @@ document.addEventListener('DOMContentLoaded', function () {
         quizResults.style.color = score === questions.length ? "var(--correct-color)" : "var(--incorrect-color-dark)";
     }
 
+    const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
     if (notesAppPanel) { const noteContentTextAreaEl = notesAppPanel.querySelector('.note-content-textarea'); if (noteContentTextAreaEl) { noteContentTextAreaEl.addEventListener('input', handleInput); } }
 
     if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) { e.stopPropagation(); handleDeleteRequest(id); } else if (e.target.closest('.pin-btn')) { e.stopPropagation(); togglePin(id); } else { openNoteEditor(id); } });
@@ -1279,6 +1305,124 @@ document.addEventListener('DOMContentLoaded', function () {
     if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { const noteContentTextAreaEl = document.querySelector('.note-content-textarea'); if(!noteContentTextAreaEl) return; if(!isEditingNote) setEditingState(true); setTimeout(() => { const t = document.title || '현재 학습'; noteContentTextAreaEl.value += `\n\n🔗 연관 학습: [[${t}]]`; saveNote(); }, 50); });
 
     if (quizSubmitBtn) quizSubmitBtn.addEventListener('click', handleQuizSubmit);
+
+------[ 4. 전체 실행 로그 ]------
+        if(quizModalOverlay) quizModalOverlay.addEventListener('click', e => { if (e.target === quizModalOverlay) quizModalOverlay.style.display = 'none'; });
+        if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
+        if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
+        if (searchInput) searchInput.addEventListener('input', renderNoteList);
+        if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportAllData);
+        if (restoreDataBtn) restoreDataBtn.addEventListener('click', handleRestoreClick);
+        if (fileImporter) fileImporter.addEventListener('change', importAllData);
+        if (systemResetBtn) systemResetBtn.addEventListener('click', handleSystemReset);
+        const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
+        if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
+        if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
+        if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) handleDeleteRequest(id); else if (e.target.closest('.pin-btn')) togglePin(id); else openNoteEditor(id); });
+        if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
+        
+        if (aiModelSelector) {
+            aiModelSelector.addEventListener('change', () => {
+                const selectedValue = aiModelSelector.value;
+                if (userApiSettings.provider && userApiSettings.apiKey) {
+                    userApiSettings.selectedModel = selectedValue;
+                    localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
+                } else {
+                    defaultModel = selectedValue;
+                    localStorage.setItem('selectedAiModel', defaultModel);
+                }
+            });
+        }
+        
+        if (apiSettingsBtn) apiSettingsBtn.addEventListener('click', openApiSettingsModal);
+        if (apiSettingsCancelBtn) apiSettingsCancelBtn.addEventListener('click', closeApiSettingsModal);
+        if (apiSettingsSaveBtn) apiSettingsSaveBtn.addEventListener('click', () => saveApiSettings(true));
+        if (verifyApiKeyBtn) verifyApiKeyBtn.addEventListener('click', handleVerifyApiKey);
+        if (resetTokenUsageBtn) resetTokenUsageBtn.addEventListener('click', resetTokenUsage);
+        if (apiSettingsModalOverlay) apiSettingsModalOverlay.addEventListener('click', (e) => { if (e.target === apiSettingsModalOverlay) closeApiSettingsModal(); });
+
+        if (sessionListContainer) {
+            sessionListContainer.addEventListener('click', (e) => {
+                if (!e.target.closest('.project-context-menu')) { removeContextMenu(); }
+                const sessionItem = e.target.closest('.session-item');
+                if (sessionItem) {
+                    const pinButton = e.target.closest('.session-pin-btn');
+                    if (pinButton) { e.stopPropagation(); toggleChatPin(sessionItem.dataset.sessionId); }
+                    else { selectSession(sessionItem.dataset.sessionId); }
+                    return;
+                }
+                const projectHeader = e.target.closest('.project-header');
+                if (projectHeader) {
+                    const actionsButton = e.target.closest('.project-actions-btn');
+                    const projectId = projectHeader.closest('.project-container').dataset.projectId;
+                    if (actionsButton) { e.stopPropagation(); showProjectContextMenu(projectId, actionsButton); }
+                    else if (!e.target.closest('input')) { toggleProjectExpansion(projectId); }
+                    return;
+                }
+            });
+
+            sessionListContainer.addEventListener('contextmenu', (e) => {
+                const sessionItem = e.target.closest('.session-item');
+                if (sessionItem) { e.preventDefault(); removeContextMenu(); showSessionContextMenu(sessionItem.dataset.sessionId, e.clientX, e.clientY); }
+            });
+
+            let draggedItem = null;
+            sessionListContainer.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('session-item')) {
+                    draggedItem = e.target;
+                    setTimeout(() => e.target.classList.add('is-dragging'), 0);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', draggedItem.dataset.sessionId);
+                } else { e.preventDefault(); }
+            });
+
+            sessionListContainer.addEventListener('dragend', () => {
+                if(draggedItem) { draggedItem.classList.remove('is-dragging'); draggedItem = null; }
+                document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => { el.classList.remove('drag-over', 'drag-target-area'); });
+            });
+
+            sessionListContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const targetProjectHeader = e.target.closest('.project-header');
+                document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => { el.classList.remove('drag-over', 'drag-target-area'); });
+                if (!draggedItem) return;
+                const sourceSessionId = draggedItem.dataset.sessionId;
+                const sourceSession = localChatSessionsCache.find(s => s.id === sourceSessionId);
+                if (targetProjectHeader) { 
+                    const targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId;
+                    if (sourceSession && sourceSession.projectId !== targetProjectId) { e.dataTransfer.dropEffect = 'move'; targetProjectHeader.classList.add('drag-over'); }
+                    else { e.dataTransfer.dropEffect = 'none'; }
+                } else { 
+                     if (sourceSession && sourceSession.projectId) { e.dataTransfer.dropEffect = 'move'; sessionListContainer.classList.add('drag-target-area'); }
+                     else { e.dataTransfer.dropEffect = 'none'; }
+                }
+            });
+            
+            sessionListContainer.addEventListener('dragleave', (e) => { if (e.target === sessionListContainer) { sessionListContainer.classList.remove('drag-target-area'); } });
+
+            sessionListContainer.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                 document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => { el.classList.remove('drag-over', 'drag-target-area'); });
+                if (!draggedItem) return;
+                const sessionId = e.dataTransfer.getData('text/plain');
+                const targetProjectHeader = e.target.closest('.project-header');
+                let targetProjectId = null; let shouldUpdate = false;
+                const sourceSession = localChatSessionsCache.find(s => s.id === sessionId);
+                if (!sourceSession) return;
+                if (targetProjectHeader) { targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId; if (sourceSession.projectId !== targetProjectId) { shouldUpdate = true; } }
+                else { if (sourceSession.projectId) { targetProjectId = null; shouldUpdate = true; } }
+                if (shouldUpdate) {
+                    try {
+                        const updates = { projectId: targetProjectId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+                        await chatSessionsCollectionRef.doc(sessionId).update(updates);
+                        if (targetProjectId) { await projectsCollectionRef.doc(targetProjectId).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+                    } catch (error) { console.error("Failed to move session:", error); }
+                }
+            });
+        }
+        
+        if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
+        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
     
         // [MODIFIED] Event Delegation for Reasoning Blocks
         if (chatMessages) {
