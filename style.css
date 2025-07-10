@@ -280,39 +280,6 @@ body:not(.dark-mode) .context-submenu {
 .submenu-arrow {
     font-size: 0.8em;
 }
-/* --- [NEW] Note Project Styles --- */
-.note-project-container { margin-bottom: 5px; }
-.note-project-header { display: flex; align-items: center; padding: 10px 5px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s, border 0.2s; position: relative; }
-body.dark-mode .note-project-header:hover { background-color: var(--quote-bg-dark); }
-body:not(.dark-mode) .note-project-header:hover { background-color: var(--quote-bg-light); }
-.note-project-header.drag-over { background-color: var(--h2-border-dark); border: 2px dashed var(--header-color-dark); }
-body:not(.dark-mode) .note-project-header.drag-over { background-color: var(--h2-border-light); border-color: var(--header-color-light); }
-
-.note-project-toggle-icon { transition: transform 0.2s ease-in-out; margin-right: 5px; line-height: 0; }
-.note-project-toggle-icon.expanded { transform: rotate(90deg); }
-.note-project-icon { margin-right: 8px; line-height: 0; }
-.note-project-header svg { fill: currentColor; }
-
-.note-project-title { font-weight: bold; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1em; }
-.note-project-title-input { font-weight: bold; flex-grow: 1; border: none; background-color: transparent; color: inherit; padding: 2px 4px; border-radius: 4px; outline: 1px solid; font-family: 'Gowun Batang', serif; font-size: 1em; box-sizing: border-box; }
-body.dark-mode .note-project-title-input { outline-color: var(--header-color-dark); }
-body:not(.dark-mode) .note-project-title-input { outline-color: var(--header-color-light); }
-
-.note-project-actions-btn { background: none; border: none; cursor: pointer; padding: 5px; border-radius: 50%; line-height: 0; opacity: 0; transition: opacity 0.2s; }
-.note-project-header:hover .note-project-actions-btn, .note-project-actions-btn.active { opacity: 1; }
-.note-project-actions-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
-
-.notes-in-project { padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
-.notes-in-project.expanded { max-height: 1000px; /* Adjust as needed */ }
-.note-group-header { 
-    font-size: 0.9em;
-    font-weight: bold;
-    padding: 15px 5px 5px 5px;
-    letter-spacing: 0.5px;
-    opacity: 0.8;
-}
-body.dark-mode .note-group-header { color: var(--sub-text-color-dark); }
-body:not(.dark-mode) .note-group-header { color: var(--sub-text-color-light); }
 
 
 .sessions-in-project { padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
@@ -416,6 +383,54 @@ body:not(.dark-mode) #note-list-view .list-header { border-bottom-color: var(--b
 body:not(.dark-mode) #search-input { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
 .notes-btn { padding: 8px 15px; border-radius: 20px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; display: flex; align-items: center; justify-content: center; gap: 6px; }
 body:not(.dark-mode) .notes-btn { background-color: var(--h2-color-light); }
+#system-reset-btn { background-color: var(--incorrect-color); }
+#system-reset-btn:hover { background-color: #c9302c; }
+.notes-date-group-header {
+    font-size: 0.8em;
+    font-weight: bold;
+    padding: 15px 5px 5px 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--sub-text-color-light);
+}
+body.dark-mode .notes-date-group-header {
+    color: var(--sub-text-color-dark);
+}
+
+.note-item-preview {
+    font-size: 0.9em;
+    opacity: 0.7;
+    margin-top: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notes-empty-state {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    padding: 20px;
+    text-align: center;
+    color: var(--sub-text-color-light);
+}
+body.dark-mode .notes-empty-state {
+    color: var(--sub-text-color-dark);
+}
+.notes-empty-state svg {
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+.notes-empty-state h3 {
+    margin: 0 0 10px 0;
+    color: var(--header-color-light);
+}
+body.dark-mode .notes-empty-state h3 {
+    color: var(--header-color-dark);
+}
+body:not(.dark-mode) #system-reset-btn:hover { background-color: #c9302c; }
 .notes-btn svg { width: 16px; height: 16px; fill: currentColor; }
 
 #system-reset-btn { background-color: var(--incorrect-color); }
