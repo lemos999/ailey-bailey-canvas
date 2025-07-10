@@ -961,85 +961,46 @@ document.addEventListener('DOMContentLoaded', function () {
     function saveCustomPrompt() { if (customPromptInput) { customPrompt = customPromptInput.value; localStorage.setItem('customTutorPrompt', customPrompt); closePromptModal(); } }
     function showModal(message, onConfirm) { if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return; modalMessage.textContent = message; customModal.style.display = 'flex'; modalConfirmBtn.onclick = () => { onConfirm(); customModal.style.display = 'none'; }; modalCancelBtn.onclick = () => { customModal.style.display = 'none'; }; }
     function listenToNotes() { return new Promise(resolve => { if (!notesCollection) return resolve(); if (unsubscribeFromNotes) unsubscribeFromNotes(); unsubscribeFromNotes = notesCollection.orderBy("updatedAt", "desc").onSnapshot(s => { localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList(); resolve(); }, e => {console.error("노트 수신 오류:", e); resolve();}); }); }
-    function renderNoteList() {
-    if (!notesList || !searchInput) return;
-
-    const term = searchInput.value.toLowerCase();
-    const filteredNotes = localNotesCache.filter(n => 
-        n.title?.toLowerCase().includes(term) || 
-        n.content?.toLowerCase().includes(term)
-    );
-
-    notesList.innerHTML = ''; // Clear previous list
-
-    if (filteredNotes.length === 0) {
-        notesList.innerHTML = `
-            <div class="notes-empty-state">
-                <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor"><path d="M17,4V10L15,8L13,10V4H6A2,2 0 0,0 4,6V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18V6A2,2 0 0,0 18,4H17Z" /></svg>
-                <h3>${term ? '검색 결과가 없습니다' : '아직 작성된 메모가 없습니다'}</h3>
-                <p>${term ? '다른 키워드로 검색해보세요.' : "'새 메모' 버튼을 눌러 생각을 기록해보세요."}</p>
-            </div>`;
-        return;
+    function renderNoteList() { if (!notesList || !searchInput) return; const term = searchInput.value.toLowerCase(); const filtered = localNotesCache.filter(n => n.title?.toLowerCase().includes(term) || n.content?.toLowerCase().includes(term)); filtered.sort((a,b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0)); notesList.innerHTML = filtered.length === 0 ? '<div>표시할 메모가 없습니다.</div>' : ''; filtered.forEach(n => { const i = document.createElement('div'); i.className = 'note-item'; i.dataset.id = n.id; if (n.isPinned) i.classList.add('pinned'); i.innerHTML = `<div class="note-item-content"><div class="note-item-title">${n.title||'무제'}</div><div class="note-item-date">${n.updatedAt?.toDate().toLocaleString('ko-KR')||'날짜 없음'}</div></div><div class="note-item-actions"><button class="item-action-btn pin-btn ${n.isPinned?'pinned-active':''}" title="고정"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg></button><button class="item-action-btn delete-btn" title="삭제"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg></button></div>`; notesList.appendChild(i); }); }
+    async function addNote(content = '') { if (!notesCollection) return; try { const ref = await notesCollection.add({ title: '새 메모', content: content, isPinned: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); openNoteEditor(ref.id); } catch (e) { console.error("새 메모 추가 실패:", e); } }
+    async function addNote(content = '') {
+    if (!notesCollection) return;
+    try {
+        const newNoteData = {
+            title: '새 메모',
+            content: content,
+            isPinned: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        const ref = await notesCollection.add(newNoteData);
+        // Pass the initial data directly to avoid race conditions with the listener
+        openNoteEditor(ref.id, newNoteData); 
+    } catch (e) {
+        console.error("새 메모 추가 실패:", e);
     }
-
-    // Group notes by date
-    const groupedNotes = filteredNotes.reduce((acc, note) => {
-        const timestamp = note.updatedAt || note.createdAt;
-        const group = getRelativeDateGroup(timestamp, note.isPinned);
-        if (!acc[group.label]) {
-            acc[group.label] = { key: group.key, items: [] };
-        }
-        acc[group.label].items.push(note);
-        return acc;
-    }, {});
-
-    const sortedGroupLabels = Object.keys(groupedNotes).sort((a, b) => groupedNotes[a].key - groupedNotes[b].key);
-    
-    const fragment = document.createDocumentFragment();
-
-    sortedGroupLabels.forEach(label => {
-        const header = document.createElement('div');
-        header.className = 'notes-date-group-header';
-        header.textContent = label;
-        fragment.appendChild(header);
-
-        const group = groupedNotes[label];
-        group.items.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-        
-        group.items.forEach(note => {
-            const item = document.createElement('div');
-            item.className = 'note-item';
-            item.dataset.id = note.id;
-            if (note.isPinned) item.classList.add('pinned');
-            
-            const previewText = (note.content || '').substring(0, 100).replace(/</g, "<").replace(/>/g, ">");
-
-            item.innerHTML = `
-                <div class="note-item-content">
-                    <div class="note-item-title">${note.title || '무제'}</div>
-                    <div class="note-item-preview">${previewText}${note.content.length > 100 ? '...' : ''}</div>
-                    <div class="note-item-date">${note.updatedAt?.toDate().toLocaleString('ko-KR') || '날짜 없음'}</div>
-                </div>
-                <div class="note-item-actions">
-                    <button class="item-action-btn pin-btn ${note.isPinned ? 'pinned-active' : ''}" title="고정">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>
-                    </button>
-                    <button class="item-action-btn delete-btn" title="삭제">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg>
-                    </button>
-                </div>`;
-            fragment.appendChild(item);
-        });
-    });
-
-    notesList.appendChild(fragment);
 }
-    function saveNote() { if (debounceTimer) clearTimeout(debounceTimer); if (!currentNoteId || !notesCollection) return; const data = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; notesCollection.doc(currentNoteId).update(data).then(() => updateStatus('저장됨 ✓', true)).catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); }); }
+function saveNote() { if (debounceTimer) clearTimeout(debounceTimer); if (!currentNoteId || !notesCollection) return; const data = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; notesCollection.doc(currentNoteId).update(data).then(() => updateStatus('저장됨 ✓', true)).catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); }); }
     function handleDeleteRequest(id) { showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => { if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e)); }); }
     async function togglePin(id) { if (!notesCollection) return; const note = localNotesCache.find(n => n.id === id); if (note) await notesCollection.doc(id).update({ isPinned: !note.isPinned }); }
     function switchView(view) { if (view === 'editor') { if(noteListView) noteListView.classList.remove('active'); if(noteEditorView) noteEditorView.classList.add('active'); } else { if(noteEditorView) noteEditorView.classList.remove('active'); if(noteListView) noteListView.classList.add('active'); currentNoteId = null; } }
-    function openNoteEditor(id) { const note = localNotesCache.find(n => n.id === id); if (note && noteTitleInput && noteContentTextarea) { currentNoteId = id; noteTitleInput.value = note.title || ''; noteContentTextarea.value = note.content || ''; switchView('editor'); } }
-    function updateStatus(msg, success) { if (!autoSaveStatus) return; autoSaveStatus.textContent = msg; autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral'; setTimeout(() => { autoSaveStatus.textContent = ''; }, 3000); }
+    function openNoteEditor(id, initialData = null) {
+    // Find note in cache, but use initialData as a fallback to prevent race conditions
+    const note = localNotesCache.find(n => n.id === id) || initialData;
+
+    if (note && noteTitleInput && noteContentTextarea) {
+        currentNoteId = id;
+        noteTitleInput.value = note.title || '';
+        noteContentTextarea.value = note.content || '';
+        switchView('editor');
+    } else if (initialData) {
+        // Fallback for the very first moment before listener updates cache
+        currentNoteId = id;
+        noteTitleInput.value = initialData.title || '';
+        noteContentTextarea.value = initialData.content || '';
+        switchView('editor');
+    }
+}
     function applyFormat(fmt) { if (!noteContentTextarea) return; const s = noteContentTextarea.selectionStart, e = noteContentTextarea.selectionEnd, t = noteContentTextarea.value.substring(s, e); const m = fmt === 'bold' ? '**' : (fmt === 'italic' ? '*' : '`'); noteContentTextarea.value = `${noteContentTextarea.value.substring(0,s)}${m}${t}${m}${noteContentTextarea.value.substring(e)}`; noteContentTextarea.focus(); }
     async function startQuiz() { if (!quizModalOverlay) return; const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', '); if (!k) { showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); return; } if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>'; if (quizResults) quizResults.innerHTML = ''; quizModalOverlay.style.display = 'flex'; try { const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); currentQuizData = JSON.parse(res); renderQuiz(currentQuizData); } catch (e) { if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; } }
     function renderQuiz(data) { if (!quizContainer || !data.questions) return; quizContainer.innerHTML = ''; data.questions.forEach((q, i) => { const b = document.createElement('div'); b.className = 'quiz-question-block'; const p = document.createElement('p'); p.textContent = `${i + 1}. ${q.q}`; const o = document.createElement('div'); o.className = 'quiz-options'; q.o.forEach(opt => { const l = document.createElement('label'); const r = document.createElement('input'); r.type = 'radio'; r.name = `q-${i}`; r.value = opt; l.append(r,` ${opt}`); o.appendChild(l); }); b.append(p, o); quizContainer.appendChild(b); }); }
@@ -1346,28 +1307,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else { 
                      if (sourceSession && sourceSession.projectId) { e.dataTransfer.dropEffect = 'move'; sessionListContainer.classList.add('drag-target-area'); }
                      else { e.dataTransfer.dropEffect = 'none'; }
-                }
-            });
-            
-            sessionListContainer.addEventListener('dragleave', (e) => { if (e.target === sessionListContainer) { sessionListContainer.classList.remove('drag-target-area'); } });
-
-            sessionListContainer.addEventListener('drop', async (e) => {
-                e.preventDefault();
-                 document.querySelectorAll('.project-header.drag-over, .session-list-container.drag-target-area').forEach(el => { el.classList.remove('drag-over', 'drag-target-area'); });
-                if (!draggedItem) return;
-                const sessionId = e.dataTransfer.getData('text/plain');
-                const targetProjectHeader = e.target.closest('.project-header');
-                let targetProjectId = null; let shouldUpdate = false;
-                const sourceSession = localChatSessionsCache.find(s => s.id === sessionId);
-                if (!sourceSession) return;
-                if (targetProjectHeader) { targetProjectId = targetProjectHeader.closest('.project-container').dataset.projectId; if (sourceSession.projectId !== targetProjectId) { shouldUpdate = true; } }
-                else { if (sourceSession.projectId) { targetProjectId = null; shouldUpdate = true; } }
-                if (shouldUpdate) {
-                    try {
-                        const updates = { projectId: targetProjectId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-                        await chatSessionsCollectionRef.doc(sessionId).update(updates);
-                        if (targetProjectId) { await projectsCollectionRef.doc(targetProjectId).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
-                    } catch (error) { console.error("Failed to move session:", error); }
                 }
             });
             
