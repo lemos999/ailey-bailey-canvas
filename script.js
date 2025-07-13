@@ -37,9 +37,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const noteTitleInput = document.getElementById('note-title-input');
     const noteContentTextarea = document.getElementById('note-content-textarea');
     const autoSaveStatus = document.getElementById('auto-save-status');
-    const noteTagFilterBar = document.getElementById('note-tag-filter-bar');
-    const noteContentRendered = document.getElementById('note-content-rendered');
-    const noteEditorContainer = document.getElementById('note-editor-container');
     const formatToolbar = document.querySelector('.format-toolbar');
     const linkTopicBtn = document.getElementById('link-topic-btn');
     const exportNotesBtn = document.getElementById('export-notes-btn');
@@ -88,8 +85,6 @@ document.addEventListener('DOMContentLoaded', function () {
     let unsubscribeFromNotes = null;
     let debounceTimer = null;
     let lastSelectedText = '';
-    let currentNoteFilterTag = null;
-    let isEditingNote = false;
 
     // --- CHAT & PROJECT STATE ---
     let localChatSessionsCache = [];
@@ -956,357 +951,291 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(canvasId).then(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" /></svg>'; setTimeout(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" /></svg>'; }, 1500); }); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { document.querySelectorAll('.keyword-chip[data-tooltip]').forEach(chip => { if (chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = chip.dataset.tooltip; } }); document.querySelectorAll('.content-section strong[data-tooltip]').forEach(highlight => { if(!highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = highlight.dataset.tooltip; highlight.appendChild(tooltipElement); } }); }
     function makePanelDraggable(panelElement) { if(!panelElement) return; const header = panelElement.querySelector('.panel-header'); if(!header) return; let isDragging = false, offset = { x: 0, y: 0 }; const onMouseMove = (e) => { if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; } }; const onMouseUp = () => { isDragging = false; panelElement.classList.remove('is-dragging'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }; header.addEventListener('mousedown', e => { if (e.target.closest('button, input, select, .close-btn, #delete-session-btn, #chat-mode-selector, #api-settings-btn')) return; isDragging = true; panelElement.classList.add('is-dragging'); offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); }); }
-    function togglePanel(panelElement, forceShow = null) { if (!panelElement) return; const show = forceShow !== null ? forceShow : panelElement.style.display !== 'flex'; panelElement.style.display = show ? 'flex' : 'none'; }
+    function togglePanel(panelElement, forceShow = null) {
+        if (!panelElement) return;
+        // Determine the current 'shown' state based on visibility/opacity for smooth transitions
+        const isCurrentlyVisible = panelElement.style.visibility === 'visible' && panelElement.style.opacity === '1';
+        const show = forceShow !== null ? forceShow : !isCurrentlyVisible; // Toggle if forceShow is null
+
+        if (show) {
+            panelElement.style.visibility = 'visible';
+            panelElement.style.opacity = '1';
+            panelElement.style.transform = 'translateY(0)';
+        } else {
+            panelElement.style.opacity = '0';
+            panelElement.style.transform = 'translateY(20px)';
+            // Wait for the transition to finish before setting visibility to 'hidden'
+            // This timeout must match the transition duration set in CSS (.draggable-panel)
+            setTimeout(() => {
+                panelElement.style.visibility = 'hidden';
+            }, 300); // 300ms matches the CSS transition duration
+        }
+    }
     function setupNavigator() { const scrollNav = document.getElementById('scroll-nav'); if (!scrollNav || !learningContent) return; const headers = learningContent.querySelectorAll('h2, #section-4 h3, #section-5 h3, #section-6 h3'); if (headers.length === 0) { scrollNav.style.display = 'none'; if(wrapper) wrapper.classList.add('toc-hidden'); return; } scrollNav.style.display = 'block'; if(wrapper) wrapper.classList.remove('toc-hidden'); const navList = document.createElement('ul'); headers.forEach((header, index) => { let targetElement = header.closest('.content-section'); if (targetElement && !targetElement.id) targetElement.id = `nav-target-${index}`; if (targetElement) { const listItem = document.createElement('li'); const link = document.createElement('a'); let navText = header.textContent.trim().replace(/\[|\]|🤓|⏳|📖/g, '').trim(); link.textContent = navText.substring(0, 25); link.href = `#${targetElement.id}`; if (header.tagName === 'H3') { link.style.paddingLeft = '25px'; link.style.fontSize = '0.9em'; } listItem.appendChild(link); navList.appendChild(listItem); } }); scrollNav.innerHTML = '<h3>학습 내비게이션</h3>'; scrollNav.appendChild(navList); const links = scrollNav.querySelectorAll('a'); const observer = new IntersectionObserver(entries => { entries.forEach(entry => { const id = entry.target.getAttribute('id'); const navLink = scrollNav.querySelector(`a[href="#${id}"]`); if (navLink && entry.isIntersecting && entry.intersectionRatio > 0.5) { links.forEach(l => l.classList.remove('active')); navLink.classList.add('active'); } }); }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 }); headers.forEach(header => { const target = header.closest('.content-section'); if (target) observer.observe(target); }); }
-    function handleTextSelection(e) { if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu, .session-context-menu')) return; const selection = window.getSelection(); const selectedText = selection.toString().trim(); removeContextMenu(); if (selectedText.length > 3) { lastSelectedText = selectedText; const range = selection.getRangeAt(0); const rect = range.getBoundingClientRect(); const popover = selectionPopover; let top = rect.top + window.scrollY - popover.offsetHeight - 10; let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2); popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`; popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`; popover.style.display = 'flex'; } else if (!e.target.closest('#selection-popover')) { selectionPopover.style.display = 'none'; } }
+    function handleTextSelection(e) {
+        if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu, .session-context-menu')) return;
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+        removeContextMenu();
+        const popover = selectionPopover; // Get popover element once
+
+        if (selectedText.length > 3) {
+            lastSelectedText = selectedText;
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            let top = rect.top + window.scrollY - popover.offsetHeight - 10;
+            let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2);
+
+            popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`;
+            popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`;
+
+            // Apply smooth transition properties
+            popover.style.visibility = 'visible';
+            popover.style.opacity = '1';
+            popover.style.transform = 'scale(1)'; // Scale up from 0.9 (initial state in CSS)
+
+        } else if (!e.target.closest('#selection-popover')) {
+            // Smoothly hide the popover
+            popover.style.opacity = '0';
+            popover.style.transform = 'scale(0.9)'; // Scale down
+            setTimeout(() => {
+                popover.style.visibility = 'hidden';
+            }, 200); // 200ms matches CSS transition duration
+        }
+    }
     function handlePopoverAskAi() { if (!lastSelectedText || !chatInput) return; togglePanel(chatPanel, true); handleNewChat(); setTimeout(() => { chatInput.value = `"${lastSelectedText}"\n\n이 내용에 대해 더 자세히 설명해줄래?`; chatInput.style.height = (chatInput.scrollHeight) + 'px'; chatInput.focus(); }, 100); selectionPopover.style.display = 'none'; }
     function handlePopoverAddNote() { if (!lastSelectedText) return; addNote(`> ${lastSelectedText}\n\n`); selectionPopover.style.display = 'none'; }
     function openPromptModal() { if (customPromptInput) customPromptInput.value = customPrompt; if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; }
     function closePromptModal() { if (promptModalOverlay) promptModalOverlay.style.display = 'none'; }
     function saveCustomPrompt() { if (customPromptInput) { customPrompt = customPromptInput.value; localStorage.setItem('customTutorPrompt', customPrompt); closePromptModal(); } }
     function showModal(message, onConfirm) { if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return; modalMessage.textContent = message; customModal.style.display = 'flex'; modalConfirmBtn.onclick = () => { onConfirm(); customModal.style.display = 'none'; }; modalCancelBtn.onclick = () => { customModal.style.display = 'none'; }; }
-    function listenToNotes() {
-        return new Promise(resolve => {
-            if (!notesCollection) return resolve();
-            if (unsubscribeFromNotes) unsubscribeFromNotes();
-            unsubscribeFromNotes = notesCollection.orderBy("updatedAt", "desc").onSnapshot(s => {
-                localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (document.getElementById('notes-app-panel')?.style.display === 'flex') {
-                    renderNoteList();
-                }
-                resolve();
-            }, e => { console.error("노트 수신 오류:", e); resolve(); });
-        });
-    }
-
-    function renderNoteList() {
-        if (!notesList || !searchInput || !noteTagFilterBar) return;
-        const searchTerm = searchInput.value.toLowerCase();
-        
-        let allTags = new Set();
-        localNotesCache.forEach(n => n.tags?.forEach(tag => allTags.add(tag)));
-        renderTagFilterBar(allTags);
-
-        const preFiltered = currentNoteFilterTag
-            ? localNotesCache.filter(n => n.tags?.includes(currentNoteFilterTag))
-            : localNotesCache;
-
-        const filtered = searchTerm
-            ? preFiltered.filter(n => n.title?.toLowerCase().includes(searchTerm) || n.content?.toLowerCase().includes(searchTerm))
-            : preFiltered;
-        
-        filtered.sort((a,b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-        
-        notesList.innerHTML = '';
-        if (filtered.length === 0) {
-            const emptyMsg = document.createElement('div');
-            emptyMsg.style.padding = '20px';
-            emptyMsg.style.textAlign = 'center';
-            emptyMsg.style.opacity = '0.7';
-            emptyMsg.textContent = currentNoteFilterTag ? `'#${currentNoteFilterTag}' 태그가 포함된 메모가 없습니다.` : '표시할 메모가 없습니다.';
-            notesList.appendChild(emptyMsg);
-        } else {
-            filtered.forEach(n => {
-                const i = document.createElement('div');
-                i.className = 'note-item';
-                if (n.id === currentNoteId) i.classList.add('active-note');
-                i.dataset.id = n.id;
-                if (n.isPinned) i.classList.add('pinned');
-
-                const tagsHTML = n.tags && n.tags.length > 0 ? `<div class="note-tags-container">${n.tags.map(tag => `<span class="note-tag">#${tag}</span>`).join('')}</div>` : '';
-                const snippet = n.content ? n.content.substring(0, 100).replace(/<[^>]*>?/gm, '').replace(/\[[x ]\]/g, '').replace(/\[\[(.*?)\]\]/g, '$1') : '내용 없음';
-
-                i.innerHTML = `
-                    <div class="note-item-content">
-                        <div class="note-item-title">${n.title || '무제'}</div>
-                        <div class="note-item-snippet">${snippet}</div>
-                        <div class="note-item-date">${n.updatedAt?.toDate().toLocaleString('ko-KR') || '날짜 없음'}</div>
-                        ${tagsHTML}
-                    </div>
-                    <div class="note-item-actions">
-                        <button class="item-action-btn pin-btn ${n.isPinned ? 'pinned-active' : ''}" title="고정"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg></button>
-                        <button class="item-action-btn delete-btn" title="삭제"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg></button>
-                    </div>`;
-                notesList.appendChild(i);
-            });
-        }
-    }
-
-    function renderTagFilterBar(tags) {
-        if (!noteTagFilterBar) return;
-        noteTagFilterBar.innerHTML = '';
-        const allBtn = document.createElement('button');
-        allBtn.className = 'tag-filter-btn';
-        allBtn.textContent = '전체보기';
-        if (!currentNoteFilterTag) allBtn.classList.add('active');
-        allBtn.addEventListener('click', () => {
-            currentNoteFilterTag = null;
-            renderNoteList();
-        });
-        noteTagFilterBar.appendChild(allBtn);
-        Array.from(tags).sort().forEach(tag => {
-            const btn = document.createElement('button');
-            btn.className = 'tag-filter-btn';
-            btn.textContent = `#${tag}`;
-            if (tag === currentNoteFilterTag) btn.classList.add('active');
-            btn.addEventListener('click', () => {
-                currentNoteFilterTag = tag;
-                renderNoteList();
-            });
-            noteTagFilterBar.appendChild(btn);
-        });
-    }
-
-    async function addNote(content = '') {
-        if (!notesCollection) return;
-        try {
-            const ref = await notesCollection.add({
-                title: '새 메모',
-                content: content,
-                tags: [],
-                isPinned: false,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            openNoteEditor(ref.id);
-        } catch (e) {
-            console.error("새 메모 추가 실패:", e);
-        }
-    }
-
-    function saveNote() {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        if (!currentNoteId || !notesCollection) return;
-        
-        const noteContentTextAreaEl = document.querySelector('.note-content-textarea');
-        const content = noteContentTextAreaEl.value;
-        const tagRegex = /#([a-zA-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)/g;
-        const tags = [...new Set(Array.from(content.matchAll(tagRegex), m => m[1]))];
-
-        const data = {
-            title: noteTitleInput.value,
-            content: content,
-            tags: tags,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        notesCollection.doc(currentNoteId).update(data)
-            .then(() => {
-                updateStatus('저장됨 ✓', true);
-                renderNoteList(); // Re-render to update tags in the list view
-            })
-            .catch(e => {
-                console.error("메모 저장 실패:", e);
-                updateStatus('저장 실패 ❌', false);
-            });
-    }
-
-    function handleDeleteRequest(id) {
-        showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => {
-            if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e));
-            if (id === currentNoteId) {
-                switchView('list');
-            }
-        });
-    }
-
-    async function togglePin(id) {
-        if (!notesCollection) return;
-        const note = localNotesCache.find(n => n.id === id);
-        if (note) await notesCollection.doc(id).update({ isPinned: !note.isPinned });
-    }
-
-    function switchView(view) {
-        if (view === 'editor') {
-            if(noteListView) noteListView.classList.remove('active');
-            if(noteEditorView) noteEditorView.classList.add('active');
-        } else {
-            if(noteEditorView) noteEditorView.classList.remove('active');
-            if(noteListView) noteListView.classList.add('active');
-            currentNoteId = null;
-        }
-    }
-
-    function openNoteEditor(id) {
-        const note = localNotesCache.find(n => n.id === id);
-        if (note && noteTitleInput && noteContentRendered) {
-            currentNoteId = id;
-            noteTitleInput.value = note.title || '';
-            const noteContentTextAreaEl = document.querySelector('.note-content-textarea');
-            if(noteContentTextAreaEl) noteContentTextAreaEl.value = note.content || '';
-            switchView('editor');
-            renderNoteContent(note);
-            setEditingState(false);
-            renderNoteList(); // To highlight the active note
-        }
-    }
-    
-    function setEditingState(isEditing) {
-        isEditingNote = isEditing;
-        const noteContentTextAreaEl = document.querySelector('.note-content-textarea');
-        if(noteContentRendered) noteContentRendered.style.display = isEditing ? 'none' : 'block';
-        if(noteContentTextAreaEl) noteContentTextAreaEl.style.display = isEditing ? 'block' : 'none';
-        
-        if (isEditing) {
-            noteContentTextAreaEl.focus();
-        }
-    }
-    
-    function renderNoteContent(note) {
-        if (!noteContentRendered || !note || typeof note.content !== 'string') return;
-        // 1. Sanitize for safety, then apply markup
-        const escapedHTML = note.content.replace(/</g, "<").replace(/>/g, ">");
-        
-        // 2. Render internal links
-        const linkedHTML = escapedHTML.replace(/\[\[(.*?)\]\]/g, (match, title) => {
-            const trimmedTitle = title.trim();
-            const linkedNote = localNotesCache.find(n => n.title === trimmedTitle);
-            return linkedNote
-                ? `<a href="#" class="internal-link" data-note-id="${linkedNote.id}">${trimmedTitle}</a>`
-                : `[[${trimmedTitle}]]`;
-        });
-
-        // 3. Render checklists
-        const checklistHTML = linkedHTML.replace(/^( *)(\[([x ])\]) (.*)$/gm, (match, indent, box, checked, text) => {
-            const isChecked = checked === 'x';
-            // Note: The input is outside the label to prevent double-triggering events.
-            return `${indent}<span class="task-list-item ${isChecked ? 'checked' : ''}"><input type="checkbox" class="task-list-item-checkbox" ${isChecked ? 'checked' : ''}>${text}</span>`;
-        });
-
-        noteContentRendered.innerHTML = checklistHTML.replace(/\n/g, '<br>');
-
-        // Add event listeners after innerHTML is set
-        noteContentRendered.querySelectorAll('.internal-link').forEach(link => {
-            link.addEventListener('click', e => {
-                e.preventDefault();
-                e.stopPropagation();
-                openNoteEditor(e.target.dataset.noteId);
-            });
-        });
-
-        noteContentRendered.querySelectorAll('.task-list-item-checkbox').forEach((checkbox, index) => {
-            checkbox.addEventListener('click', (e) => { // Use click instead of change for better responsiveness
-                e.stopPropagation();
-                const noteContentTextAreaEl = document.querySelector('.note-content-textarea');
-                const lines = noteContentTextAreaEl.value.split('\n');
-                let taskIndex = -1;
-                const updatedLines = lines.map(line => {
-                    if (/^ *\[[x ]\]/.test(line)) {
-                        taskIndex++;
-                        if (taskIndex === index) {
-                            return line.replace(/\[[x ]\]/, `[${checkbox.checked ? 'x' : ' '}]`);
-                        }
-                    }
-                    return line;
-                });
-                noteContentTextAreaEl.value = updatedLines.join('\n');
-                saveNote();
-            });
-        });
-    }
-
+    function listenToNotes() { return new Promise(resolve => { if (!notesCollection) return resolve(); if (unsubscribeFromNotes) unsubscribeFromNotes(); unsubscribeFromNotes = notesCollection.orderBy("updatedAt", "desc").onSnapshot(s => { localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList(); resolve(); }, e => {console.error("노트 수신 오류:", e); resolve();}); }); }
+    function renderNoteList() { if (!notesList || !searchInput) return; const term = searchInput.value.toLowerCase(); const filtered = localNotesCache.filter(n => n.title?.toLowerCase().includes(term) || n.content?.toLowerCase().includes(term)); filtered.sort((a,b) => (b.isPinned - a.isPinned) || (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0)); notesList.innerHTML = filtered.length === 0 ? '<div>표시할 메모가 없습니다.</div>' : ''; filtered.forEach(n => { const i = document.createElement('div'); i.className = 'note-item'; i.dataset.id = n.id; if (n.isPinned) i.classList.add('pinned'); i.innerHTML = `<div class="note-item-content"><div class="note-item-title">${n.title||'무제'}</div><div class="note-item-date">${n.updatedAt?.toDate().toLocaleString('ko-KR')||'날짜 없음'}</div></div><div class="note-item-actions"><button class="item-action-btn pin-btn ${n.isPinned?'pinned-active':''}" title="고정"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg></button><button class="item-action-btn delete-btn" title="삭제"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg></button></div>`; notesList.appendChild(i); }); }
+    async function addNote(content = '') { if (!notesCollection) return; try { const ref = await notesCollection.add({ title: '새 메모', content: content, isPinned: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); openNoteEditor(ref.id); } catch (e) { console.error("새 메모 추가 실패:", e); } }
+    function saveNote() { if (debounceTimer) clearTimeout(debounceTimer); if (!currentNoteId || !notesCollection) return; const data = { title: noteTitleInput.value, content: noteContentTextarea.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }; notesCollection.doc(currentNoteId).update(data).then(() => updateStatus('저장됨 ✓', true)).catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); }); }
+    function handleDeleteRequest(id) { showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => { if (notesCollection) notesCollection.doc(id).delete().catch(e => console.error("메모 삭제 실패:", e)); }); }
+    async function togglePin(id) { if (!notesCollection) return; const note = localNotesCache.find(n => n.id === id); if (note) await notesCollection.doc(id).update({ isPinned: !note.isPinned }); }
+    function switchView(view) { if (view === 'editor') { if(noteListView) noteListView.classList.remove('active'); if(noteEditorView) noteEditorView.classList.add('active'); } else { if(noteEditorView) noteEditorView.classList.remove('active'); if(noteListView) noteListView.classList.add('active'); currentNoteId = null; } }
+    function openNoteEditor(id) { const note = localNotesCache.find(n => n.id === id); if (note && noteTitleInput && noteContentTextarea) { currentNoteId = id; noteTitleInput.value = note.title || ''; noteContentTextarea.value = note.content || ''; switchView('editor'); } }
     function updateStatus(msg, success) { if (!autoSaveStatus) return; autoSaveStatus.textContent = msg; autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral'; setTimeout(() => { autoSaveStatus.textContent = ''; }, 3000); }
+    function applyFormat(fmt) { if (!noteContentTextarea) return; const s = noteContentTextarea.selectionStart, e = noteContentTextarea.selectionEnd, t = noteContentTextarea.value.substring(s, e); const m = fmt === 'bold' ? '**' : (fmt === 'italic' ? '*' : '`'); noteContentTextarea.value = `${noteContentTextarea.value.substring(0,s)}${m}${t}${m}${noteContentTextarea.value.substring(e)}`; noteContentTextarea.focus(); }
+    async function startQuiz() { if (!quizModalOverlay) return; const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', '); if (!k) { showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); return; } if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>'; if (quizResults) quizResults.innerHTML = ''; quizModalOverlay.style.display = 'flex'; try { const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); currentQuizData = JSON.parse(res); renderQuiz(currentQuizData); } catch (e) { if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; } }
+    function renderQuiz(data) { if (!quizContainer || !data.questions) return; quizContainer.innerHTML = ''; data.questions.forEach((q, i) => { const b = document.createElement('div'); b.className = 'quiz-question-block'; const p = document.createElement('p'); p.textContent = `${i + 1}. ${q.q}`; const o = document.createElement('div'); o.className = 'quiz-options'; q.o.forEach(opt => { const l = document.createElement('label'); const r = document.createElement('input'); r.type = 'radio'; r.name = `q-${i}`; r.value = opt; l.append(r,` ${opt}`); o.appendChild(l); }); b.append(p, o); quizContainer.appendChild(b); }); }
+
     
-    function applyFormat(fmt) {
-        const noteContentTextAreaEl = document.querySelector('.note-content-textarea');
-        if (!noteContentTextAreaEl || !isEditingNote) return;
-
-        const s = noteContentTextAreaEl.selectionStart;
-        const e = noteContentTextAreaEl.selectionEnd;
-        const t = noteContentTextAreaEl.value.substring(s, e);
-        let prefix = '', suffix = '';
-        
-        switch (fmt) {
-            case 'bold': prefix = '**'; suffix = '**'; break;
-            case 'italic': prefix = '*'; suffix = '*'; break;
-            case 'code': prefix = '`'; suffix = '`'; break;
-            case 'checklist': prefix = '[ ] '; suffix = ''; break;
-            case 'quote': prefix = '> '; suffix = ''; break;
-        }
-
-        noteContentTextAreaEl.value = `${noteContentTextAreaEl.value.substring(0,s)}${prefix}${t}${suffix}${noteContentTextAreaEl.value.substring(e)}`;
-        noteContentTextAreaEl.focus();
-        noteContentTextAreaEl.selectionStart = s + prefix.length;
-        noteContentTextAreaEl.selectionEnd = e + prefix.length;
-    }
-
-    function initializeNoteEditorListeners() {
-        if (noteEditorContainer) {
-            noteEditorContainer.addEventListener('dblclick', (e) => {
-                // 더블 클릭 시 편집 모드로 전환 (텍스트 영역이 아닌 렌더링 영역에서만)
-                if (e.target.closest('#note-content-rendered')) {
-                    setEditingState(true);
-                }
-            });
-        }
-        const noteContentTextAreaEl = document.querySelector('.note-content-textarea');
-        if (noteContentTextAreaEl) {
-            noteContentTextAreaEl.addEventListener('blur', () => {
-                // 포커스를 잃으면 자동으로 읽기 모드로 전환하고, 최신 내용을 렌더링
-                setEditingState(false);
-                const currentNote = localNotesCache.find(n => n.id === currentNoteId);
-                if(currentNote) renderNoteContent(currentNote);
-            });
-        }
-    }
-
-    function handleQuizSubmit() {
-        if (!currentQuizData || !quizResults) return;
-        let score = 0;
-        const questions = currentQuizData.questions;
-        let allAnswered = true;
-        
-        questions.forEach((q, i) => {
-            const selectedOption = document.querySelector(`input[name="q-${i}"]:checked`);
-            if (!selectedOption) {
-                allAnswered = false;
-            }
-        });
-
-        if (!allAnswered) {
-            quizResults.textContent = "모든 문제에 답해주세요!";
-            quizResults.style.color = "var(--incorrect-color)";
-            return;
-        }
-
-        questions.forEach((q, i) => {
-            const selectedOption = document.querySelector(`input[name="q-${i}"]:checked`);
-            const parentLabel = selectedOption.parentElement;
-            if (selectedOption.value === q.a) {
-                score++;
-                parentLabel.style.border = "1px solid var(--correct-color)";
-                parentLabel.style.backgroundColor = "rgba(62, 142, 65, 0.1)";
-            } else {
-                parentLabel.style.border = "1px solid var(--incorrect-color)";
-                parentLabel.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
-                // Also highlight the correct answer
-                const options = document.querySelectorAll(`input[name="q-${i}"]`);
-                options.forEach(opt => {
-                    if (opt.value === q.a) {
-                        opt.parentElement.style.border = "1px solid var(--correct-color)";
-                    }
-                });
-            }
-        });
-
-        quizResults.textContent = `결과: ${questions.length} 중 ${score} 정답!`;
-        quizResults.style.color = score === questions.length ? "var(--correct-color)" : "var(--incorrect-color-dark)";
-    }
-
-    const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
-    if (notesAppPanel) { const noteContentTextAreaEl = notesAppPanel.querySelector('.note-content-textarea'); if (noteContentTextAreaEl) { noteContentTextAreaEl.addEventListener('input', handleInput); } }
-
-    if (notesList) notesList.addEventListener('click', e => { const i = e.target.closest('.note-item'); if (!i) return; const id = i.dataset.id; if (e.target.closest('.delete-btn')) { e.stopPropagation(); handleDeleteRequest(id); } else if (e.target.closest('.pin-btn')) { e.stopPropagation(); togglePin(id); } else { openNoteEditor(id); } });
-
-    initializeNoteEditorListeners();
-
-    if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) { if(!isEditingNote) setEditingState(true); setTimeout(()=>applyFormat(b.dataset.format), 50); } });
+    // --- [REFINED] API Settings & Dynamic Model Selector Functions ---
     
-    if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { const noteContentTextAreaEl = document.querySelector('.note-content-textarea'); if(!noteContentTextAreaEl) return; if(!isEditingNote) setEditingState(true); setTimeout(() => { const t = document.title || '현재 학습'; noteContentTextAreaEl.value += `\n\n🔗 연관 학습: [[${t}]]`; saveNote(); }, 50); });
+    function createApiSettingsModal() {
+        const modal = document.createElement('div');
+        modal.id = 'api-settings-modal-overlay';
+        modal.className = 'custom-modal-overlay';
+        modal.innerHTML = `
+            <div class="custom-modal api-settings-modal">
+                <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg> 개인 API 설정 (BYOK)</h3>
+                <p class="api-modal-desc">기본 제공되는 모델 외에, 개인 API 키를 사용하여 더 다양하고 강력한 모델을 이용할 수 있습니다.</p>
+                <div class="api-form-section">
+                    <label for="api-key-input">API 키</label>
+                    <div class="api-key-wrapper">
+                        <input type="password" id="api-key-input" placeholder="sk-..., sk-ant-..., 또는 Google API 키를 입력하세요">
+                        <button id="verify-api-key-btn">키 검증 & 모델 로드</button>
+                    </div>
+                    <div id="api-key-status"></div>
+                </div>
+                <div class="api-form-section">
+                    <label for="api-model-select">사용 모델</label>
+                    <select id="api-model-select" disabled>
+                        <option value="">API 키를 먼저 검증해주세요</option>
+                    </select>
+                </div>
+                <div class="api-form-section">
+                    <label>토큰 한도 설정</label>
+                    <div class="token-limit-wrapper">
+                        <input type="number" id="max-output-tokens-input" placeholder="최대 출력 (예: 2048)">
+                    </div>
+                    <small>모델이 생성할 응답의 최대 길이를 제한합니다. (입력값 없을 시 모델 기본값 사용)</small>
+                </div>
+                <div class="api-form-section token-usage-section">
+                    <label>누적 토큰 사용량 (개인 키)</label>
+                    <div id="token-usage-display">
+                        <span>입력: 0</span> | <span>출력: 0</span> | <strong>총합: 0</strong>
+                    </div>
+                    <button id="reset-token-usage-btn">사용량 초기화</button>
+                    <small>Google 유료 모델은 응답에 토큰 정보를 포함하지 않아 집계되지 않습니다.</small>
+                </div>
+                <div class="custom-modal-actions">
+                    <button id="api-settings-cancel-btn" class="modal-btn">취소</button>
+                    <button id="api-settings-save-btn" class="modal-btn">저장</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
 
-    if (quizSubmitBtn) quizSubmitBtn.addEventListener('click', handleQuizSubmit);
+        apiSettingsModalOverlay = document.getElementById('api-settings-modal-overlay');
+        apiKeyInput = document.getElementById('api-key-input');
+        verifyApiKeyBtn = document.getElementById('verify-api-key-btn');
+        apiKeyStatus = document.getElementById('api-key-status');
+        apiModelSelect = document.getElementById('api-model-select');
+        maxOutputTokensInput = document.getElementById('max-output-tokens-input');
+        tokenUsageDisplay = document.getElementById('token-usage-display');
+        resetTokenUsageBtn = document.getElementById('reset-token-usage-btn');
+        apiSettingsSaveBtn = document.getElementById('api-settings-save-btn');
+        apiSettingsCancelBtn = document.getElementById('api-settings-cancel-btn');
+    }
 
-------[ 4. 전체 실행 로그 ]------
+    function openApiSettingsModal() {
+        loadApiSettings();
+        apiKeyInput.value = userApiSettings.apiKey;
+        maxOutputTokensInput.value = userApiSettings.maxOutputTokens;
+        populateModelSelector(userApiSettings.availableModels, userApiSettings.provider, userApiSettings.selectedModel);
+        if (userApiSettings.apiKey) {
+             apiKeyStatus.textContent = `✅ [${userApiSettings.provider}] 키가 활성화되어 있습니다.`;
+             apiKeyStatus.className = 'status-success';
+        } else {
+             apiKeyStatus.textContent = '';
+             apiKeyStatus.className = '';
+        }
+        renderTokenUsage();
+        apiSettingsModalOverlay.style.display = 'flex';
+    }
+
+    function closeApiSettingsModal() {
+        apiSettingsModalOverlay.style.display = 'none';
+        loadApiSettings(); 
+        updateChatHeaderModelSelector();
+    }
+
+    function loadApiSettings() {
+        const savedSettings = localStorage.getItem('userApiSettings');
+        if (savedSettings) {
+            userApiSettings = JSON.parse(savedSettings);
+            if (!userApiSettings.tokenUsage) { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; }
+            if (!userApiSettings.availableModels) { userApiSettings.availableModels = []; }
+        }
+    }
+
+    function saveApiSettings(closeModal = true) {
+        const key = apiKeyInput.value.trim();
+        if (key) {
+            userApiSettings.apiKey = key;
+            userApiSettings.selectedModel = apiModelSelect.value;
+            userApiSettings.maxOutputTokens = Number(maxOutputTokensInput.value) || 2048;
+            if (apiModelSelect && apiModelSelect.options.length > 0 && !apiModelSelect.disabled) {
+                 userApiSettings.availableModels = Array.from(apiModelSelect.options).map(opt => opt.value);
+            }
+        } else {
+            userApiSettings = { provider: null, apiKey: '', selectedModel: '', availableModels: [], maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 } };
+        }
+        localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
+        updateChatHeaderModelSelector();
+        if (closeModal) { closeApiSettingsModal(); }
+    }
+
+    function detectProvider(key) {
+        if (key.startsWith('sk-ant-api')) return 'anthropic';
+        if (key.startsWith('sk-')) return 'openai';
+        if (key.length > 35 && key.startsWith('AIza')) return 'google_paid';
+        return null;
+    }
+
+    async function handleVerifyApiKey() {
+        const key = apiKeyInput.value.trim();
+        if (!key) { apiKeyStatus.textContent = 'API 키를 입력해주세요.'; apiKeyStatus.className = 'status-error'; return; }
+        const provider = detectProvider(key);
+        if (!provider) { apiKeyStatus.textContent = '알 수 없는 형식의 API 키입니다. (OpenAI, Anthropic, Google 지원)'; apiKeyStatus.className = 'status-error'; return; }
+        userApiSettings.provider = provider;
+        apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`; apiKeyStatus.className = 'status-loading'; verifyApiKeyBtn.disabled = true;
+        try {
+            const models = await fetchAvailableModels(provider, key);
+            populateModelSelector(models, provider);
+            apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하고 저장하세요.`; apiKeyStatus.className = 'status-success'; apiModelSelect.disabled = false;
+        } catch (error) {
+            console.error("API Key Verification Error:", error);
+            apiKeyStatus.textContent = `❌ [${provider}] 키 검증 실패: ${error.message}`; apiKeyStatus.className = 'status-error'; apiModelSelect.innerHTML = '<option>키 검증에 실패했습니다</option>'; apiModelSelect.disabled = true;
+        } finally { verifyApiKeyBtn.disabled = false; }
+    }
+
+    async function fetchAvailableModels(provider, key) {
+        if (provider === 'openai') {
+            const response = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': `Bearer ${key}` } });
+            if (!response.ok) throw new Error('OpenAI 서버에서 모델 목록을 가져올 수 없습니다.');
+            const data = await response.json();
+            return data.data.filter(m => m.id.includes('gpt')).map(m => m.id).sort().reverse();
+        } else if (provider === 'anthropic') {
+            return ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-2.1'];
+        } else if (provider === 'google_paid') {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+            if (!response.ok) throw new Error('Google 서버에서 모델 목록을 가져올 수 없습니다.');
+            const data = await response.json();
+            return data.models.map(m => m.name.replace('models/', '')).filter(m => m.includes('gemini'));
+        }
+        return [];
+    }
+
+    function populateModelSelector(models, provider, selectedModel = null) {
+        apiModelSelect.innerHTML = '';
+        const effectiveModels = models || [];
+        if (provider && effectiveModels.length === 0) { if (provider === 'anthropic') { effectiveModels.push('claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'); } }
+        if (effectiveModels.length > 0) { effectiveModels.forEach(modelId => { const option = document.createElement('option'); option.value = modelId; option.textContent = modelId; if (modelId === selectedModel) { option.selected = true; } apiModelSelect.appendChild(option); }); apiModelSelect.disabled = false; }
+        else { apiModelSelect.innerHTML = '<option>사용 가능한 모델 없음</option>'; apiModelSelect.disabled = true; }
+    }
+    
+    function updateChatHeaderModelSelector() {
+        if (!aiModelSelector) return;
+        const DEFAULT_MODELS = [ { value: 'gemini-2.5-flash-preview-04-17', text: '⚡️ Gemini 2.5 Flash (최신)' }, { value: 'gemini-2.0-flash', text: '💡 Gemini 2.0 Flash (안정)' } ];
+        aiModelSelector.innerHTML = '';
+        if (userApiSettings.provider && userApiSettings.apiKey) {
+            const models_to_show = userApiSettings.availableModels || [];
+            if(models_to_show.length === 0 && userApiSettings.selectedModel) { models_to_show.push(userApiSettings.selectedModel); }
+            models_to_show.forEach(modelId => { const option = document.createElement('option'); option.value = modelId; option.textContent = `[개인] ${modelId}`; aiModelSelector.appendChild(option); });
+            aiModelSelector.value = userApiSettings.selectedModel; aiModelSelector.title = `${userApiSettings.provider} 모델을 선택합니다. (개인 키 사용 중)`;
+        } else {
+            DEFAULT_MODELS.forEach(model => { const option = document.createElement('option'); option.value = model.value; option.textContent = model.text; aiModelSelector.appendChild(option); });
+            const savedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
+            aiModelSelector.value = savedDefaultModel; aiModelSelector.title = 'AI 모델을 선택합니다.';
+        }
+    }
+
+    function renderTokenUsage() {
+        const { prompt, completion } = userApiSettings.tokenUsage;
+        const total = prompt + completion;
+        tokenUsageDisplay.innerHTML = `<span>입력: ${prompt.toLocaleString()}</span> | <span>출력: ${completion.toLocaleString()}</span> | <strong>총합: ${total.toLocaleString()}</strong>`;
+    }
+
+    function resetTokenUsage() { showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; saveApiSettings(false); renderTokenUsage(); }); }
+
+    // --- 4. Global Initialization ---
+    function initialize() {
+        if (!body || !wrapper) { console.error("Core layout elements not found."); return; }
+        updateClock(); setInterval(updateClock, 1000);
+        createApiSettingsModal();
+        const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
+        if (chatHeader) {
+            apiSettingsBtn = document.createElement('span'); apiSettingsBtn.id = 'api-settings-btn'; apiSettingsBtn.title = '개인 API 설정';
+            apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
+            chatHeader.appendChild(apiSettingsBtn);
+        }
+        loadApiSettings();
+        updateChatHeaderModelSelector();
+        initializeFirebase().then(() => { setupNavigator(); setupChatModeSelector(); initializeTooltips(); makePanelDraggable(chatPanel); makePanelDraggable(notesAppPanel); });
+
+        // Event Listeners
+        document.addEventListener('click', (e) => { handleTextSelection(e); if (!e.target.closest('.session-context-menu, .project-context-menu')) { removeContextMenu(); } });
+        if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
+        if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
+        if (themeToggle) { themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light'); }); if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); }
+        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); systemInfoWidget?.classList.toggle('tucked'); });
+        if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
+        if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
+        if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => { togglePanel(notesAppPanel); if(notesAppPanel.style.display === 'flex') renderNoteList(); });
+        if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
+        if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
+        if (deleteSessionBtn) deleteSessionBtn.addEventListener('click', () => handleDeleteSession(currentSessionId));
+        if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
+        if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
+        if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
+        if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
+        if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
+        if (quizSubmitBtn) quizSubmitBtn.addEventListener('click', () => { if (!currentQuizData || !quizResults) return; let score = 0; if (currentQuizData.questions.some((q, i) => !document.querySelector(`input[name="q-${i}"]:checked`))) { quizResults.textContent = "모든 문제에 답해주세요!"; return; } currentQuizData.questions.forEach((q, i) => { if(document.querySelector(`input[name="q-${i}"]:checked`).value === q.a) score++; }); quizResults.textContent = `결과: ${currentQuizData.questions.length} 중 ${score} 정답!`; });
         if(quizModalOverlay) quizModalOverlay.addEventListener('click', e => { if (e.target === quizModalOverlay) quizModalOverlay.style.display = 'none'; });
         if (addNewNoteBtn) addNewNoteBtn.addEventListener('click', () => addNote());
         if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
