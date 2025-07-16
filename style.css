@@ -372,48 +372,252 @@ body:dark-mode .send-to-note-btn { border-color: var(--sub-text-color-dark); col
 body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-light); color: var(--sub-text-color-light); }
 .send-to-note-btn:disabled { cursor: not-allowed; opacity: 0.5; border-color: gray; color: gray; }
 
-/* Notes App Panel Styles */
-#notes-app-panel { bottom: 100px; left: 100px; width: 400px; height: 600px; padding: 0; }
-.notes-view { display: none; flex-direction: column; height: 100%; }
-.notes-view.active { display: flex; }
-#note-list-view .panel-header .header-button-group { display: flex; gap: 10px; flex-wrap: wrap; }
-#note-list-view .list-header { padding: 10px 15px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
-body:not(.dark-mode) #note-list-view .list-header { border-bottom-color: var(--border-color-light); }
-#search-input { flex-grow: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
-body:not(.dark-mode) #search-input { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
-.notes-btn { padding: 8px 15px; border-radius: 20px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; display: flex; align-items: center; justify-content: center; gap: 6px; }
-body:not(.dark-mode) .notes-btn { background-color: var(--h2-color-light); }
-.notes-btn svg { width: 16px; height: 16px; fill: currentColor; }
+/* --- [REFINED] Notes App Panel Styles --- */
+#notes-app-panel {
+    bottom: 100px;
+    left: 100px;
+    width: 450px; /* Increased width for better layout */
+    height: 650px; /* Increased height */
+    padding: 0;
+    flex-direction: column; /* Ensure main panel is a flex column */
+}
+
+.notes-view {
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden; /* Prevent internal scrolling issues */
+}
+.notes-view.active {
+    display: flex; /* Shown when active */
+}
+
+/* Header for the list view */
+#note-list-view .panel-header {
+    flex-shrink: 0; /* Prevent header from shrinking */
+}
+#note-list-view .panel-header .header-button-group {
+    display: flex;
+    gap: 8px; /* Consistent gap */
+    flex-wrap: wrap; /* Allow buttons to wrap on smaller panel sizes */
+    justify-content: flex-end; /* Align buttons to the right */
+}
+
+/* Header for the search/list area */
+#note-list-view .list-header {
+    padding: 10px 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color-dark);
+    flex-shrink: 0; /* Prevent this header from shrinking */
+}
+body:not(.dark-mode) #note-list-view .list-header {
+    border-bottom-color: var(--border-color-light);
+}
+
+/* Search input styling */
+#search-input {
+    flex-grow: 1;
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color-dark);
+    background-color: var(--quote-bg-dark);
+    color: var(--text-color-dark);
+    outline: none; /* Remove default focus outline */
+}
+body:not(.dark-mode) #search-input {
+    border-color: var(--border-color-light);
+    background-color: var(--quote-bg-light);
+    color: var(--text-color-light);
+}
+
+/* General button styling for the notes app */
+.notes-btn {
+    padding: 8px 12px; /* Adjusted padding */
+    border-radius: 8px; /* More modern, less rounded */
+    border: none;
+    cursor: pointer;
+    background-color: var(--h2-color-dark);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: 'Gowun Batang', serif;
+    font-size: 0.9em;
+    transition: background-color 0.2s; /* Smooth transition */
+}
+body:not(.dark-mode) .notes-btn {
+    background-color: var(--h2-color-light);
+}
+.notes-btn:hover {
+    opacity: 0.9; /* Slight feedback on hover */
+}
+.notes-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
 
 #system-reset-btn { background-color: var(--incorrect-color); }
 #system-reset-btn:hover { background-color: #c9302c; }
 body:not(.dark-mode) #system-reset-btn:hover { background-color: #c9302c; }
 
-#notes-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
-.note-item { padding: 12px 15px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: background-color 0.2s; position: relative; }
-body:not(.dark-mode) .note-item:hover { background-color: var(--quote-bg-light); }
-body.dark-mode .note-item:hover { background-color: var(--quote-bg-dark); }
-.note-item.pinned { border-left: 4px solid var(--pin-color); }
-body:not(.dark-mode) .note-item.pinned { background-color: #fff9e8; }
-body.dark-mode .note-item.pinned { background-color: #2e281d; }
-.note-item-title { font-weight: bold; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.note-item-date { font-size: 0.8em; opacity: 0.7; }
-.note-item-actions { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; gap: 5px; opacity: 0; transition: opacity 0.2s; }
-.note-item:hover .note-item-actions { opacity: 1; }
-.item-action-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 5px; border-radius: 50%; line-height: 0; }
-.item-action-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
-.item-action-btn svg { fill: currentColor; }
-.pin-btn.pinned-active { color: var(--pin-color); }
-#note-editor-view .editor-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
-body:not(.dark-mode) #note-editor-view .editor-header { border-bottom-color: var(--border-color-light); }
-#note-title-input { font-size: 1.2em; font-weight: bold; width: 100%; border: none; background: transparent; padding: 10px 15px; color: var(--text-color-dark); }
-body:not(.dark-mode) #note-title-input { color: var(--text-color-light); }
-.format-toolbar { display: flex; gap: 10px; padding: 8px 15px; border-bottom: 1px solid var(--border-color-dark); }
-body:not(.dark-mode) .format-toolbar { border-bottom-color: var(--border-color-light); }
-.format-btn { background: none; border: 1px solid; border-radius: 5px; padding: 5px 10px; cursor: pointer; }
-#note-content-textarea { flex-grow: 1; width: 100%; border: none; background: transparent; padding: 15px; resize: none; font-family: 'Gowun Batang', serif; font-size: 1em; color: var(--text-color-dark); box-sizing: border-box; }
-body:not(.dark-mode) #note-content-textarea { color: var(--text-color-light); }
-#auto-save-status { font-size: 0.8em; padding: 5px 15px; text-align: right; opacity: 0.7; }
+#notes-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+.note-item {
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-left-color 0.2s;
+    position: relative;
+    border-left: 4px solid transparent; /* For pin indicator */
+}
+body:not(.dark-mode) .note-item:hover {
+    background-color: var(--quote-bg-light);
+}
+body.dark-mode .note-item:hover {
+    background-color: var(--quote-bg-dark);
+}
+.note-item.pinned {
+    border-left-color: var(--pin-color);
+}
+body:not(.dark-mode) .note-item.pinned {
+    background-color: #fff9e8;
+}
+body.dark-mode .note-item.pinned {
+    background-color: #2e281d;
+}
+.note-item-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.note-item-date {
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+.note-item-actions {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    background-color: inherit; /* Ensure actions background matches item */
+}
+.note-item:hover .note-item-actions {
+    opacity: 1;
+}
+.item-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 5px;
+    border-radius: 50%;
+    line-height: 0;
+    transition: background-color 0.2s;
+}
+.item-action-btn:hover {
+    background-color: rgba(128, 128, 128, 0.2);
+}
+.item-action-btn svg {
+    fill: currentColor;
+}
+.pin-btn.pinned-active {
+    color: var(--pin-color);
+}
+/* Header for the editor view */
+#note-editor-view .panel-header {
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* Title input for the note */
+#note-title-input {
+    font-size: 1.3em;
+    font-weight: bold;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 15px;
+    color: var(--text-color-dark);
+    outline: none;
+    border-bottom: 1px solid var(--border-color-dark);
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+body:not(.dark-mode) #note-title-input {
+    color: var(--text-color-light);
+    border-bottom-color: var(--border-color-light);
+}
+
+/* Toolbar for formatting options */
+.format-toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 8px 15px;
+    border-bottom: 1px solid var(--border-color-dark);
+    flex-shrink: 0;
+    flex-wrap: wrap; /* Allow wrapping */
+}
+body:not(.dark-mode) .format-toolbar {
+    border-bottom-color: var(--border-color-light);
+}
+.format-btn {
+    background: none;
+    border: 1px solid var(--border-color-dark);
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: var(--text-color-dark);
+}
+body:not(.dark-mode) .format-btn {
+    border-color: var(--border-color-light);
+    color: var(--text-color-light);
+}
+
+/* Main content area for the note */
+#note-content-textarea {
+    flex-grow: 1;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 15px;
+    resize: none;
+    font-family: 'Gowun Batang', serif;
+    font-size: 1.05em; /* Slightly larger for readability */
+    line-height: 1.8;
+    color: var(--text-color-dark);
+    box-sizing: border-box;
+    outline: none;
+}
+body:not(.dark-mode) #note-content-textarea {
+    color: var(--text-color-light);
+}
+
+/* Auto-save status indicator */
+#auto-save-status {
+    font-size: 0.8em;
+    padding: 0 10px 5px 0;
+    text-align: right;
+    opacity: 0.7;
+    transition: color 0.3s;
+    height: 20px; /* Reserve space */
+    flex-shrink: 0;
+}
 
 .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; }
 .custom-modal { padding: 30px; border-radius: 10px; width: 90%; max-width: 450px; text-align: center; }
