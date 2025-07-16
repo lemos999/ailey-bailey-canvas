@@ -951,58 +951,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupSystemInfoWidget() { if (!systemInfoWidget || !currentUser) return; const canvasIdDisplay = document.getElementById('canvas-id-display'); if (canvasIdDisplay) { canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; } const copyBtn = document.getElementById('copy-canvas-id'); if (copyBtn) { copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(canvasId).then(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" /></svg>'; setTimeout(() => { copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" /></svg>'; }, 1500); }); }); } const tooltip = document.createElement('div'); tooltip.className = 'system-tooltip'; tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; systemInfoWidget.appendChild(tooltip); }
     function initializeTooltips() { document.querySelectorAll('.keyword-chip[data-tooltip]').forEach(chip => { if (chip.querySelector('.tooltip')) { chip.classList.add('has-tooltip'); chip.querySelector('.tooltip').textContent = chip.dataset.tooltip; } }); document.querySelectorAll('.content-section strong[data-tooltip]').forEach(highlight => { if(!highlight.querySelector('.tooltip')) { highlight.classList.add('has-tooltip'); const tooltipElement = document.createElement('span'); tooltipElement.className = 'tooltip'; tooltipElement.textContent = highlight.dataset.tooltip; highlight.appendChild(tooltipElement); } }); }
     function makePanelDraggable(panelElement) { if(!panelElement) return; const header = panelElement.querySelector('.panel-header'); if(!header) return; let isDragging = false, offset = { x: 0, y: 0 }; const onMouseMove = (e) => { if (isDragging) { panelElement.style.left = (e.clientX + offset.x) + 'px'; panelElement.style.top = (e.clientY + offset.y) + 'px'; } }; const onMouseUp = () => { isDragging = false; panelElement.classList.remove('is-dragging'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }; header.addEventListener('mousedown', e => { if (e.target.closest('button, input, select, .close-btn, #delete-session-btn, #chat-mode-selector, #api-settings-btn')) return; isDragging = true; panelElement.classList.add('is-dragging'); offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); }); }
-    function togglePanel(panelElement, forceShow = null) {
-        if (!panelElement) return;
-        // Determine the current 'shown' state based on visibility/opacity for smooth transitions
-        const isCurrentlyVisible = panelElement.style.visibility === 'visible' && panelElement.style.opacity === '1';
-        const show = forceShow !== null ? forceShow : !isCurrentlyVisible; // Toggle if forceShow is null
-
-        if (show) {
-            panelElement.style.visibility = 'visible';
-            panelElement.style.opacity = '1';
-            panelElement.style.transform = 'translateY(0)';
-        } else {
-            panelElement.style.opacity = '0';
-            panelElement.style.transform = 'translateY(20px)';
-            // Wait for the transition to finish before setting visibility to 'hidden'
-            // This timeout must match the transition duration set in CSS (.draggable-panel)
-            setTimeout(() => {
-                panelElement.style.visibility = 'hidden';
-            }, 300); // 300ms matches the CSS transition duration
-        }
-    }
+    function togglePanel(panelElement, forceShow = null) { if (!panelElement) return; const show = forceShow !== null ? forceShow : panelElement.style.display !== 'flex'; panelElement.style.display = show ? 'flex' : 'none'; }
     function setupNavigator() { const scrollNav = document.getElementById('scroll-nav'); if (!scrollNav || !learningContent) return; const headers = learningContent.querySelectorAll('h2, #section-4 h3, #section-5 h3, #section-6 h3'); if (headers.length === 0) { scrollNav.style.display = 'none'; if(wrapper) wrapper.classList.add('toc-hidden'); return; } scrollNav.style.display = 'block'; if(wrapper) wrapper.classList.remove('toc-hidden'); const navList = document.createElement('ul'); headers.forEach((header, index) => { let targetElement = header.closest('.content-section'); if (targetElement && !targetElement.id) targetElement.id = `nav-target-${index}`; if (targetElement) { const listItem = document.createElement('li'); const link = document.createElement('a'); let navText = header.textContent.trim().replace(/\[|\]|🤓|⏳|📖/g, '').trim(); link.textContent = navText.substring(0, 25); link.href = `#${targetElement.id}`; if (header.tagName === 'H3') { link.style.paddingLeft = '25px'; link.style.fontSize = '0.9em'; } listItem.appendChild(link); navList.appendChild(listItem); } }); scrollNav.innerHTML = '<h3>학습 내비게이션</h3>'; scrollNav.appendChild(navList); const links = scrollNav.querySelectorAll('a'); const observer = new IntersectionObserver(entries => { entries.forEach(entry => { const id = entry.target.getAttribute('id'); const navLink = scrollNav.querySelector(`a[href="#${id}"]`); if (navLink && entry.isIntersecting && entry.intersectionRatio > 0.5) { links.forEach(l => l.classList.remove('active')); navLink.classList.add('active'); } }); }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 }); headers.forEach(header => { const target = header.closest('.content-section'); if (target) observer.observe(target); }); }
-    function handleTextSelection(e) {
-        if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu, .session-context-menu')) return;
-        const selection = window.getSelection();
-        const selectedText = selection.toString().trim();
-        removeContextMenu();
-        const popover = selectionPopover; // Get popover element once
-
-        if (selectedText.length > 3) {
-            lastSelectedText = selectedText;
-            const range = selection.getRangeAt(0);
-            const rect = range.getBoundingClientRect();
-            let top = rect.top + window.scrollY - popover.offsetHeight - 10;
-            let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2);
-
-            popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`;
-            popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`;
-
-            // Apply smooth transition properties
-            popover.style.visibility = 'visible';
-            popover.style.opacity = '1';
-            popover.style.transform = 'scale(1)'; // Scale up from 0.9 (initial state in CSS)
-
-        } else if (!e.target.closest('#selection-popover')) {
-            // Smoothly hide the popover
-            popover.style.opacity = '0';
-            popover.style.transform = 'scale(0.9)'; // Scale down
-            setTimeout(() => {
-                popover.style.visibility = 'hidden';
-            }, 200); // 200ms matches CSS transition duration
-        }
-    }
+    function handleTextSelection(e) { if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu, .session-context-menu')) return; const selection = window.getSelection(); const selectedText = selection.toString().trim(); removeContextMenu(); if (selectedText.length > 3) { lastSelectedText = selectedText; const range = selection.getRangeAt(0); const rect = range.getBoundingClientRect(); const popover = selectionPopover; let top = rect.top + window.scrollY - popover.offsetHeight - 10; let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2); popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`; popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`; popover.style.display = 'flex'; } else if (!e.target.closest('#selection-popover')) { selectionPopover.style.display = 'none'; } }
     function handlePopoverAskAi() { if (!lastSelectedText || !chatInput) return; togglePanel(chatPanel, true); handleNewChat(); setTimeout(() => { chatInput.value = `"${lastSelectedText}"\n\n이 내용에 대해 더 자세히 설명해줄래?`; chatInput.style.height = (chatInput.scrollHeight) + 'px'; chatInput.focus(); }, 100); selectionPopover.style.display = 'none'; }
     function handlePopoverAddNote() { if (!lastSelectedText) return; addNote(`> ${lastSelectedText}\n\n`); selectionPopover.style.display = 'none'; }
     function openPromptModal() { if (customPromptInput) customPromptInput.value = customPrompt; if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; }
