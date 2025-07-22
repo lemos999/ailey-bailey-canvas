@@ -1,209 +1,177 @@
 /*
 --- Ailey & Bailey Canvas ---
-File: api-handler.js
-Version: 12.0.2 (Model Update)
+File: api-settings.js
+Version: 12.0.3 (Circular Dependency Fix)
 Architect: [Username] & System Architect CodeMaster
-Description: This module is responsible for all interactions with external AI APIs. **Update: Changed the fallback default model to 'gemini-2.0-flash' to align with new requirements.**
+Description: This dedicated module handles all functionality related to the 'API Settings' modal. **Fix: Refactored 'saveApiSettings' to be an internal function and added a simple 'persistApiSettings' export to break a circular dependency chain with api-handler.js and chat-ui.js.**
 */
 
 import { state } from './state.js';
-import { renderChatMessages } from './chat-ui.js';
-import { saveApiSettings } from './api-settings.js';
-import { renderSidebarContent } from './chat-ui.js';
+import { showModal } from './ui-helpers.js';
+import { updateChatHeaderModelSelector, populateModelSelector, renderTokenUsage } from './chat-ui.js';
 
-let chatInput, chatSendBtn, chatWelcomeMessage, chatMessages;
+// --- Element Cache ---
+let apiSettingsModalOverlay, apiKeyInput, verifyApiKeyBtn, apiKeyStatus,
+    apiModelSelect, maxOutputTokensInput,
+    apiSettingsSaveBtn, apiSettingsCancelBtn, apiSettingsBtn;
 
 function queryElements() {
-    chatInput = document.getElementById('chat-input');
-    chatSendBtn = document.getElementById('chat-send-btn');
-    chatWelcomeMessage = document.getElementById('chat-welcome-message');
-    chatMessages = document.getElementById('chat-messages');
+    apiSettingsBtn = document.getElementById('api-settings-btn');
+    apiSettingsModalOverlay = document.getElementById('api-settings-modal-overlay');
+    apiKeyInput = document.getElementById('api-key-input');
+    verifyApiKeyBtn = document.getElementById('verify-api-key-btn');
+    apiKeyStatus = document.getElementById('api-key-status');
+    apiModelSelect = document.getElementById('api-model-select');
+    maxOutputTokensInput = document.getElementById('max-output-tokens-input');
+    apiSettingsSaveBtn = document.getElementById('api-settings-save-btn');
+    apiSettingsCancelBtn = document.getElementById('api-settings-cancel-btn');
 }
 
-export function initializeApiHandler() {
+export function initializeApiSettings() {
     queryElements();
+    loadApiSettings(); // Load settings on initialization
+    setupEventListeners();
 }
 
-export async function handleChatSend() {
-    if (!chatInput || chatInput.disabled) return;
-    const query = chatInput.value.trim();
-    if (!query) return;
+function setupEventListeners() {
+    const resetTokenUsageBtn = document.getElementById('reset-token-usage-btn');
+    if (apiSettingsBtn) apiSettingsBtn.addEventListener('click', openApiSettingsModal);
+    if (apiSettingsCancelBtn) apiSettingsCancelBtn.addEventListener('click', closeApiSettingsModal);
+    if (apiSettingsSaveBtn) apiSettingsSaveBtn.addEventListener('click', () => saveApiSettings(true));
+    if (verifyApiKeyBtn) verifyApiKeyBtn.addEventListener('click', handleVerifyApiKey);
+    if (resetTokenUsageBtn) resetTokenUsageBtn.addEventListener('click', resetTokenUsage);
+    if (apiSettingsModalOverlay) apiSettingsModalOverlay.addEventListener('click', (e) => {
+        if (e.target === apiSettingsModalOverlay) closeApiSettingsModal();
+    });
+}
 
-    chatInput.value = '';
-    chatInput.style.height = 'auto';
-    chatInput.disabled = true;
-    chatSendBtn.disabled = true;
-
-    const userMessage = { role: 'user', content: query, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
-    const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
-    let sessionRef;
-    let isNewSession = false;
-
-    if (!state.currentSessionId) {
-        isNewSession = true;
-        const activeProject = document.querySelector('.project-header.active-drop-target');
-        const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
-        if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-        if (chatMessages) chatMessages.style.display = 'flex';
-        
-        const displayUserMessage = { ...userMessage, timestamp: new Date() };
-        renderChatMessages({ messages: [displayUserMessage, loadingMessage] });
-        
-        const newSessionData = {
-            title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-            messages: [userMessage],
-            mode: state.selectedMode,
-            projectId: newSessionProjectId,
-            isPinned: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        sessionRef = await state.chatSessionsCollectionRef.add(newSessionData);
-        state.currentSessionId = sessionRef.id;
+function openApiSettingsModal() {
+    loadApiSettings();
+    if (!apiSettingsModalOverlay) return;
+    
+    apiKeyInput.value = state.userApiSettings.apiKey;
+    maxOutputTokensInput.value = state.userApiSettings.maxOutputTokens;
+    updateChatHeaderModelSelector(state.userApiSettings, true);
+    
+    if (state.userApiSettings.apiKey && state.userApiSettings.provider) {
+         apiKeyStatus.textContent = `✅ [${state.userApiSettings.provider}] 키가 활성화되어 있습니다.`;
+         apiKeyStatus.className = 'status-success';
     } else {
-        sessionRef = state.chatSessionsCollectionRef.doc(state.currentSessionId);
-        const currentSessionData = state.localChatSessionsCache.find(s => s.id === state.currentSessionId);
-        
-        const displayMessages = (currentSessionData.messages || []).map(m => ({ ...m, timestamp: m.timestamp?.toDate() }));
-        displayMessages.push({ ...userMessage, timestamp: new Date() }, loadingMessage);
-        renderChatMessages({ messages: displayMessages });
-        
-        await sessionRef.update({
-            messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+         apiKeyStatus.textContent = '';
+         apiKeyStatus.className = '';
     }
     
-    const startTime = performance.now();
-    try {
-        const currentSessionData = state.localChatSessionsCache.find(s => s.id === state.currentSessionId);
-        const historyForApi = (currentSessionData?.messages || []).concat(userMessage)
-                                .map(m => ({ role: m.role, content: m.content }));
+    renderTokenUsage();
+    apiSettingsModalOverlay.style.display = 'flex';
+}
 
-        let aiRes, usageData;
-        
-        if (state.userApiSettings.provider && state.userApiSettings.apiKey && state.userApiSettings.selectedModel) {
-            // Paid API logic
-            const requestDetails = buildApiRequest(state.userApiSettings.provider, state.userApiSettings.selectedModel, historyForApi, state.userApiSettings.maxOutputTokens);
-            const res = await fetch(requestDetails.url, requestDetails.options);
-            if (!res.ok) { const errorBody = await res.text(); throw new Error(`API Error ${res.status}: ${errorBody}`); }
-            const result = await res.json();
-            const parsed = parseApiResponse(state.userApiSettings.provider, result);
-            aiRes = parsed.content;
-            usageData = parsed.usage;
-            if (usageData) { 
-                state.userApiSettings.tokenUsage.prompt += usageData.prompt;
-                state.userApiSettings.tokenUsage.completion += usageData.completion;
-                saveApiSettings(false); // Save without closing modal
-            }
-        } else {
-            // Default Google API logic
-            const prompt = `Based on the following query, provide a step-by-step reasoning process if it is complex. The reasoning must be encapsulated within [REASONING_START] and [REASONING_END] tags. Each step must follow the format: SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}. For simple queries, omit the reasoning part. The final answer should be in a friendly, informal Korean tone. Query: "${query}"`;
-            const apiMessages = [{ role: 'user', parts: [{ text: prompt }] }];
-            
-            // [UPDATE] Changed the fallback default model
-            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-2.0-flash'; 
-            
-            const GOOGLE_API_KEY = typeof __google_api_key !== 'undefined' ? __google_api_key : null;
-            if (!GOOGLE_API_KEY) throw new Error("Default API Key is not configured.");
-            
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=${GOOGLE_API_KEY}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: apiMessages })
-            });
-            if (!res.ok) throw new Error(`Google API Error ${res.status}`);
-            const result = await res.json();
-            aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
-        }
-        
-        const endTime = performance.now();
-        const duration = ((endTime - startTime) / 1000).toFixed(2);
-        const aiMessage = { role: 'ai', content: aiRes, timestamp: firebase.firestore.FieldValue.serverTimestamp(), duration: duration };
-        
-        await sessionRef.update({
-            messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+function closeApiSettingsModal() {
+    if (!apiSettingsModalOverlay) return;
+    apiSettingsModalOverlay.style.display = 'none';
+    loadApiSettings(); 
+    updateChatHeaderModelSelector(state.userApiSettings, false);
+}
 
-    } catch (e) {
-        console.error("Chat send error:", e);
-        const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
-        await sessionRef.update({ messages: firebase.firestore.FieldValue.arrayUnion(errorMessage) });
-    } finally {
-        chatInput.disabled = false;
-        chatSendBtn.disabled = false;
-        chatInput.focus();
-        if (isNewSession) {
-            renderSidebarContent(); // Update sidebar to show the new session
-        }
+function loadApiSettings() {
+    const savedSettings = localStorage.getItem('userApiSettings');
+    if (savedSettings) {
+        state.userApiSettings = JSON.parse(savedSettings);
+        if (!state.userApiSettings.tokenUsage) state.userApiSettings.tokenUsage = { prompt: 0, completion: 0 };
+        if (!state.userApiSettings.availableModels) state.userApiSettings.availableModels = [];
     }
 }
 
-function buildApiRequest(provider, model, messages, maxTokens) {
-    const history = messages.map(msg => ({
-        role: msg.role === 'ai' ? 'assistant' : 'user',
-        content: msg.content
-    }));
-
-    if (provider === 'openai') {
-        return {
-            url: 'https://api.openai.com/v1/chat/completions',
-            options: {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.userApiSettings.apiKey}` },
-                body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 })
-            }
-        };
-    } else if (provider === 'anthropic') {
-         return {
-             url: 'https://api.anthropic.com/v1/messages',
-             options: {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json', 'x-api-key': state.userApiSettings.apiKey, 'anthropic-version': '2023-06-01' },
-                 body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 })
-             }
-         };
-    } else if (provider === 'google_paid') {
-        const googleHistory = messages.map(msg => ({
-            role: msg.role === 'ai' ? 'model' : 'user',
-            parts: [{ text: msg.content }]
-        }));
-        return {
-            url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${state.userApiSettings.apiKey}`,
-            options: {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: googleHistory, generationConfig: { maxOutputTokens: Number(maxTokens) || 2048 } })
-            }
-        };
+// [FIX] This function is now internal to the module and not exported.
+function saveApiSettings(closeModal = true) {
+    const key = apiKeyInput.value.trim();
+    if (key) {
+        state.userApiSettings.apiKey = key;
+        state.userApiSettings.selectedModel = apiModelSelect.value;
+        state.userApiSettings.maxOutputTokens = Number(maxOutputTokensInput.value) || 2048;
+        if (apiModelSelect && apiModelSelect.options.length > 0 && !apiModelSelect.disabled) {
+             state.userApiSettings.availableModels = Array.from(apiModelSelect.options).map(opt => opt.value);
+        }
+    } else {
+        state.userApiSettings = { provider: null, apiKey: '', selectedModel: '', availableModels: [], maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 } };
     }
-    throw new Error(`Unsupported provider: ${provider}`);
+    persistApiSettings(); // Use the new persistence function
+    updateChatHeaderModelSelector(state.userApiSettings, false);
+    if (closeModal) {
+        closeApiSettingsModal();
+    }
 }
 
-function parseApiResponse(provider, result) {
+// [FIX] New simple exportable function to break circular dependency.
+export function persistApiSettings() {
+    localStorage.setItem('userApiSettings', JSON.stringify(state.userApiSettings));
+}
+
+function detectProvider(key) {
+    if (key.startsWith('sk-ant-api')) return 'anthropic';
+    if (key.startsWith('sk-')) return 'openai';
+    if (key.length > 35 && key.startsWith('AIza')) return 'google_paid';
+    return null;
+}
+
+async function handleVerifyApiKey() {
+    const key = apiKeyInput.value.trim();
+    if (!key) {
+        apiKeyStatus.textContent = 'API 키를 입력해주세요.';
+        apiKeyStatus.className = 'status-error';
+        return;
+    }
+    
+    const provider = detectProvider(key);
+    if (!provider) {
+        apiKeyStatus.textContent = '알 수 없는 형식의 API 키입니다. (OpenAI, Anthropic, Google 지원)';
+        apiKeyStatus.className = 'status-error';
+        return;
+    }
+    
+    state.userApiSettings.provider = provider;
+    apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`;
+    apiKeyStatus.className = 'status-loading';
+    verifyApiKeyBtn.disabled = true;
+    
     try {
-        if (provider === 'openai') {
-            return {
-                content: result.choices[0].message.content,
-                usage: { prompt: result.usage.prompt_tokens, completion: result.usage.completion_tokens }
-            };
-        }
-        else if (provider === 'anthropic') {
-            return {
-                content: result.content[0].text,
-                usage: { prompt: result.usage.input_tokens, completion: result.usage.output_tokens }
-            };
-        }
-        else if (provider === 'google_paid') {
-            return {
-                content: result.candidates[0].content.parts[0].text,
-                usage: null // Google's API response for this endpoint doesn't provide token usage details.
-            };
-        }
+        const models = await fetchAvailableModels(provider, key);
+        state.userApiSettings.availableModels = models;
+        populateModelSelector(models, provider);
+        apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하고 저장하세요.`;
+        apiKeyStatus.className = 'status-success';
+        apiModelSelect.disabled = false;
     } catch (error) {
-        console.error(`Error parsing ${provider} response:`, error, result);
-        return { content: 'API 응답을 파싱하는 중 오류가 발생했습니다.', usage: null };
+        console.error("API Key Verification Error:", error);
+        apiKeyStatus.textContent = `❌ [${provider}] 키 검증 실패: ${error.message}`;
+        apiKeyStatus.className = 'status-error';
+        apiModelSelect.innerHTML = '<option>키 검증에 실패했습니다</option>';
+        apiModelSelect.disabled = true;
+    } finally {
+        verifyApiKeyBtn.disabled = false;
     }
-    return { content: '알 수 없는 제공사입니다.', usage: null };
+}
+
+async function fetchAvailableModels(provider, key) {
+    if (provider === 'openai') {
+        const response = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': `Bearer ${key}` } });
+        if (!response.ok) throw new Error('OpenAI 서버에서 모델 목록을 가져올 수 없습니다.');
+        const data = await response.json();
+        return data.data.filter(m => m.id.includes('gpt')).map(m => m.id).sort().reverse();
+    } else if (provider === 'anthropic') {
+        return ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-2.1'];
+    } else if (provider === 'google_paid') {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+        if (!response.ok) throw new Error('Google 서버에서 모델 목록을 가져올 수 없습니다.');
+        const data = await response.json();
+        return data.models.map(m => m.name.replace('models/', '')).filter(m => m.includes('gemini'));
+    }
+    return [];
+}
+
+function resetTokenUsage() {
+    showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => {
+        state.userApiSettings.tokenUsage = { prompt: 0, completion: 0 };
+        persistApiSettings();
+        renderTokenUsage();
+    });
 }
