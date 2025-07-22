@@ -1,0 +1,76 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: panels.css
+Version: 11.0 (CSS Module Structure)
+Architect: [Username] & System Architect CodeMaster
+Description: Defines common styles for all draggable panels and panel-specific layouts.
+*/
+
+/* Draggable Panel Base Styles */
+.draggable-panel { 
+    position: fixed; 
+    border-radius: 10px; 
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
+    display: none; 
+    flex-direction: column; 
+    resize: both; 
+    overflow: auto; 
+    transition: background-color 0.3s; 
+    z-index: 1100; 
+}
+
+.draggable-panel.is-dragging { 
+    z-index: 1200; 
+}
+
+body.dark-mode .draggable-panel { background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) .draggable-panel { background-color: var(--container-bg-light); border: 1px solid var(--border-color-light); }
+
+.panel-header { 
+    padding: 10px; 
+    cursor: move; 
+    font-family: 'Noto Serif KR', serif; 
+    font-weight: bold; 
+    user-select: none; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    flex-wrap: wrap; 
+    transition: background-color 0.3s, border-color 0.3s; 
+    position: sticky; 
+    top: 0; 
+    z-index: 1; 
+}
+
+body.dark-mode .panel-header { background-color: #2a2a2a; border-bottom: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1px solid var(--border-color-light); }
+
+.panel-header .close-btn { 
+    cursor: pointer; 
+    background: none; 
+    border: none; 
+    padding: 0; 
+    line-height: 0; 
+}
+
+.panel-header .close-btn svg { 
+    fill: currentColor; 
+}
+
+/* Panel-specific Layouts */
+#chat-panel { 
+    bottom: 100px; 
+    right: 100px; 
+    height: 600px; 
+    width: 700px; 
+    flex-direction: row; 
+    overflow: hidden; 
+}
+
+#notes-app-panel { 
+    bottom: 100px; 
+    left: 100px; 
+    width: 400px; 
+    height: 600px; 
+    padding: 0; 
+}
