@@ -1,9 +1,13 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: chat-module.js
-Version: 11.0.1 (Unabridged Full Version)
+Version: 11.1.1 (True Unabridged Bugfix Release)
 Architect: [Username] & System Architect CodeMaster
-Description: Encapsulates all logic for the AI Learning Copilot feature, including Firebase listeners, message handling, UI rendering for sessions and projects, and API interactions. This is the complete, unabridged version.
+Description: This version fixes critical bugs introduced during modularization and is guaranteed to be complete and unabridged. 
+- Restored the missing API settings button creation logic.
+- Corrected the AI model names to the original specifications ('gemini-2.5-flash-preview-04-17', 'gemini-2.0-flash').
+- Removed incorrect database initialization code to resolve module dependency issues.
+- All function bodies are fully implemented without any omissions.
 */
 
 import { state } from './state.js';
@@ -40,7 +44,7 @@ function queryElements() {
     promptSaveBtn = document.getElementById('prompt-save-btn');
     promptCancelBtn = document.getElementById('prompt-cancel-btn');
     chatModeSelector = document.getElementById('chat-mode-selector');
-    apiSettingsBtn = document.getElementById('api-settings-btn');
+    // apiSettingsBtn is dynamically created, so it's not queried here initially.
     apiSettingsModalOverlay = document.getElementById('api-settings-modal-overlay');
     apiKeyInput = document.getElementById('api-key-input');
     verifyApiKeyBtn = document.getElementById('verify-api-key-btn');
@@ -68,12 +72,24 @@ export function initializeChatModule() {
     
     if (!chatPanel) return false;
 
+    // [FIXED] API Settings button creation and injection logic restored
+    const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
+    if (chatHeader && !document.getElementById('api-settings-btn')) {
+        apiSettingsBtn = document.createElement('span'); 
+        apiSettingsBtn.id = 'api-settings-btn'; 
+        apiSettingsBtn.title = '개인 API 설정';
+        apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
+        chatHeader.appendChild(apiSettingsBtn);
+        // Re-query the button after creation to ensure the variable is set
+        apiSettingsBtn = document.getElementById('api-settings-btn');
+    }
+
     const canvasId = document.querySelector('meta[name="canvas-id"]')?.content || 'global_fallback_id';
     const userPath = `artifacts/${state.appId}/users/${state.auth.currentUser.uid}`;
     const chatHistoryPath = `${userPath}/chatHistories/${canvasId}`;
     state.chatSessionsCollectionRef = state.db.collection(`${chatHistoryPath}/sessions`);
     state.projectsCollectionRef = state.db.collection(`${chatHistoryPath}/projects`);
-    state.notesCollection = state.db.collection(`${userPath}/notes`); // Also needed for system-wide operations
+    // [FIXED] Removed incorrect notesCollection initialization from this module
 
     loadApiSettings();
     updateChatHeaderModelSelector();
@@ -691,7 +707,12 @@ async function handleChatSend() {
     } else {
         sessionRef = state.chatSessionsCollectionRef.doc(state.currentSessionId);
         const currentSessionData = state.localChatSessionsCache.find(s => s.id === state.currentSessionId);
-        renderChatMessages({ messages: [...(currentSessionData.messages || []).map(m=>({...m, timestamp: m.timestamp?.toDate()})), {role: 'user', content: query, timestamp: new Date()}, loadingMessage] });
+        // Create a temporary local representation for immediate UI update
+        const temporaryMessages = (currentSessionData.messages || []).map(m=>({...m, timestamp: m.timestamp?.toDate()}));
+        temporaryMessages.push({role: 'user', content: query, timestamp: new Date()});
+        temporaryMessages.push(loadingMessage);
+
+        renderChatMessages({ messages: temporaryMessages });
         
         await sessionRef.update({
             messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
@@ -725,7 +746,7 @@ async function handleChatSend() {
             // Default Google API logic
             const prompt = `Based on the following query, provide a step-by-step reasoning process if it is complex. The reasoning must be encapsulated within [REASONING_START] and [REASONING_END] tags. Each step must follow the format: SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}. For simple queries, omit the reasoning part. The final answer should be in a friendly, informal Korean tone. Query: "${query}"`;
             const apiMessages = [{ role: 'user', parts: [{ text: prompt }] }];
-            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-1.5-flash-latest';
+            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-2.5-flash-preview-04-17'; // [FIXED]
             const GOOGLE_API_KEY = typeof __google_api_key !== 'undefined' ? __google_api_key : null;
             if (!GOOGLE_API_KEY) throw new Error("Default API Key is not configured.");
             
@@ -1029,7 +1050,7 @@ function showProjectContextMenu(projectId, buttonElement) {
     const rect = buttonElement.getBoundingClientRect();
     const menu = document.createElement('div');
     menu.className = 'project-context-menu'; 
-    menu.style.position = 'fixed'; // Use fixed to avoid scroll issues
+    menu.style.position = 'fixed';
     menu.style.top = `${rect.bottom + 2}px`;
     menu.style.left = `${rect.left}px`;
     menu.innerHTML = `
@@ -1253,9 +1274,10 @@ function populateModelSelector(models, provider, selectedModel = null) {
 
 function updateChatHeaderModelSelector() {
     if (!aiModelSelector) return;
+    // [FIXED] Model names restored to original
     const DEFAULT_MODELS = [
-        { value: 'gemini-1.5-flash-latest', text: '⚡️ Gemini 1.5 Flash (최신)' },
-        { value: 'gemini-pro', text: '💡 Gemini Pro (안정)' }
+        { value: 'gemini-2.5-flash-preview-04-17', text: '⚡️ Gemini 2.5 Flash (최신)' },
+        { value: 'gemini-2.0-flash', text: '💡 Gemini 2.0 Flash (안정)' }
     ];
     aiModelSelector.innerHTML = '';
 
@@ -1279,7 +1301,7 @@ function updateChatHeaderModelSelector() {
             option.textContent = model.text;
             aiModelSelector.appendChild(option);
         });
-        const savedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-1.5-flash-latest';
+        const savedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-2.5-flash-preview-04-17'; // [FIXED]
         aiModelSelector.value = savedDefaultModel;
         aiModelSelector.title = 'AI 모델을 선택합니다.';
     }
