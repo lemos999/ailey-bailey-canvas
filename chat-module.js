@@ -1,22 +1,23 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: chat-module.js (Orchestrator)
-Version: 12.0 (Chat Module Refactor)
+Version: 12.0.2 (Error Fix)
 Architect: [Username] & System Architect CodeMaster
-Description: This module now acts as an orchestrator for the entire chat system. Its sole responsibility is to import and initialize all specialized chat-related sub-modules in the correct order.
+Description: This module now acts as an orchestrator for the entire chat system. Its sole responsibility is to import and initialize all specialized chat-related sub-modules in the correct order. **Fix: Added 'chatInput', 'chatMessages', and 'popoverAddNote' to variable declarations to resolve a ReferenceError during event listener setup.**
 */
 
 import { initializeApiSettings } from './api-settings.js';
 import { initializeApiHandler } from './api-handler.js';
 import { initializeDataLayer } from './chat-data.js';
-import { initializeUI, openPromptModal, setupChatModeSelector } from './chat-ui.js';
+import { initializeUI, openPromptModal } from './chat-ui.js';
 import { handleSidebarClick, handleSidebarContextMenu, handleDragStart, handleDragEnd, handleDragOver, handleDragLeave, handleDrop, handleReasoningBlockClick, handlePopoverAskAi } from './chat-events.js';
 import { initializeSystemData } from './system-data.js';
 import { initializeQuiz } from './quiz.js';
 import { state } from './state.js';
 
+// [FIX] Event listener setup에 필요한 변수들 선언
 let chatPanel, chatForm, newChatBtn, newProjectBtn, searchSessionsInput,
-    sessionListContainer, promptSaveBtn, promptCancelBtn, popoverAskAi;
+    sessionListContainer, promptSaveBtn, promptCancelBtn, popoverAskAi, chatInput, chatMessages, popoverAddNote;
 
 function queryElements() {
     chatPanel = document.getElementById('chat-panel');
@@ -28,6 +29,9 @@ function queryElements() {
     promptSaveBtn = document.getElementById('prompt-save-btn');
     promptCancelBtn = document.getElementById('prompt-cancel-btn');
     popoverAskAi = document.getElementById('popover-ask-ai');
+    chatInput = document.getElementById('chat-input');
+    chatMessages = document.getElementById('chat-messages');
+    popoverAddNote = document.getElementById('popover-add-note'); // notes-module과 공유하지만 여기서도 필요
 }
 
 export function initializeChatModule() {
@@ -89,6 +93,10 @@ function setupOrchestrationEventListeners() {
     }
     
     if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
+    if (popoverAddNote) popoverAddNote.addEventListener('click', () => {
+        // notes-module의 handlePopoverAddNote를 동적으로 import하여 사용
+        import('./notes-module.js').then(module => module.handlePopoverAddNote());
+    });
 
     // Custom prompt modal requires functions from both UI and state
     if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
