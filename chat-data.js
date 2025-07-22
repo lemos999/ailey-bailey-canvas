@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: chat-data.js
-Version: 12.0 (Chat Module Refactor)
+Version: 12.0.2 (Critical Fix)
 Architect: [Username] & System Architect CodeMaster
-Description: This module manages all data interactions with Firebase Firestore for the chat functionality. It handles listeners, CRUD operations for projects and sessions, and keeps the local state cache in sync.
+Description: This module manages all data interactions with Firebase Firestore for the chat functionality. **Fix: Added missing collection reference initializations in 'initializeDataLayer' to resolve a critical 'TypeError: Cannot read properties of null (reading 'add')' when creating a new chat.**
 */
 
 import { state } from './state.js';
@@ -24,6 +24,14 @@ function queryElements() {
 
 export function initializeDataLayer() {
     queryElements();
+
+    // [FIX] CRITICAL: Initialize Firestore collection references. This was the cause of the TypeError.
+    const canvasId = document.querySelector('meta[name="canvas-id"]')?.content || 'global_fallback_id';
+    const userPath = `artifacts/${state.appId}/users/${state.auth.currentUser.uid}`;
+    const chatHistoryPath = `${userPath}/chatHistories/${canvasId}`;
+    state.chatSessionsCollectionRef = state.db.collection(`${chatHistoryPath}/sessions`);
+    state.projectsCollectionRef = state.db.collection(`${chatHistoryPath}/projects`);
+    
     listenToProjects();
     listenToChatSessions();
 }
