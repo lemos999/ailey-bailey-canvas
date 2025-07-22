@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: chat-ui.js
-Version: 12.0.1 (Error Fix)
+Version: 12.0.2 (Model Update)
 Architect: [Username & System Architect CodeMaster]
-Description: This module is exclusively responsible for rendering all UI components of the chat system. It takes data from other modules and updates the DOM, handling everything from the sidebar and messages to context menus. **Fix: Added 'aiModelSelect' to variable declarations to resolve a ReferenceError during initialization.**
+Description: This module is exclusively responsible for rendering all UI components of the chat system. **Update: Removed 'Gemini 2.5 Flash' from the default model list in 'updateChatHeaderModelSelector' as per new requirements.**
 */
 
 import { state } from './state.js';
@@ -12,7 +12,7 @@ import { deleteProject, toggleChatPin, handleDeleteSession, moveSessionToProject
 
 // --- Element Cache ---
 let sessionListContainer, searchSessionsInput, chatMessages, aiModelSelector, tokenUsageDisplay,
-    promptModalOverlay, customPromptInput, chatModeSelector, aiModelSelect; // [FIX] 'aiModelSelect' 변수 선언 추가
+    promptModalOverlay, customPromptInput, chatModeSelector, aiModelSelect;
 
 function queryElements() {
     sessionListContainer = document.getElementById('session-list-container');
@@ -425,9 +425,9 @@ export function updateChatHeaderModelSelector(settings, isModal = false) {
     const selector = isModal ? aiModelSelect : aiModelSelector;
     if (!selector) return;
 
+    // [UPDATE] Removed Gemini 2.5 Flash from the default list
     const DEFAULT_MODELS = [
-        { value: 'gemini-1.5-flash-latest', text: '⚡️ Gemini 1.5 Flash (최신)' },
-        { value: 'gemini-pro', text: '💡 Gemini Pro (안정)' }
+        { value: 'gemini-2.0-flash', text: '💡 Gemini 2.0 Flash (안정)' }
     ];
     selector.innerHTML = '';
 
@@ -451,7 +451,7 @@ export function updateChatHeaderModelSelector(settings, isModal = false) {
             option.textContent = model.text;
             selector.appendChild(option);
         });
-        const savedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-1.5-flash-latest';
+        const savedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-2.0-flash';
         selector.value = savedDefaultModel;
         selector.title = 'AI 모델을 선택합니다.';
     }
