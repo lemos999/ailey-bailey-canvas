@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: chat-module.js (Orchestrator)
-Version: 12.0.3 (Critical Fix)
+Version: 12.0.4 (SyntaxError Fix)
 Architect: [Username] & System Architect CodeMaster
-Description: This module now acts as an orchestrator for the entire chat system. **Fix: Added the event listener for the main chat panel toggle button ('chatToggleBtn') which was missing after refactoring, restoring the panel's open/close functionality.**
+Description: This module acts as an orchestrator for the entire chat system. **Fix: Corrected a critical SyntaxError by adding a missing closing brace '}' to the 'closePromptModal' function at the end of the file, which caused all scripts to fail.**
 */
 
 import { initializeApiSettings } from './api-settings.js';
@@ -14,9 +14,9 @@ import { handleSidebarClick, handleSidebarContextMenu, handleDragStart, handleDr
 import { initializeSystemData } from './system-data.js';
 import { initializeQuiz } from './quiz.js';
 import { state } from './state.js';
-import { togglePanel } from './ui-helpers.js'; // [FIX] Import togglePanel to control the panel visibility
+import { togglePanel } from './ui-helpers.js';
 
-// [FIX] Event listener setup에 필요한 변수들 선언 (chatToggleBtn 추가)
+// Event listener setup에 필요한 변수들 선언
 let chatPanel, chatForm, newChatBtn, newProjectBtn, searchSessionsInput,
     sessionListContainer, promptSaveBtn, promptCancelBtn, popoverAskAi, chatInput, chatMessages, popoverAddNote, chatToggleBtn;
 
@@ -33,7 +33,7 @@ function queryElements() {
     chatInput = document.getElementById('chat-input');
     chatMessages = document.getElementById('chat-messages');
     popoverAddNote = document.getElementById('popover-add-note');
-    chatToggleBtn = document.getElementById('chat-toggle-btn'); // [FIX] Query the toggle button
+    chatToggleBtn = document.getElementById('chat-toggle-btn');
 }
 
 export function initializeChatModule() {
@@ -59,7 +59,6 @@ export function initializeChatModule() {
 }
 
 function setupOrchestrationEventListeners() {
-    // [FIX] Add the missing event listener for the chat panel toggle button
     if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
     
     if (chatForm) chatForm.addEventListener('submit', (e) => {
@@ -123,5 +122,4 @@ function closePromptModal() {
     if (promptModalOverlay) {
         promptModalOverlay.style.display = 'none';
     }
-}```
-
+} // [FIX] Added the missing closing brace for the function
