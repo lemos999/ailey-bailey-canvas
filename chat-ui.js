@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: chat-ui.js
-Version: 12.0 (Chat Module Refactor)
+Version: 12.0.1 (Error Fix)
 Architect: [Username & System Architect CodeMaster]
-Description: This module is exclusively responsible for rendering all UI components of the chat system. It takes data from other modules and updates the DOM, handling everything from the sidebar and messages to context menus.
+Description: This module is exclusively responsible for rendering all UI components of the chat system. It takes data from other modules and updates the DOM, handling everything from the sidebar and messages to context menus. **Fix: Added 'aiModelSelect' to variable declarations to resolve a ReferenceError during initialization.**
 */
 
 import { state } from './state.js';
@@ -12,7 +12,7 @@ import { deleteProject, toggleChatPin, handleDeleteSession, moveSessionToProject
 
 // --- Element Cache ---
 let sessionListContainer, searchSessionsInput, chatMessages, aiModelSelector, tokenUsageDisplay,
-    promptModalOverlay, customPromptInput, chatModeSelector;
+    promptModalOverlay, customPromptInput, chatModeSelector, aiModelSelect; // [FIX] 'aiModelSelect' 변수 선언 추가
 
 function queryElements() {
     sessionListContainer = document.getElementById('session-list-container');
@@ -439,7 +439,7 @@ export function updateChatHeaderModelSelector(settings, isModal = false) {
         models_to_show.forEach(modelId => {
             const option = document.createElement('option');
             option.value = modelId;
-            option.textContent = `[개인] ${modelId}`;
+            option.textContent = isModal ? modelId : `[개인] ${modelId}`;
             selector.appendChild(option);
         });
         if(settings.selectedModel) selector.value = settings.selectedModel;
