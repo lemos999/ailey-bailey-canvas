@@ -425,7 +425,7 @@ export function updateChatHeaderModelSelector(settings, isModal = false) {
     const selector = isModal ? aiModelSelect : aiModelSelector;
     if (!selector) return;
 
-    // [UPDATE] Removed Gemini 2.5 Flash from the default list
+    // [UPDATE] Only Gemini 2.0 Flash is available now
     const DEFAULT_MODELS = [
         { value: 'gemini-2.0-flash', text: '💡 Gemini 2.0 Flash (안정)' }
     ];
@@ -451,7 +451,7 @@ export function updateChatHeaderModelSelector(settings, isModal = false) {
             option.textContent = model.text;
             selector.appendChild(option);
         });
-        const savedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-2.0-flash';
+        const savedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-2.0-flash'; // Ensure default is 2.0 flash
         selector.value = savedDefaultModel;
         selector.title = 'AI 모델을 선택합니다.';
     }
