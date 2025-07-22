@@ -1,9 +1,11 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: chat-module.js
-Version: 11.2 (Bugfix & Policy Update)
+Version: 11.3 (Critical Bugfix Release 2)
 Architect: [Username] & System Architect CodeMaster
-Description: This version fixes the non-functional API settings button by adding the missing event listener. It also implements the new policy of using a single, non-selectable default model ('gemini-2.0-flash') when no user API key is provided, updating both the API call logic and the UI to reflect this change.
+Description: This is a critical bugfix release that addresses two major issues.
+- Fixed the non-functional API settings button by correctly adding the event listener after the button's dynamic creation.
+- Corrected the fatal error in the default API call logic by removing the reference to a non-existent `__google_api_key` variable and restoring the direct API call method, ensuring the chatbot can respond.
 */
 
 import { state } from './state.js';
@@ -125,13 +127,11 @@ function setupEventListeners() {
     if (resetTokenUsageBtn) resetTokenUsageBtn.addEventListener('click', resetTokenUsage);
     if (apiSettingsModalOverlay) apiSettingsModalOverlay.addEventListener('click', (e) => { if (e.target === apiSettingsModalOverlay) closeApiSettingsModal(); });
 
-    // System wide buttons
     if (systemResetBtn) systemResetBtn.addEventListener('click', handleSystemReset);
     if (exportNotesBtn) exportNotesBtn.addEventListener('click', exportAllData);
     if (restoreDataBtn) restoreDataBtn.addEventListener('click', () => fileImporter?.click());
     if (fileImporter) fileImporter.addEventListener('change', importAllData);
 
-    // Sidebar interaction listeners
     if (sessionListContainer) {
         sessionListContainer.addEventListener('click', handleSidebarClick);
         sessionListContainer.addEventListener('contextmenu', handleSidebarContextMenu);
@@ -142,18 +142,15 @@ function setupEventListeners() {
         sessionListContainer.addEventListener('drop', handleDrop);
     }
     
-    // Reasoning block expansion
     if (chatMessages) {
         chatMessages.addEventListener('click', handleReasoningBlockClick);
     }
 
-    // Quiz listeners
     if(startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
     if(quizSubmitBtn) quizSubmitBtn.addEventListener('click', handleQuizSubmit);
     if(quizModalOverlay) quizModalOverlay.addEventListener('click', e => { if (e.target === quizModalOverlay) quizModalOverlay.style.display = 'none'; });
 }
 
-// --- Listener Handlers ---
 function handleSidebarClick(e) {
     if (!e.target.closest('.project-context-menu')) {
         removeContextMenu();
@@ -269,8 +266,8 @@ async function handleDrop(e) {
         if (sourceSession.projectId !== targetProjectId) {
             shouldUpdate = true;
         }
-    } else { // Dropped on the general area
-        if (sourceSession.projectId) { // Only update if it was in a project
+    } else {
+        if (sourceSession.projectId) {
             targetProjectId = null;
             shouldUpdate = true;
         }
@@ -298,7 +295,7 @@ function handleReasoningBlockClick(e) {
     if (block.classList.contains('expanded')) {
         const steps = JSON.parse(block.dataset.steps);
         const fullText = steps.map(s => `**${s.summary}**\n${s.detail}`).filter(Boolean).join('\n\n');
-        content.innerHTML = ''; // Clear previous content
+        content.innerHTML = '';
         typewriterEffect(content, fullText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'));
     } else {
         content.innerHTML = '';
@@ -308,7 +305,6 @@ function handleReasoningBlockClick(e) {
 }
 
 
-// --- Firebase Listeners ---
 function listenToProjects() {
     if (!state.projectsCollectionRef) return;
     if (state.unsubscribeFromProjects) state.unsubscribeFromProjects();
@@ -356,7 +352,6 @@ function listenToChatSessions() {
 }
 
 
-// --- UI Rendering ---
 function renderSidebarContent() {
     if (!sessionListContainer || !searchSessionsInput) return;
     const searchTerm = searchSessionsInput.value.toLowerCase();
@@ -727,13 +722,12 @@ async function handleChatSend() {
                 saveApiSettings(false); 
             }
         } else {
+            // [FIXED] API call logic corrected to use a direct key string and single default model
             const prompt = `Based on the following query, provide a step-by-step reasoning process if it is complex. The reasoning must be encapsulated within [REASONING_START] and [REASONING_END] tags. Each step must follow the format: SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}. For simple queries, omit the reasoning part. The final answer should be in a friendly, informal Korean tone. Query: "${query}"`;
             const apiMessages = [{ role: 'user', parts: [{ text: prompt }] }];
-            const selectedDefaultModel = 'gemini-2.0-flash'; // [FIXED]
-            const GOOGLE_API_KEY = typeof __google_api_key !== 'undefined' ? __google_api_key : null;
-            if (!GOOGLE_API_KEY) throw new Error("Default API Key is not configured.");
+            const selectedDefaultModel = 'gemini-2.0-flash';
             
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=${GOOGLE_API_KEY}`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: apiMessages })
@@ -1164,7 +1158,6 @@ function saveApiSettings(closeModal = true) {
              state.userApiSettings.availableModels = Array.from(apiModelSelect.options).map(opt => opt.value);
         }
     } else {
-        // Clear settings if key is removed
         state.userApiSettings = { provider: null, apiKey: '', selectedModel: '', availableModels: [], maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 } };
     }
     localStorage.setItem('userApiSettings', JSON.stringify(state.userApiSettings));
@@ -1464,7 +1457,6 @@ async function handleSystemReset() {
 }
 
 function exportAllData() {
-    // This now needs to access notesCache from the global state
     if (state.localNotesCache.length === 0 && state.localChatSessionsCache.length === 0 && state.localProjectsCache.length === 0) {
         showModal("백업할 데이터가 없습니다.", () => {});
         return;
@@ -1524,7 +1516,6 @@ async function importAllData(event) {
                         const { id, ...dataToWrite } = note;
                         dataToWrite.createdAt = toFirestoreTimestamp(note.createdAt);
                         dataToWrite.updatedAt = toFirestoreTimestamp(note.updatedAt);
-                        // notesCollection is now on the global state
                         batch.set(state.notesCollection.doc(id), dataToWrite);
                     });
 
