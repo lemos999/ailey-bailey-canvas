@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: notes-module.js
-Version: 11.0 (JS Module Structure)
+Version: 11.1 (Critical Bugfix Release)
 Architect: [Username] & System Architect CodeMaster
-Description: Encapsulates all logic for the Notes App feature, including Firebase listeners, CRUD operations, and rendering for the notes list and editor.
+Description: This version fixes a critical bug where the notes database collection was not being properly initialized within this module, causing all note-related functionalities to fail. The initialization logic has been correctly placed.
 */
 
 import { state } from './state.js';
@@ -35,6 +35,10 @@ export function initializeNotesModule() {
     queryElements();
 
     if (!notesAppPanel) return false;
+
+    // [FIXED] Correctly initialize the notes collection reference within its own module.
+    const userPath = `artifacts/${state.appId}/users/${state.auth.currentUser.uid}`;
+    state.notesCollection = state.db.collection(`${userPath}/notes`);
 
     setupEventListeners();
     listenToNotes();
