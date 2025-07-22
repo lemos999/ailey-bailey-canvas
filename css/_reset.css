@@ -1,9 +1,0 @@
-/* css/_reset.css */
-html { 
-    scroll-behavior: smooth; 
-}
-
-body {
-    margin: 0;
-    box-sizing: border-box;
-}
