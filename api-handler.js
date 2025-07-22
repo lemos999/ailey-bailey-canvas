@@ -1,15 +1,14 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: api-handler.js
-Version: 12.0 (Chat Module Refactor)
+Version: 12.0.3 (Circular Dependency Fix)
 Architect: [Username] & System Architect CodeMaster
-Description: This module is responsible for all interactions with external AI APIs. It handles sending chat messages, constructing API requests, and parsing the responses.
+Description: This module is responsible for all interactions with external AI APIs. **Fix: Changed the import from 'saveApiSettings' to the new 'persistApiSettings' to break a circular dependency, making the architecture more stable.**
 */
 
 import { state } from './state.js';
-import { renderChatMessages } from './chat-ui.js';
-import { saveApiSettings } from './api-settings.js';
-import { renderSidebarContent } from './chat-ui.js';
+import { renderChatMessages, renderSidebarContent, renderTokenUsage } from './chat-ui.js';
+import { persistApiSettings } from './api-settings.js'; // [FIX] Import the new simple function
 
 let chatInput, chatSendBtn, chatWelcomeMessage, chatMessages;
 
@@ -46,7 +45,6 @@ export async function handleChatSend() {
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
         if (chatMessages) chatMessages.style.display = 'flex';
         
-        // Temporarily convert server timestamp to a Date object for immediate rendering
         const displayUserMessage = { ...userMessage, timestamp: new Date() };
         renderChatMessages({ messages: [displayUserMessage, loadingMessage] });
         
@@ -78,7 +76,6 @@ export async function handleChatSend() {
     const startTime = performance.now();
     try {
         const currentSessionData = state.localChatSessionsCache.find(s => s.id === state.currentSessionId);
-        // The last message is the one we just added, so we include it.
         const historyForApi = (currentSessionData?.messages || []).concat(userMessage)
                                 .map(m => ({ role: m.role, content: m.content }));
 
@@ -96,13 +93,16 @@ export async function handleChatSend() {
             if (usageData) { 
                 state.userApiSettings.tokenUsage.prompt += usageData.prompt;
                 state.userApiSettings.tokenUsage.completion += usageData.completion;
-                saveApiSettings(false); // Save without closing modal
+                persistApiSettings(); // [FIX] Use the new persistence function
+                renderTokenUsage();   // Update the UI after changing the state
             }
         } else {
             // Default Google API logic
             const prompt = `Based on the following query, provide a step-by-step reasoning process if it is complex. The reasoning must be encapsulated within [REASONING_START] and [REASONING_END] tags. Each step must follow the format: SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}. For simple queries, omit the reasoning part. The final answer should be in a friendly, informal Korean tone. Query: "${query}"`;
             const apiMessages = [{ role: 'user', parts: [{ text: prompt }] }];
-            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-1.5-flash-latest';
+            
+            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || 'gemini-2.0-flash'; 
+            
             const GOOGLE_API_KEY = typeof __google_api_key !== 'undefined' ? __google_api_key : null;
             if (!GOOGLE_API_KEY) throw new Error("Default API Key is not configured.");
             
@@ -134,7 +134,7 @@ export async function handleChatSend() {
         chatSendBtn.disabled = false;
         chatInput.focus();
         if (isNewSession) {
-            renderSidebarContent(); // Update sidebar to show the new session
+            renderSidebarContent();
         }
     }
 }
@@ -197,7 +197,7 @@ function parseApiResponse(provider, result) {
         else if (provider === 'google_paid') {
             return {
                 content: result.candidates[0].content.parts[0].text,
-                usage: null // Google's API response for this endpoint doesn't provide token usage details.
+                usage: null
             };
         }
     } catch (error) {
