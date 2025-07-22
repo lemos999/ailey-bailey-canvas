@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: js/notes-manager.js
-Version: 11.0 (Refactored)
-Description: Manages all functionalities related to the Notes App feature,
-including CRUD operations, rendering the note list, and handling editor interactions.
+Version: 11.1 (Patched)
+Description: Manages all functionalities related to the Notes App feature.
+Patched: Exported renderNoteList to allow direct calls from main.js.
 */
 
 import * as state from './state.js';
@@ -80,6 +80,7 @@ function handleNoteListClick(event) {
     }
 }
 
+// [MODIFIED] Added 'export' to make this function accessible from other modules
 export function renderNoteList() {
     if (!notesList || !searchInput) return;
 
