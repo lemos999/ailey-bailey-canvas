@@ -1,0 +1,5 @@
+/* css/_animations.css */
+@keyframes blink-caret { 
+    from, to { opacity: 1; } 
+    50% { opacity: 0; } 
+}

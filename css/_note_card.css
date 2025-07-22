@@ -1,0 +1,29 @@
+/* css/_note_card.css */
+.note-item { 
+    padding: 12px 15px; 
+    border-radius: 6px; 
+    margin-bottom: 8px; 
+    cursor: pointer; 
+    transition: background-color 0.2s; 
+    position: relative; 
+}
+
+body:not(.dark-mode) .note-item:hover { 
+    background-color: var(--quote-bg-light); 
+}
+
+body.dark-mode .note-item:hover { 
+    background-color: var(--quote-bg-dark); 
+}
+
+.note-item.pinned { 
+    border-left: 4px solid var(--pin-color); 
+}
+
+body:not(.dark-mode) .note-item.pinned { 
+    background-color: #fff9e8; 
+}
+
+body.dark-mode .note-item.pinned { 
+    background-color: #2e281d; 
+}
