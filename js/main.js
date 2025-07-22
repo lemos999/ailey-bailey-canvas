@@ -1,15 +1,16 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: js/main.js
-Version: 11.0 (Refactored)
+Version: 11.1 (Patched)
 Description: The main entry point for the application. It imports all other modules
-and initializes them in the correct order after the DOM is fully loaded.
+and initializes them. Patched to fix a critical syntax error from truncation and
+to correctly import and call renderNoteList for the notes panel.
 */
 
-// Import initializers from all other modules
+// Import initializers and specific functions from all other modules
 import { initializeFirebase } from './firebase-service.js';
 import { initializeUIManager, setupNavigator, togglePanel, handlePopoverAskAi } from './ui-manager.js';
-import { initializeNotesManager, handlePopoverAddNote } from './notes-manager.js';
+import { initializeNotesManager, handlePopoverAddNote, renderNoteList } from './notes-manager.js';
 import { initializeApiManager } from './api-manager.js';
 import { initializeChatSessionManager } from './chat-session.js';
 import { initializeChatUI } from './chat-ui.js';
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 2. If Firebase fails, halt initialization and show an error.
     if (!firebaseReady) {
-        document.body.innerHTML = '<div style="text-align: center; padding: 50px; font-size: 1.2em;">시스템 초기화에 실패했습니다. Firebase 연결을 확인해주세요.</div>';
+        document.body.innerHTML = '<div style="text-align: center; padding: 50px; font-size: 1.2em; color: lightcoral;">시스템 초기화에 실패했습니다. Firebase 연결을 확인해주세요.</div>';
         return;
     }
 
@@ -56,9 +57,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 5. Attach global event listeners managed by main.js
     if (themeToggle) {
-        // Set initial theme
+        // Set initial theme from localStorage
         if (localStorage.getItem('theme') === 'dark') {
             body.classList.add('dark-mode');
+        } else {
+            body.classList.remove('dark-mode'); // Ensure light mode if not specified
         }
         themeToggle.addEventListener('click', () => {
             body.classList.toggle('dark-mode');
@@ -76,30 +79,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
     if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
 
-    if (chatToggleBtn) {
+    if (chatToggleBtn && chatPanel) {
         chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
-    }
-    if (chatPanel) {
         const closeBtn = chatPanel.querySelector('.close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => togglePanel(chatPanel, false));
         }
     }
 
-    if (notesAppToggleBtn) {
+    if (notesAppToggleBtn && notesAppPanel) {
         notesAppToggleBtn.addEventListener('click', () => {
             togglePanel(notesAppPanel);
-            // If opening the panel, render the list
+            // [FIXED] If opening the panel, render the list using the directly imported function
             if (notesAppPanel.style.display === 'flex') {
-                const renderNoteList = window.notesManager.renderNoteList; // A bit of a hack if not exported, better to export
-                if(typeof renderNoteList === "function") renderNoteList();
+                renderNoteList();
             }
         });
-    }
-    if (notesAppPanel) {
-        const closeBtn = notesAppPanel.querySelector('.close-btn'); // Assuming notes panel has a close button
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => togglePanel(notesAppPanel, false));
+        const closeBtn = notesAppPanel.querySelector('.panel-header .notes-btn'); // More specific selector for back button
+        if (closeBtn && closeBtn.id === 'back-to-list-btn') {
+            // This is handled inside notes-manager, but a general close button could be added here if needed
+        }
+        // Assuming the main panel also has a top-level close button, similar to chat
+        const mainCloseBtn = notesAppPanel.querySelector('.close-btn');
+         if (mainCloseBtn) {
+            mainCloseBtn.addEventListener('click', () => togglePanel(notesAppPanel, false));
         }
     }
 
