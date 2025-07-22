@@ -1,0 +1,10 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: style.css
+Version: 10.0 (Split Main)
+Description: Main stylesheet that imports all modular CSS files.
+*/
+
+@import url('_base.css');
+@import url('_layout.css');
+@import url('_components.css');
