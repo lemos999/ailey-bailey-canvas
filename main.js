@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: main.js (Entry Point)
-Version: 12.0 (Chat Module Refactor)
+Version: 12.0.1 (Error Fix & Stability Improvement)
 Architect: [Username] & System Architect CodeMaster
-Description: This is the main entry point for the application. It imports all primary feature modules (chat, notes), initializes them, and sets up global event listeners, orchestrating the entire system.
+Description: This is the main entry point for the application. It imports all primary feature modules (chat, notes), initializes them, and sets up global event listeners. **Fix: Ensured Firebase initialization and logging occurs only once to prevent duplicate logs and improve stability.**
 */
 
 import { initializeFirebase, getDb, getAuth } from './firebase-config.js';
@@ -31,10 +31,13 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // --- 1. Core System Initialization ---
     try {
-        await initializeFirebase();
-        state.db = getDb();
-        state.auth = getAuth();
-        console.log("Firebase initialized and user signed in:", state.auth.currentUser ? state.auth.currentUser.uid : 'No user');
+        // [FIX] Ensure Firebase initialization logic runs only once.
+        if (!state.auth) { 
+            await initializeFirebase();
+            state.db = getDb();
+            state.auth = getAuth();
+            console.log("Firebase initialized and user signed in:", state.auth.currentUser ? state.auth.currentUser.uid : 'No user');
+        }
     } catch (error) {
         console.error("Firebase initialization failed:", error);
         showModal("시스템의 핵심 기능(DB)을 불러오는 데 실패했습니다. 일부 기능이 작동하지 않을 수 있습니다.", () => {});
@@ -82,10 +85,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     // --- 3. Global Event Listeners ---
     document.addEventListener('click', (e) => {
         handleTextSelection(e);
-        // This logic is now managed inside chat-ui.js but can be a global fallback
         const openedContextMenu = document.querySelector('.project-context-menu, .session-context-menu');
         if (openedContextMenu && !e.target.closest('.project-context-menu, .session-context-menu, .project-actions-btn, .session-item')) {
-            openedContextMenu.remove();
+            const uiModule = import('./chat-ui.js');
+            uiModule.then(ui => ui.removeContextMenu());
         }
     });
 
