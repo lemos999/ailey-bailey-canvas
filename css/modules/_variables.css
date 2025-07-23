@@ -1,8 +1,0 @@
-/*
---- Module: _variables.css ---
-Description: Defines all CSS variables for light and dark themes.
-*/
-:root {
-    --bg-color-light: #FDF8F0; --text-color-light: #4B4237; --container-bg-light: #F7F3E9; --border-color-light: #EAE0D3; --header-color-light: #6D5D4B; --h2-color-light: #8C6D46; --h2-border-light: #B99C7A; --sub-text-color-light: #8C7B6A; --quote-bg-light: #F2EEE5; --strong-bg-light: #EADCB5; --highlight-color: #ffe875; --chat-ai-bg-light: #E9E4DB; --pin-color: #e58a8a; --correct-color: #3e8e41; --incorrect-color: #d9534f;
-    --bg-color-dark: #121212; --text-color-dark: #E0E0E0; --container-bg-dark: #1E1E1E; --border-color-dark: #333333; --header-color-dark: #D4B28C; --h2-color-dark: #B99C7A; --h2-border-dark: #8C6D46; --sub-text-color-dark: #9E9E9E; --quote-bg-dark: #2A2A2A; --strong-bg-dark: #5a4a3a; --chat-ai-bg-dark: #2C2C2C; --correct-color-dark: #66bb6a; --incorrect-color-dark: #ef5350;
-}
