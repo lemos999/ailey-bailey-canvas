@@ -1,0 +1,14 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: css/style.css (Main Entry Point)
+Version: 11.0 (Modular CSS)
+Architect: [Username] & System Architect Ailey
+Description: This file acts as the main entry point for all CSS modules. It imports all other CSS files in a structured order.
+*/
+
+@import url('./base.css');
+@import url('./components.css');
+@import url('./panels.css');
+@import url('./chat.css');
+@import url('./notes.css');
+@import url('./modals.css');

@@ -1,0 +1,84 @@
+// js/utils/domElements.js
+// 모든 DOM 요소 선택자를 한 곳에서 관리하여 일관성을 유지하고 중복을 방지합니다.
+
+export const learningContent = document.getElementById('learning-content');
+export const wrapper = document.querySelector('.wrapper');
+export const body = document.body;
+export const systemInfoWidget = document.getElementById('system-info-widget');
+export const selectionPopover = document.getElementById('selection-popover');
+export const popoverAskAi = document.getElementById('popover-ask-ai');
+export const popoverAddNote = document.getElementById('popover-add-note');
+export const tocToggleBtn = document.getElementById('toc-toggle-btn');
+export const quizModalOverlay = document.getElementById('quiz-modal-overlay');
+export const quizContainer = document.getElementById('quiz-container');
+export const quizSubmitBtn = document.getElementById('quiz-submit-btn');
+export const quizResults = document.getElementById('quiz-results');
+export const startQuizBtn = document.getElementById('start-quiz-btn');
+export const chatModeSelector = document.getElementById('chat-mode-selector');
+export const chatPanel = document.getElementById('chat-panel');
+export const chatForm = document.getElementById('chat-form');
+export const chatInput = document.getElementById('chat-input');
+export const chatMessages = document.getElementById('chat-messages');
+export const chatSendBtn = document.getElementById('chat-send-btn');
+export const notesAppPanel = document.getElementById('notes-app-panel');
+export const noteListView = document.getElementById('note-list-view');
+export const noteEditorView = document.getElementById('note-editor-view');
+export const notesList = document.getElementById('notes-list');
+export const searchInput = document.getElementById('search-input');
+export const addNewNoteBtn = document.getElementById('add-new-note-btn');
+export const backToListBtn = document.getElementById('back-to-list-btn');
+export const noteTitleInput = document.getElementById('note-title-input');
+export const noteContentTextarea = document.getElementById('note-content-textarea');
+export const autoSaveStatus = document.getElementById('auto-save-status');
+export const formatToolbar = document.querySelector('.format-toolbar');
+export const linkTopicBtn = document.getElementById('link-topic-btn');
+export const exportNotesBtn = document.getElementById('export-notes-btn');
+export const customModal = document.getElementById('custom-modal');
+export const modalMessage = document.getElementById('modal-message');
+export const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+export const modalCancelBtn = document.getElementById('modal-cancel-btn');
+export const promptModalOverlay = document.getElementById('prompt-modal-overlay');
+export const customPromptInput = document.getElementById('custom-prompt-input');
+export const promptSaveBtn = document.getElementById('prompt-save-btn');
+export const promptCancelBtn = document.getElementById('prompt-cancel-btn');
+export const themeToggle = document.getElementById('theme-toggle');
+export const chatToggleBtn = document.getElementById('chat-toggle-btn');
+export const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
+
+// Chat Session & Project UI Elements
+export const newChatBtn = document.getElementById('new-chat-btn');
+export const newProjectBtn = document.getElementById('new-project-btn');
+export const sessionListContainer = document.getElementById('session-list-container');
+export const chatSessionTitle = document.getElementById('chat-session-title');
+export const deleteSessionBtn = document.getElementById('delete-session-btn');
+export const chatWelcomeMessage = document.getElementById('chat-welcome-message');
+export const searchSessionsInput = document.getElementById('search-sessions-input');
+export const aiModelSelector = document.getElementById('ai-model-selector');
+
+// Backup & Restore UI Elements
+export const restoreDataBtn = document.getElementById('restore-data-btn');
+export const fileImporter = document.getElementById('file-importer');
+
+// System Reset UI Element
+export const systemResetBtn = document.getElementById('system-reset-btn');
+
+// API Settings UI Elements (dynamically created, but we need selectors)
+// These are assigned after creation in the main script, but defined here for clarity.
+export let apiSettingsBtn, apiSettingsModalOverlay, apiKeyInput, verifyApiKeyBtn, apiKeyStatus,
+    apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn,
+    apiSettingsSaveBtn, apiSettingsCancelBtn;
+
+// A function to set the dynamically created elements
+export function setApiSettingsElements(elements) {
+    apiSettingsBtn = elements.apiSettingsBtn;
+    apiSettingsModalOverlay = elements.apiSettingsModalOverlay;
+    apiKeyInput = elements.apiKeyInput;
+    verifyApiKeyBtn = elements.verifyApiKeyBtn;
+    apiKeyStatus = elements.apiKeyStatus;
+    apiModelSelect = elements.apiModelSelect;
+    maxOutputTokensInput = elements.maxOutputTokensInput;
+    tokenUsageDisplay = elements.tokenUsageDisplay;
+    resetTokenUsageBtn = elements.resetTokenUsageBtn;
+    apiSettingsSaveBtn = elements.apiSettingsSaveBtn;
+    apiSettingsCancelBtn = elements.apiSettingsCancelBtn;
+}
