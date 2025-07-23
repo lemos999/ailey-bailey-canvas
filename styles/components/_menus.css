@@ -1,0 +1,78 @@
+/* --- Component: Context Menus --- */
+.project-context-menu, .session-context-menu {
+    position: absolute;
+    background-color: var(--container-bg-dark);
+    border: 1px solid var(--border-color-dark);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 1500;
+    padding: 5px;
+    display: none;
+    min-width: 180px;
+    font-size: 0.95em;
+}
+body:not(.dark-mode) .project-context-menu,
+body:not(.dark-mode) .session-context-menu {
+    background-color: var(--container-bg-light);
+    border-color: var(--border-color-light);
+}
+
+.context-menu-item {
+    background: none;
+    border: none;
+    color: inherit;
+    padding: 8px 12px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: 'Gowun Batang', serif;
+    font-size: 1em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+body:not(.dark-mode) .context-menu-item:not([disabled]):hover {
+    background-color: var(--quote-bg-light);
+}
+body.dark-mode .context-menu-item:not([disabled]):hover {
+    background-color: var(--quote-bg-dark);
+}
+.context-menu-item[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.context-menu-separator {
+    height: 1px;
+    background-color: var(--border-color-dark);
+    margin: 4px 8px;
+}
+body:not(.dark-mode) .context-menu-separator {
+    background-color: var(--border-color-light);
+}
+
+.context-submenu-container {
+    position: relative;
+}
+.context-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: -6px; 
+    background-color: var(--container-bg-dark);
+    border: 1px solid var(--border-color-dark);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    padding: 5px;
+    min-width: 150px;
+}
+body:not(.dark-mode) .context-submenu {
+    background-color: var(--container-bg-light);
+    border-color: var(--border-color-light);
+}
+.context-submenu-container:hover > .context-submenu {
+    display: block;
+}
+.submenu-arrow {
+    font-size: 0.8em;
+}
