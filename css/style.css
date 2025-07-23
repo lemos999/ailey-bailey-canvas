@@ -1,0 +1,21 @@
+/* css/style.css - Master Entry Point */
+
+/* 1. Base (가장 기본) */
+@import url('./base/_variables.css');
+@import url('./base/_base.css');
+
+/* 2. Layout (전체 구조) */
+@import url('./layout/_wrapper.css');
+@import url('./layout/_panels.css');
+
+/* 3. Components (재사용 UI 요소) */
+@import url('./components/_buttons.css');
+@import url('./components/_modals.css');
+@import url('./components/_tooltips.css');
+@import url('./components/_nav.css');
+
+/* 4. Features (개별 기능) */
+@import url('./features/_chat.css');
+@import url('./features/_notes.css');
+
+/* --- 더 이상 다른 스타일 규칙은 여기에 작성하지 않음 --- */
