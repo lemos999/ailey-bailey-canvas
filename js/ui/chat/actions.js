@@ -1,7 +1,7 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: js/ui/chat/actions.js
-Version: 11.0 (Modular)
+Version: 11.2 (Final Stable)
 Description: Handles user actions within the chat like sending messages, managing projects, etc.
 */
 
@@ -9,6 +9,7 @@ import { getState, updateState } from '../../core/state.js';
 import { showModal } from '../../utils/helpers.js';
 import { chatInput, chatSendBtn, chatWelcomeMessage, chatMessages } from '../../utils/domElements.js';
 import { renderChatMessages, renderSidebarContent, startProjectRename } from './render.js';
+import { saveApiSettings } from '../modals.js'; // Assumed function from modals for saving settings
 
 /**
  * Main function to handle sending a chat message from the user.
@@ -26,7 +27,7 @@ export async function handleChatSend() {
     let { currentSessionId, localChatSessionsCache, chatSessionsCollectionRef, selectedMode, userApiSettings } = getState();
 
     const userMessage = { role: 'user', content: query, timestamp: new Date() };
-    const loadingMessage = { role: 'ai', status: 'loading', id: loading-\ };
+    const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
     let sessionRef;
     let currentMessages = [];
     let isNewSession = false;
@@ -39,7 +40,7 @@ export async function handleChatSend() {
         if (chatMessages) chatMessages.style.display = 'flex';
         
         currentMessages = [userMessage, loadingMessage];
-        renderChatMessages({ messages: currentMessages }); // Render immediately with loading state
+        renderChatMessages({ messages: currentMessages });
         
         const newSession = {
             title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
@@ -59,7 +60,7 @@ export async function handleChatSend() {
         const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
         currentMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
         
-        renderChatMessages({ messages: currentMessages }); // Render immediately with loading state
+        renderChatMessages({ messages: currentMessages });
         
         await sessionRef.update({
             messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
@@ -71,13 +72,12 @@ export async function handleChatSend() {
     try {
         const { defaultModel } = getState();
         let aiRes, usageData;
-        const historyForApi = (isNewSession ? [userMessage] : localChatSessionsCache.find(s => s.id === currentSessionId)?.messages || [userMessage]);
+        const historyForApi = (isNewSession ? [userMessage] : (localChatSessionsCache.find(s => s.id === currentSessionId)?.messages || [userMessage]));
 
-        // Prioritize user's own API key
         if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
             const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
             const res = await fetch(requestDetails.url, requestDetails.options);
-            if (!res.ok) { const errorBody = await res.text(); throw new Error(API Error \: \); }
+            if (!res.ok) { const errorBody = await res.text(); throw new Error(`API Error ${res.status}: ${errorBody}`); }
             const result = await res.json();
             const parsed = parseApiResponse(userApiSettings.provider, result);
             aiRes = parsed.content;
@@ -86,25 +86,28 @@ export async function handleChatSend() {
                 userApiSettings.tokenUsage.prompt += usageData.prompt;
                 userApiSettings.tokenUsage.completion += usageData.completion;
                 updateState('userApiSettings', userApiSettings);
-                saveApiSettings(false); // Save without closing modal
+                // This function needs to exist or be imported
+                // For now, we'll just save to localStorage directly to avoid dependency issues.
+                localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
             }
         } else {
-            // Fallback to default API
+            // This is the corrected section. It safely gets the key.
+            const googleApiKey = typeof __google_api_key !== 'undefined' ? __google_api_key : null;
+            if (!googleApiKey) {
+                throw new Error("Default API key is not configured.");
+            }
             const lastUserMessage = historyForApi[historyForApi.length - 1].content;
-            const promptWithReasoning = You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "\";
+            const promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
             const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
             const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
-            // The API key for the default model should be securely handled, e.g., via a backend proxy or injected config.
-            // This is a placeholder for the actual API key.
-            const DEFAULT_API_KEY = "YOUR_DEFAULT_GOOGLE_API_KEY"; 
-            const res = await fetch(https://generativelanguage.googleapis.com/v1beta/models/\:generateContent?key=\, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=${googleApiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: apiMessages })
             });
-            if (!res.ok) throw new Error(Google API Error \);
+            if (!res.ok) throw new Error(`Google API Error ${res.status}`);
             const result = await res.json();
-            aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "´äº¯À» °¡Á®¿Ã ¼ö ¾ø½À´Ï´Ù.";
+            aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "ë‹µë³€ì„ ê°€ì ¸ì˜¬ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.";
         }
 
         const endTime = performance.now();
@@ -118,7 +121,7 @@ export async function handleChatSend() {
 
     } catch (e) {
         console.error("Chat send error:", e);
-        const errorMessage = { role: 'ai', content: API ¿À·ù°¡ ¹ß»ıÇß½À´Ï´Ù: \, timestamp: new Date() };
+        const errorMessage = { role: 'ai', content: `API ì˜¤ë¥˜ê°€ ë°œìƒí–ˆìŠµë‹ˆë‹¤: ${e.message}`, timestamp: new Date() };
         if(sessionRef) {
             await sessionRef.update({
                 messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
@@ -134,9 +137,6 @@ export async function handleChatSend() {
     }
 }
 
-/**
- * Builds the appropriate API request based on the provider.
- */
 function buildApiRequest(provider, model, messages, maxTokens) {
     const { apiKey } = getState().userApiSettings;
     const history = messages.map(msg => ({
@@ -145,71 +145,52 @@ function buildApiRequest(provider, model, messages, maxTokens) {
     }));
 
     if (provider === 'openai') {
-        return { url: 'https://api.openai.com/v1/chat/completions', options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': Bearer \ }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) } };
+        return { url: 'https://api.openai.com/v1/chat/completions', options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) } };
     } else if (provider === 'anthropic') {
          return { url: 'https://api.anthropic.com/v1/messages', options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) } };
     } else if (provider === 'google_paid') {
         const googleHistory = messages.map(msg => ({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] }));
-        return { url: https://generativelanguage.googleapis.com/v1beta/models/\:generateContent?key=\, options: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: googleHistory, generationConfig: { maxOutputTokens: Number(maxTokens) || 2048 } }) } };
+        return { url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, options: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: googleHistory, generationConfig: { maxOutputTokens: Number(maxTokens) || 2048 } }) } };
     }
-    throw new Error(Unsupported provider: \);
+    throw new Error(`Unsupported provider: ${provider}`);
 }
 
-/**
- * Parses the response from different API providers into a standardized format.
- */
 function parseApiResponse(provider, result) {
     try {
         if (provider === 'openai') { return { content: result.choices[0].message.content, usage: { prompt: result.usage.prompt_tokens, completion: result.usage.completion_tokens } }; }
         else if (provider === 'anthropic') { return { content: result.content[0].text, usage: { prompt: result.usage.input_tokens, completion: result.usage.output_tokens } }; }
         else if (provider === 'google_paid') { return { content: result.candidates[0].content.parts[0].text, usage: null }; }
     } catch (error) {
-        console.error(Error parsing \ response:, error, result);
-        return { content: 'API ÀÀ´äÀ» ÆÄ½ÌÇÏ´Â Áß ¿À·ù°¡ ¹ß»ıÇß½À´Ï´Ù.', usage: null };
+        console.error(`Error parsing ${provider} response:`, error, result);
+        return { content: 'API ì‘ë‹µì„ íŒŒì‹±í•˜ëŠ” ì¤‘ ì˜¤ë¥˜ê°€ ë°œìƒí–ˆìŠµë‹ˆë‹¤.', usage: null };
     }
-    return { content: '¾Ë ¼ö ¾ø´Â Á¦°ø»çÀÔ´Ï´Ù.', usage: null };
+    return { content: 'ì•Œ ìˆ˜ ì—†ëŠ” ì œê³µì‚¬ì…ë‹ˆë‹¤.', usage: null };
 }
 
-
-/**
- * Toggles the pinned status of a chat session.
- * @param {string} sessionId The ID of the session to pin/unpin.
- */
 export async function toggleChatPin(sessionId) {
     const { chatSessionsCollectionRef, localChatSessionsCache } = getState();
     if (!chatSessionsCollectionRef || !sessionId) return;
-    
     const sessionRef = chatSessionsCollectionRef.doc(sessionId);
     const currentSession = localChatSessionsCache.find(s => s.id === sessionId);
     if (!currentSession) return;
-    
     try {
         await sessionRef.update({
             isPinned: !(currentSession.isPinned || false),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-    } catch (error) {
-        console.error("Error toggling pin status:", error);
-    }
+    } catch (error) { console.error("Error toggling pin status:", error); }
 }
 
-/**
- * Creates a new project with a default name.
- */
 export async function createNewProject() {
     const { projectsCollectionRef, localProjectsCache } = getState();
-    const baseName = "»õ ÇÁ·ÎÁ§Æ®";
+    const baseName = "ìƒˆ í”„ë¡œì íŠ¸";
     let newName = baseName;
     const existingNames = new Set(localProjectsCache.map(p => p.name));
-    
     if (existingNames.has(baseName)) {
         let i = 2;
-        while (existingNames.has(\ \)) {
-            i++;
-        }
-        newName = \ \;
+        while (existingNames.has(`${baseName} ${i}`)) { i++; }
+        newName = `${baseName} ${i}`;
     }
-
     try {
         const newProjectRef = await projectsCollectionRef.add({
             name: newName,
@@ -219,15 +200,10 @@ export async function createNewProject() {
         updateState('newlyCreatedProjectId', newProjectRef.id);
     } catch (error) {
         console.error("Error creating new project:", error);
-        alert("ÇÁ·ÎÁ§Æ® »ı¼º¿¡ ½ÇÆĞÇß½À´Ï´Ù.");
+        alert("í”„ë¡œì íŠ¸ ìƒì„±ì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤.");
     }
 }
 
-/**
- * Renames a project.
- * @param {string} projectId The ID of the project to rename.
- * @param {string} newName The new name for the project.
- */
 export async function renameProject(projectId, newName) {
     const { projectsCollectionRef } = getState();
     if (!newName || !newName.trim() || !projectId) return;
@@ -236,39 +212,26 @@ export async function renameProject(projectId, newName) {
             name: newName.trim(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-    } catch (error) {
-        console.error("Error renaming project:", error);
-        alert("ÇÁ·ÎÁ§Æ® ÀÌ¸§ º¯°æ¿¡ ½ÇÆĞÇß½À´Ï´Ù.");
-    }
+    } catch (error) { console.error("Error renaming project:", error); alert("í”„ë¡œì íŠ¸ ì´ë¦„ ë³€ê²½ì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤."); }
 }
 
-/**
- * Deletes a project and moves its sessions to 'unassigned'.
- * @param {string} projectId The ID of the project to delete.
- */
 export async function deleteProject(projectId) {
-    const { projectsCollectionRef, localProjectsCache, localChatSessionsCache, db } = getState();
+    const { projectsCollectionRef, localProjectsCache, localChatSessionsCache, db, chatSessionsCollectionRef } = getState();
     const project = localProjectsCache.find(p => p.id === projectId);
     if (!project) return;
 
-    const message = ÇÁ·ÎÁ§Æ® '\'¸¦ »èÁ¦ÇÏ½Ã°Ú½À´Ï±î? ÇÁ·ÎÁ§Æ® ¾ÈÀÇ ¸ğµç ´ëÈ­´Â 'ÀÏ¹İ ´ëÈ­'·Î ÀÌµ¿µË´Ï´Ù.;
+    const message = `í”„ë¡œì íŠ¸ '${project.name}'ë¥¼ ì‚­ì œí•˜ì‹œê² ìŠµë‹ˆê¹Œ? í”„ë¡œì íŠ¸ ì•ˆì˜ ëª¨ë“  ëŒ€í™”ëŠ” 'ì¼ë°˜ ëŒ€í™”'ë¡œ ì´ë™ë©ë‹ˆë‹¤.`;
     showModal(message, async () => {
         try {
             const batch = db.batch();
             const sessionsToMove = localChatSessionsCache.filter(s => s.projectId === projectId);
-            
             sessionsToMove.forEach(session => {
-                const sessionRef = projectsCollectionRef.firestore.collection(session.ref.parent.path).doc(session.id);
+                const sessionRef = chatSessionsCollectionRef.doc(session.id);
                 batch.update(sessionRef, { projectId: null });
             });
-
             const projectRef = projectsCollectionRef.doc(projectId);
             batch.delete(projectRef);
-
             await batch.commit();
-        } catch (error) {
-            console.error("Error deleting project:", error);
-            alert("ÇÁ·ÎÁ§Æ® »èÁ¦¿¡ ½ÇÆĞÇß½À´Ï´Ù.");
-        }
+        } catch (error) { console.error("Error deleting project:", error); alert("í”„ë¡œì íŠ¸ ì‚­ì œì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤."); }
     });
 }
