@@ -44,6 +44,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Attach all event listeners
         attachEventListeners();
+
+        /*
+         * [AI 러닝메이트] 초기 상태에서 새 대화 버튼을 누르지 않아도 사용자가 바로
+         * 채팅 입력창을 사용할 수 있도록 입력창과 전송 버튼을 활성화합니다.
+         * 이 코드는 DOM 요소가 정상적으로 바인딩된 이후 실행되며,
+         * 채팅 세션이 없는 초기 화면에서도 곧바로 질문을 입력할 수 있게 만듭니다.
+         * 초기화 이후 다른 곳에서 다시 비활성화 상태로 설정하지 않는 한
+         * 기본값으로 활성화된 상태가 유지됩니다.
+         */
+        if (typeof chatInput !== 'undefined' && chatInput) {
+            // HTML 마크업에서 disabled 속성이 포함되어 있어도 JS에서 false로 덮어씁니다.
+            chatInput.disabled = false;
+            // 사용자가 빈 입력창을 볼 수 있도록 플레이스홀더를 설정합니다.
+            chatInput.placeholder = "AI 러닝메이트에게 질문하기...";
+        }
+        if (typeof chatSendBtn !== 'undefined' && chatSendBtn) {
+            chatSendBtn.disabled = false;
+        }
+        if (typeof deleteSessionBtn !== 'undefined' && deleteSessionBtn) {
+            // 초기에는 삭제 버튼을 보이지 않게 하여 새 세션이 없는 상태를 명확히 합니다.
+            deleteSessionBtn.style.display = 'none';
+        }
     }
 
     // --- 5. Event Listener Attachment Function ---
