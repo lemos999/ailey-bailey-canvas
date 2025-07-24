@@ -1,5 +1,0 @@
-/* Module: base.css - Basic styles for html, body, and global theme settings. */
-html { scroll-behavior: smooth; }
-body { font-family: 'Gowun Batang', serif; line-height: 1.8; margin: 0; padding: 20px; box-sizing: border-box; transition: background-color 0.3s, color 0.3s; }
-body.dark-mode { background-color: var(--bg-color-dark); color: var(--text-color-dark); }
-body:not(.dark-mode) { background-color: var(--bg-color-light); color: var(--text-color-light); }
