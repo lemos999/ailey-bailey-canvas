@@ -1,0 +1,118 @@
+/* Module: Main page layout styles */
+.wrapper { 
+    display: flex; 
+    max-width: 1100px; 
+    margin: 20px auto; 
+    gap: 20px; 
+    transition: max-width 0.4s ease; 
+}
+.wrapper.toc-hidden { 
+    max-width: 880px; 
+}
+
+.container { 
+    max-width: 800px; 
+    flex-grow: 1; 
+    padding: 30px 40px; 
+    border-radius: 12px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.07); 
+    transition: background-color 0.3s, border-color 0.3s, max-width 0.4s ease; 
+}
+.wrapper.toc-hidden .container { 
+    max-width: 100%; 
+}
+
+.header { 
+    text-align: center; 
+    padding-bottom: 20px; 
+    margin-bottom: 30px; 
+    transition: border-color 0.3s; 
+}
+body.dark-mode .header { 
+    border-bottom: 2px solid var(--border-color-dark); 
+}
+body:not(.dark-mode) .header { 
+    border-bottom: 2px solid var(--border-color-light); 
+}
+
+.header h1 { 
+    font-family: 'Noto Serif KR', serif; 
+    font-size: 2.8em; 
+    font-weight: 600; 
+    margin: 0; 
+    transition: color 0.3s; 
+}
+body.dark-mode .header h1 { 
+    color: var(--header-color-dark); 
+}
+body:not(.dark-mode) .header h1 { 
+    color: var(--header-color-light); 
+}
+
+.header .subtitle { 
+    font-size: 1.1em; 
+    transition: color 0.3s; 
+}
+body.dark-mode .header .subtitle { 
+    color: var(--sub-text-color-dark); 
+}
+body:not(.dark-mode) .header .subtitle { 
+    color: var(--sub-text-color-light); 
+}
+
+.draggable-panel { 
+    position: fixed; 
+    border-radius: 10px; 
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
+    display: none; 
+    flex-direction: column; 
+    resize: both; 
+    overflow: auto; 
+    transition: background-color 0.3s; 
+    z-index: 1100; 
+}
+.draggable-panel.is-dragging { 
+    z-index: 1200; 
+}
+body.dark-mode .draggable-panel { 
+    background-color: var(--container-bg-dark); 
+    border: 1px solid var(--border-color-dark); 
+}
+body:not(.dark-mode) .draggable-panel { 
+    background-color: var(--container-bg-light); 
+    border: 1px solid var(--border-color-light); 
+}
+
+.panel-header { 
+    padding: 10px; 
+    cursor: move; 
+    font-family: 'Noto Serif KR', serif; 
+    font-weight: bold; 
+    user-select: none; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    flex-wrap: wrap; 
+    transition: background-color 0.3s, border-color 0.3s; 
+    position: sticky; 
+    top: 0; 
+    z-index: 1; 
+}
+body.dark-mode .panel-header { 
+    background-color: #2a2a2a; 
+    border-bottom: 1px solid var(--border-color-dark); 
+}
+body:not(.dark-mode) .panel-header { 
+    background-color: #eaddc7; 
+    border-bottom: 1px solid var(--border-color-light); 
+}
+.panel-header .close-btn { 
+    cursor: pointer; 
+    background: none; 
+    border: none; 
+    padding: 0; 
+    line-height: 0; 
+}
+.panel-header .close-btn svg { 
+    fill: currentColor; 
+}

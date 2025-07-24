@@ -1,0 +1,32 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: style.css (Entry Point)
+Version: 11.0 (Modular CSS Architecture)
+Architect: [Username] & System Architect Ailey
+Description: This file now acts as the central entry point for all CSS modules. 
+             It imports component-specific stylesheets in a logical order to maintain the original cascade.
+*/
+
+/* 1. 전역 변수 */
+@import url('./modules/css/_variables.css');
+
+/* 2. 기본 스타일 (태그 선택자 위주) */
+@import url('./modules/css/_base.css');
+
+/* 3. 주요 레이아웃 구조 */
+@import url('./modules/css/_layout.css');
+
+/* 4. 학습 컨텐츠 (본문) 스타일 */
+@import url('./modules/css/_main-content.css');
+
+/* 5. 재사용 가능한 범용 컴포넌트 */
+@import url('./modules/css/_components.css');
+
+/* 6. 목차 (Scroll Navigation) */
+@import url('./modules/css/_scroll-nav.css');
+
+/* 7. 지식 발전소 (Notes Panel) */
+@import url('./modules/css/_notes-panel.css');
+
+/* 8. AI 러닝메이트 (Chat Panel) */
+@import url('./modules/css/_chat-panel.css');
