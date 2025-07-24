@@ -44,9 +44,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Attach all event listeners
         attachEventListeners();
-
-        // Start a new chat session automatically on load
-        handleNewChat();
     }
 
     // --- 5. Event Listener Attachment Function ---
@@ -208,11 +205,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 block.dispatchEvent(new Event('toggle'));
                 if (isExpanded) {
                     const steps = JSON.parse(block.dataset.steps);
-                    const fullText = steps.map(s => `<strong>${s.summary}</strong><br>${s.detail.replace(/
-/g, '<br>')}`).join('<br><br>');
+                    const fullText = steps.map(s => `<strong>${s.summary}</strong><br>${s.detail.replace(/\n/g, '<br>')}`).join('<br><br>');
                     content.innerHTML = '';
-                    typewriterEffect(content, fullText.replace(/<br>/g, '
-'));
+                    typewriterEffect(content, fullText.replace(/<br>/g, '\n'));
                 } else {
                     const steps = JSON.parse(block.dataset.steps);
                     startSummaryAnimation(block, steps);
@@ -240,9 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
             else openNoteEditor(id); 
         });
         if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
-        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `
-
-🔗 연관 학습: [${t}]`; saveNote(); });
+        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
 
         // Modal Listeners
         if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
