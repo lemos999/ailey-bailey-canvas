@@ -1,0 +1,16 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: style.css (Entry Point)
+Version: 11.0 (Modularized CSS)
+Architect: [Username] & System Architect Ailey
+Description: This file now acts as the entry point for all modularized CSS files. It imports all other style modules in a specific order to ensure correct style application.
+*/
+
+@import url('./modules/css/variables.css');
+@import url('./modules/css/base.css');
+@import url('./modules/css/layout.css');
+@import url('./modules/css/main-content.css');
+@import url('./modules/css/components.css');
+@import url('./modules/css/scroll-nav.css');
+@import url('./modules/css/notes-panel.css');
+@import url('./modules/css/chat-panel.css');
