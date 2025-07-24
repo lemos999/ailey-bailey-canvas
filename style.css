@@ -1,0 +1,7 @@
+﻿/* CSS Entry Point: Imports all modules using ABSOLUTE paths */
+@import url('https://lemos999.github.io/ailey-bailey-canvas/css_modules/base.css');
+@import url('https://lemos999.github.io/ailey-bailey-canvas/css_modules/panels.css');
+@import url('https://lemos999.github.io/ailey-bailey-canvas/css_modules/chat.css');
+@import url('https://lemos999.github.io/ailey-bailey-canvas/css_modules/notes.css');
+@import url('https://lemos999.github.io/ailey-bailey-canvas/css_modules/components.css');
+@import url('https://lemos999.github.io/ailey-bailey-canvas/css_modules/modals.css');
