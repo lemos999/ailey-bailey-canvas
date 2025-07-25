@@ -97,9 +97,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (notesAppToggleBtn) {
             notesAppToggleBtn.addEventListener('click', () => { 
                 togglePanel(notesAppPanel);
-                if (notesAppPanel.style.display === 'flex') { // 패널이 성공적으로 열렸을 때
-                    ensureNotePanelHeader();
-                    switchView('list'); // Always switch to the list view when opening the panel for consistency.
+                if (notesAppPanel.style.display === 'flex') {
+                    ensureNotePanelHeader(); // Ensure header exists for dragging
                     renderNoteList();
                 }
             });
