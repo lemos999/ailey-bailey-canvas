@@ -1,10 +1,13 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_notes_app.js
-Version: 13.3 (Intelligent Auto-Title)
+Version: 14.0 (Toast UI Editor Integration)
 Architect: [Username] & System Architect Ailey
-Description: Contains all business logic and UI rendering for the enhanced Notes App, including panel management, drag & drop, context menus, and intelligent auto-titling.
+Description: Integrates the powerful Toast UI Editor for a rich markdown editing experience.
 */
+
+// --- [NEW] Global variable for the editor instance
+let toastEditorInstance = null;
 
 // --- 3.0: Panel & View Management ---
 function ensureNotePanelHeader() {
@@ -28,13 +31,19 @@ function switchView(view) {
         noteListView?.classList.remove('active');
         noteEditorView?.classList.add('active');
     } else {
-        // [MODIFIED] Auto-title generation when leaving editor with empty title
         if (noteTitleInput && noteTitleInput.value.trim() === '' && currentNoteId) {
             const newTitle = generateTitleFromContent();
-            if (newTitle) { // Only save if there's content to make a title from
+            if (newTitle) {
                 notesCollectionRef.doc(currentNoteId).update({ title: newTitle });
             }
         }
+        
+        // [MODIFIED] Destroy editor instance on view switch to prevent memory leaks
+        if (toastEditorInstance) {
+            toastEditorInstance.destroy();
+            toastEditorInstance = null;
+        }
+
         noteEditorView?.classList.remove('active');
         noteListView?.classList.add('active');
         currentNoteId = null;
@@ -107,13 +116,13 @@ function toggleNoteProjectExpansion(projectId) {
 }
 
 // --- 3.2: Note Management (CRUD & More) ---
-async function addNote(content = '') { // [MODIFIED]
+async function addNote(content = '') {
     if (!notesCollectionRef) return;
     try {
         const activeProject = document.querySelector('.note-project-header.active-drop-target');
         const projectId = activeProject ? activeProject.closest('.note-project-container').dataset.projectId : null;
         const ref = await notesCollectionRef.add({
-            title: '', // Start with an empty title
+            title: '',
             content,
             projectId,
             isPinned: false,
@@ -122,28 +131,25 @@ async function addNote(content = '') { // [MODIFIED]
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         openNoteEditor(ref.id);
-        // Focus on title input for immediate typing
         if(noteTitleInput) noteTitleInput.focus();
     } catch (e) { console.error("새 메모 추가 실패:", e); }
 }
 
-function saveNote() { // [MODIFIED]
+function saveNote() {
     if (debounceTimer) clearTimeout(debounceTimer);
-    if (!currentNoteId || !notesCollectionRef) return;
+    if (!currentNoteId || !notesCollectionRef || !toastEditorInstance) return;
 
     let titleValue = noteTitleInput.value.trim();
-    const contentValue = noteContentTextarea.value;
+    // [MODIFIED] Get content from Toast UI Editor instance
+    const contentValue = toastEditorInstance.getMarkdown();
 
-    // Auto-generate title if title is empty but content is not
     if (titleValue === '' && contentValue.trim() !== '') {
-        titleValue = generateTitleFromContent();
+        titleValue = generateTitleFromContent(contentValue); // Pass content directly
     }
     
-    // Fallback for empty title AND content
     if (titleValue === '' && contentValue.trim() === '') {
         titleValue = '무제 노트';
     }
-
 
     const data = {
         title: titleValue,
@@ -155,7 +161,6 @@ function saveNote() { // [MODIFIED]
         .then(() => updateStatus('저장됨 ✓', true))
         .catch(e => { console.error("메모 저장 실패:", e); updateStatus('저장 실패 ❌', false); });
 }
-
 
 function deleteNote(noteId) {
     showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => {
@@ -210,22 +215,52 @@ async function moveNoteToProject(noteId, projectId) {
 
 function openNoteEditor(id) {
     const note = localNotesCache.find(n => n.id === id);
-    if (note && noteTitleInput && noteContentTextarea) {
-        currentNoteId = id;
-        noteTitleInput.value = note.title || '';
-        noteContentTextarea.value = note.content || '';
-        switchView('editor');
+    if (!note) return;
+    
+    // Ensure we switch to the editor view first
+    switchView('editor');
+
+    const editorEl = document.getElementById('toast-editor');
+    if (!editorEl) {
+        console.error("Toast editor container not found!");
+        return;
     }
+
+    // Destroy any existing instance before creating a new one
+    if (toastEditorInstance) {
+        toastEditorInstance.destroy();
+        toastEditorInstance = null;
+    }
+
+    // [MODIFIED] Initialize Toast UI Editor
+    toastEditorInstance = new toastui.Editor({
+        el: editorEl,
+        initialValue: note.content || '',
+        initialEditType: 'markdown',
+        previewStyle: 'vertical',
+        height: '100%',
+        theme: document.body.classList.contains('dark-mode') ? 'dark' : 'light',
+        plugins: [toastui.Editor.plugin.codeSyntaxHighlight],
+        events: {
+            change: debounce(() => {
+                updateStatus('입력 중...', true);
+                saveNote();
+            }, 1500)
+        }
+    });
+
+    currentNoteId = id;
+    if(noteTitleInput) noteTitleInput.value = note.title || '';
 }
 
-// [NEW] Helper function to generate a title from note content
-function generateTitleFromContent() {
-    if (!noteContentTextarea) return '무제 노트';
-    const content = noteContentTextarea.value.trim();
-    if (content === '') {
+
+function generateTitleFromContent(content) {
+    if (!content) return '무제 노트';
+    const trimmedContent = content.trim();
+    if (trimmedContent === '') {
         return '무제 노트';
     }
-    const firstLine = content.split('\n')[0];
+    const firstLine = trimmedContent.split('\n')[0].replace(/^[#->s*]*/, ''); // Remove markdown characters from start
     return firstLine.substring(0, 30) || '무제 노트';
 }
 
@@ -310,7 +345,6 @@ function renderNoteList() {
     else if (fragment.children.length === 0) notesListContainer.innerHTML = '<div>표시할 메모가 없습니다.</div>';
     else notesListContainer.appendChild(fragment);
 }
-
 
 function createNoteItem(noteData) {
     const item = document.createElement('div');
@@ -425,8 +459,7 @@ function createProjectContextMenu(projectId) {
 }
 
 
-// --- 3.5: [REVISED] Data Management Functions ---
-
+// --- 3.5: Data Management Functions ---
 async function handleSystemReset() {
     const message = "정말로 이 캔버스의 모든 데이터를 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.";
     showModal(message, async () => {
@@ -539,3 +572,5 @@ async function importAllData(event) {
     };
     reader.readAsText(file);
 }
+
+// [DELETED] applyFormat function is no longer needed with Toast UI Editor.
