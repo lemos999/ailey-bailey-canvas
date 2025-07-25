@@ -1,0 +1,14 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: style.css (Main Hub)
+Version: 11.0 (Modular CSS Structure)
+Architect: [Username] & System Architect Ailey
+Description: This file now acts as the central hub for all CSS modules. It uses @import to load modularized stylesheets, improving organization and maintainability without changing any functionality.
+*/
+
+@import url('style_base.css');
+@import url('style_widgets.css');
+@import url('style_navigation.css');
+@import url('style_panels.css');
+@import url('style_chat.css');
+@import url('style_notes.css');
