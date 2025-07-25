@@ -1,7 +1,7 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_main.js
-Version: 12.0 (Modular JS Refactor)
+Version: 16.0 (Notes UI Overhaul Complete)
 Architect: [Username] & System Architect Ailey
 Description: The main entry point for the application. Initializes the app and attaches all primary event listeners using robust, delegated patterns.
 */
@@ -105,10 +105,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         // --- Notes App Event Delegation ---
+        // A single, powerful set of listeners on the main list view container.
         if (noteListView) {
-            // Click listener for various actions
+            // Main click handler for all buttons, items, and headers.
             noteListView.addEventListener('click', e => {
                 const target = e.target;
+                
+                // Handle actions from the 'More Options' dropdown menu.
                 const dropdownAction = target.closest('.dropdown-item')?.dataset.action;
                 if (dropdownAction) {
                     if (dropdownAction === 'export-all') exportAllData();
@@ -118,21 +121,28 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 
+                // Open a note in the editor.
                 const noteItem = target.closest('.note-item');
                 if (noteItem) { openNoteEditor(noteItem.dataset.id); return; }
 
+                // Expand or collapse a project/folder.
                 const projectHeader = target.closest('.note-project-header');
                 if (projectHeader) { toggleNoteProjectExpansion(projectHeader.closest('.note-project-container').dataset.projectId); return; }
                 
+                // Handle Action Bar buttons.
                 if (target.closest('#add-new-note-btn-dynamic')) { handleAddNewNote(); return; }
                 if (target.closest('#add-new-note-project-btn-dynamic')) { createNewNoteProject(); return; }
                 if (target.closest('#more-options-btn')) { document.getElementById('notes-dropdown-menu')?.classList.toggle('show'); return; }
             });
 
-            // Context Menu (Right-click) listener
-            noteListView.addEventListener('contextmenu', e => showContextMenu(e.target, e));
+            // Context Menu (Right-click) listener for notes and folders.
+            noteListView.addEventListener('contextmenu', e => {
+                // Prevent default browser menu and show custom one.
+                e.preventDefault();
+                showContextMenu(e.target, e);
+            });
 
-            // Debounced search input
+            // Debounced search input handler.
             const debouncedRender = debounce(renderNoteList, 300);
             noteListView.addEventListener('input', e => {
                 if (e.target.id === 'search-input-dynamic') {
@@ -140,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
 
-            // Drag and Drop listeners
+            // Set of listeners to handle drag-and-drop for moving notes.
             let draggedNoteId = null;
             noteListView.addEventListener('dragstart', e => {
                 const noteItem = e.target.closest('.note-item');
@@ -152,18 +162,19 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             noteListView.addEventListener('dragover', e => {
-                e.preventDefault();
+                e.preventDefault(); // Necessary to allow dropping.
                 const projectHeader = e.target.closest('.note-project-header');
                 document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
                 if (projectHeader) {
                     e.dataTransfer.dropEffect = 'move';
-                    projectHeader.classList.add('drag-over');
+                    projectHeader.classList.add('drag-over'); // Visual feedback.
                 } else {
                     e.dataTransfer.dropEffect = 'none';
                 }
             });
             
             noteListView.addEventListener('dragleave', e => {
+                // Clean up visual feedback when dragging leaves a potential target.
                 const projectHeader = e.target.closest('.note-project-header');
                 if (projectHeader) projectHeader.classList.remove('drag-over');
             });
@@ -173,13 +184,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 const projectHeader = e.target.closest('.note-project-header');
                 if (projectHeader && draggedNoteId) {
                     const projectId = projectHeader.closest('.note-project-container').dataset.projectId;
-                    moveNoteToProject(draggedNoteId, projectId);
+                    moveNoteToProject(draggedNoteId, projectId); // Perform the move.
                 }
                 document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
                 draggedNoteId = null;
             });
             
             noteListView.addEventListener('dragend', () => {
+                // Clean up dragging styles regardless of drop success.
                 document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging'));
                 draggedNoteId = null;
             });

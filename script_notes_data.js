@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_notes_data.js
-Version: 12.0 (Modular JS Refactor)
+Version: 16.0 (Notes UI Overhaul Complete)
 Architect: [Username] & System Architect Ailey
-Description: Handles all data layer interactions with Firebase Firestore for the Notes App. This includes CRUD operations for notes and note projects (folders).
+Description: Handles all data layer interactions with Firebase Firestore for the Notes App. This version improves new note creation UX.
 */
 
 // --- 3. Function Definitions (Notes Data Management) ---
@@ -20,7 +20,7 @@ async function addNote(content = '') {
         const projectId = activeProject ? activeProject.closest('.note-project-container').dataset.projectId : null;
         
         const ref = await notesCollectionRef.add({
-            title: '', // 제목은 에디터에서 생성
+            title: generateTitleFromContent(content) || '무제 노트', // [MODIFIED] Generate initial title
             content: content,
             projectId: projectId,
             isPinned: false,

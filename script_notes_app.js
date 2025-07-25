@@ -1,8 +1,7 @@
-
 /*
 --- Ailey & Bailey Canvas ---
 File: script_notes_app.js
-Version: 13.0 (Editor UI Overhaul)
+Version: 16.0 (Notes UI Overhaul Complete)
 Architect: [Username] & System Architect Ailey
 Description: Acts as the main controller for the Notes App. It orchestrates the data, UI, editor, and utility modules, and handles view switching and event listening.
 */
@@ -10,13 +9,11 @@ Description: Acts as the main controller for the Notes App. It orchestrates the 
 // --- 3.0: Panel & View Management (Controller) ---
 
 /**
- * 노트 패널을 초기화합니다. 헤더, 콘텐츠 래퍼를 생성하고 드래그 기능을 활성화합니다.
+ * 노트 패널에 헤더가 없으면 생성하고 드래그 기능을 활성화합니다.
  * 패널이 처음 열릴 때 한 번만 호출됩니다.
  */
-function initializeNotesPanel() {
-    if (!notesAppPanel || notesAppPanel.dataset.initialized) return;
-
-    // Create and prepend the header if it doesn't exist
+function ensureNotePanelHeader() {
+    if (!notesAppPanel) return;
     let header = notesAppPanel.querySelector('.panel-header');
     if (!header) {
         header = document.createElement('div');
@@ -27,58 +24,36 @@ function initializeNotesPanel() {
         `;
         header.querySelector('.close-btn').addEventListener('click', () => togglePanel(notesAppPanel, false));
         notesAppPanel.prepend(header);
+        makePanelDraggable(notesAppPanel); // from _ui_helpers.js
     }
-
-    // Create the main content wrapper if it doesn't exist
-    let contentWrapper = notesAppPanel.querySelector('.notes-panel-content');
-    if (!contentWrapper) {
-        contentWrapper = document.createElement('div');
-        contentWrapper.className = 'notes-panel-content';
-
-        // Move existing views into the new wrapper
-        const listView = document.getElementById('note-list-view');
-        const editorView = document.getElementById('note-editor-view');
-        if (listView) contentWrapper.appendChild(listView);
-        if (editorView) contentWrapper.appendChild(editorView);
-
-        notesAppPanel.appendChild(contentWrapper);
-    }
-
-    makePanelDraggable(notesAppPanel); // from _ui_helpers.js
-    notesAppPanel.dataset.initialized = 'true';
 }
-
 
 /**
  * 노트 앱의 뷰를 'list' 또는 'editor'로 전환합니다.
  * @param {'list' | 'editor'} view - 전환할 뷰의 이름
  */
 function switchView(view) {
-    const listView = document.getElementById('note-list-view');
-    const editorView = document.getElementById('note-editor-view');
-
     if (view === 'editor') {
-        listView?.classList.remove('active');
-        editorView?.classList.add('active');
+        noteListView?.classList.remove('active');
+        noteEditorView?.classList.add('active');
     } else { // Switching back to 'list'
         // If the title was left blank in the editor, auto-generate it from content before leaving
-        const editorTitleInput = document.getElementById('note-title-input');
-        if (editorTitleInput && editorTitleInput.value.trim() === '' && currentNoteId && toastEditorInstance) {
+        if (noteTitleInput && noteTitleInput.value.trim() === '' && currentNoteId && toastEditorInstance) {
             const content = toastEditorInstance.getMarkdown();
             const newTitle = generateTitleFromContent(content); // from _editor.js
             if (newTitle && newTitle !== '무제 노트') {
                 notesCollectionRef.doc(currentNoteId).update({ title: newTitle });
             }
         }
-
+        
         // Destroy the editor instance on view switch to prevent memory leaks and ensure clean state
         if (toastEditorInstance) {
             toastEditorInstance.destroy();
             toastEditorInstance = null;
         }
 
-        editorView?.classList.remove('active');
-        listView?.classList.add('active');
+        noteEditorView?.classList.remove('active');
+        noteListView?.classList.add('active');
         currentNoteId = null; // Clear active note ID
     }
 }

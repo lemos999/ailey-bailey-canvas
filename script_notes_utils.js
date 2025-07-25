@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_notes_utils.js
-Version: 12.0 (Modular JS Refactor)
+Version: 13.0 (UI Overhaul - Step 7)
 Architect: [Username] & System Architect Ailey
-Description: Provides utility functions for the Notes App, such as data backup, restoration, and complete system reset.
+Description: Provides utility functions for the Notes App, such as data backup, restoration, and a complete, robust system reset.
 */
 
 // --- 3. Function Definitions (Notes Utility Management) ---
@@ -133,10 +133,14 @@ async function handleSystemReset() {
         }
         updateStatus("시스템 초기화 중...", true);
         
-        // List all collections to be wiped
+        // [CRITICAL UPDATE] List all collections to be wiped, including new ones.
         const collectionsToDelete = [
-            notesCollectionRef, noteProjectsCollectionRef, chatSessionsCollectionRef,
-            projectsCollectionRef, tagsCollectionRef, noteTemplatesCollectionRef
+            notesCollectionRef, 
+            noteProjectsCollectionRef, 
+            chatSessionsCollectionRef,
+            projectsCollectionRef, 
+            tagsCollectionRef, 
+            noteTemplatesCollectionRef
         ];
 
         try {

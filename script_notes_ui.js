@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_notes_ui.js
-Version: 12.0 (Modular JS Refactor)
+Version: 16.0 (Notes UI Overhaul Complete)
 Architect: [Username] & System Architect Ailey
-Description: Handles all UI rendering logic for the Notes App, including the main list view, note items, projects (folders), and context menus.
+Description: Handles all UI rendering logic for the Notes App, including the dynamic action bar, note lists, and context menus.
 */
 
 // --- 3. Function Definitions (Notes UI Management) ---
@@ -123,10 +123,8 @@ function createNoteItem(noteData) {
     if (noteData.isPinned) item.classList.add('pinned');
 
     item.innerHTML = `
-        <div class="note-item-content">
-            <div class="note-item-title">${noteData.title || '무제 노트'}</div>
-            <div class="note-item-date">${noteData.updatedAt?.toDate().toLocaleString('ko-KR',{dateStyle:'short',timeStyle:'short'})||'날짜 없음'}</div>
-        </div>
+        <div class="note-item-title">${noteData.title || '무제 노트'}</div>
+        <div class="note-item-date">${noteData.updatedAt?.toDate().toLocaleString('ko-KR',{dateStyle:'short',timeStyle:'short'})||'날짜 없음'}</div>
     `;
     return item;
 }
