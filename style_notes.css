@@ -1,0 +1,103 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: style_notes.css
+Version: 15.0 (UI/UX Revamp)
+Architect: [Username] & System Architect Ailey
+Description: Styles for the fully revamped Notes App, featuring a card-based UI, view toggles, and quick actions.
+*/
+
+/* --- General Panel & View Styles --- */
+#notes-app-panel { bottom: 100px; left: 100px; width: 800px; height: 75vh; min-width: 400px; min-height: 500px; padding: 0; overflow: hidden; }
+.notes-view { display: none; flex-direction: column; height: 100%; }
+.notes-view.active { display: flex; }
+#notes-app-panel .panel-header { width: 100%; box-sizing: border-box; }
+.notes-view.is-initializing .note-card { pointer-events: none; } /* [CRITICAL] Ghost click prevention */
+
+/* --- Action Bar --- */
+.action-bar { padding: 10px 15px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border-color-dark); justify-content: space-between; flex-wrap: wrap; }
+body:not(.dark-mode) .action-bar { border-bottom-color: var(--border-color-light); }
+.action-bar-group { display: flex; gap: 10px; align-items: center; }
+.action-bar-group.center { flex-grow: 1; justify-content: center; min-width: 150px; }
+.search-input-notes { flex-grow: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); font-family: 'Gowun Batang', serif; }
+body:not(.dark-mode) .search-input-notes { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
+.notes-btn { padding: 8px; border-radius: 50%; width: 36px; height: 36px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; display: flex; align-items: center; justify-content: center; white-space: nowrap; transition: background-color 0.2s; }
+body:not(.dark-mode) .notes-btn { background-color: var(--h2-color-light); }
+.notes-btn:hover { background-color: var(--h2-border-dark); }
+body:not(.dark-mode) .notes-btn:hover { background-color: var(--h2-border-light); }
+.notes-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+/* View Toggle Buttons */
+.view-toggle-btn { background: none; border: 1px solid transparent; border-radius: 6px; padding: 6px; cursor: pointer; line-height: 0; opacity: 0.6; transition: opacity 0.2s, background-color 0.2s; }
+.view-toggle-btn.active { opacity: 1; background-color: var(--strong-bg-dark); }
+body:not(.dark-mode) .view-toggle-btn.active { background-color: var(--strong-bg-light); }
+
+/* --- Note List & Project Styles --- */
+#notes-list-container { flex-grow: 1; overflow-y: auto; padding: 20px; }
+.note-group-header { font-size: 0.9em; font-weight: bold; padding: 15px 5px 10px 5px; color: var(--sub-text-color-dark); border-bottom: 1px solid var(--border-color-dark); margin-bottom: 15px; }
+body:not(.dark-mode) .note-group-header { color: var(--sub-text-color-light); border-bottom-color: var(--border-color-light); }
+
+/* Grid & List View Containers */
+.notes-list.grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+.notes-list.list-view { display: flex; flex-direction: column; gap: 10px; }
+
+/* Note Card (Core of the new design) */
+.note-card { border-radius: 8px; transition: all 0.2s ease-in-out; position: relative; display: flex; flex-direction: column; cursor: pointer; }
+body:not(.dark-mode) .note-card { background-color: var(--quote-bg-light); border: 1px solid var(--border-color-light); }
+body.dark-mode .note-card { background-color: var(--quote-bg-dark); border: 1px solid var(--border-color-dark); }
+.note-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+body.dark-mode .note-card:hover { border-color: var(--h2-border-dark); }
+body:not(.dark-mode) .note-card:hover { border-color: var(--h2-border-light); }
+.note-card.is-dragging { opacity: 0.5; background-color: var(--h2-border-dark); cursor: grabbing; }
+
+.note-card-content { padding: 15px; flex-grow: 1; }
+.note-card-title { font-size: 1.1em; font-weight: bold; margin: 0 0 8px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-card-snippet { font-size: 0.9em; opacity: 0.8; line-height: 1.5; margin: 0; height: 4.5em; /* 3 lines */ overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.list-view .note-card-snippet { height: 1.5em; -webkit-line-clamp: 1; } /* Snippet is shorter in list view */
+
+.note-card-footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-top: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) .note-card-footer { border-top-color: var(--border-color-light); }
+.note-card-date { font-size: 0.8em; opacity: 0.7; white-space: nowrap; }
+
+/* Tags inside cards */
+.note-card-tags { display: flex; flex-wrap: wrap; gap: 5px; overflow: hidden; }
+.note-tag { background-color: var(--strong-bg-dark); color: var(--text-color-dark); padding: 2px 8px; border-radius: 10px; font-size: 0.75em; }
+body:not(.dark-mode) .note-tag { background-color: var(--strong-bg-light); color: var(--text-color-light); }
+
+/* Quick Actions on Hover */
+.note-card-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 5px; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.note-card:hover .note-card-actions { opacity: 1; pointer-events: auto; }
+.note-card-actions .action-btn { background-color: rgba(0,0,0,0.3); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(2px); transition: background-color 0.2s; }
+.note-card-actions .action-btn:hover { background-color: rgba(0,0,0,0.5); }
+.note-card-actions .action-btn svg { width: 16px; height: 16px; }
+.note-card-actions .pin-btn.pinned-active { background-color: var(--pin-color); color: white; }
+
+/* List View Specific Styles */
+.list-view .note-card { flex-direction: row; align-items: center; }
+.list-view .note-card-content { display: flex; align-items: center; gap: 15px; padding: 10px 15px; }
+.list-view .note-card-title { margin-bottom: 0; flex-basis: 30%; flex-shrink: 0; }
+.list-view .note-card-snippet { flex-grow: 1; }
+.list-view .note-card-footer { border-top: none; border-left: 1px solid var(--border-color-dark); padding: 10px 15px; flex-shrink: 0; }
+body:not(.dark-mode) .list-view .note-card-footer { border-left-color: var(--border-color-light); }
+
+/* Project styles remain largely the same, but simplified for clarity */
+.note-project-container { margin-bottom: 5px; }
+.note-project-header { display: flex; align-items: center; padding: 10px 5px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
+body:not(.dark-mode) .note-project-header:hover { background-color: var(--quote-bg-light); }
+body.dark-mode .note-project-header:hover { background-color: var(--quote-bg-dark); }
+.note-project-header.drag-over { background-color: var(--h2-border-light) !important; border: 1px dashed var(--h2-color-light); }
+body.dark-mode .note-project-header.drag-over { background-color: var(--h2-border-dark) !important; border-color: var(--h2-color-dark); }
+.note-project-toggle-icon { transition: transform 0.2s ease-in-out; margin-right: 5px; line-height: 0; }
+.note-project-toggle-icon.expanded { transform: rotate(90deg); }
+.note-project-title { font-weight: bold; flex-grow: 1; }
+.note-count { font-size: 0.8em; color: var(--sub-text-color-dark); margin-left: 8px; }
+body:not(.dark-mode) .note-count { color: var(--sub-text-color-light); }
+.notes-in-project { padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
+.notes-in-project.expanded { max-height: 5000px; /* Allow for many notes */ padding-top: 10px; }
+
+/* --- Editor View --- */
+#note-editor-view { display: flex; flex-direction: column; height: 100%; }
+#note-editor-view .editor-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) #note-editor-view .editor-header { border-bottom-color: var(--border-color-light); }
+#note-title-input { font-size: 1.2em; font-weight: bold; width: 100%; border: none; background: transparent; padding: 10px 15px; color: inherit; }
+#toast-editor { flex-grow: 1; width: 100%; box-sizing: border-box; }
+#auto-save-status { font-size: 0.8em; padding: 5px 15px; text-align: right; opacity: 0.7; }
