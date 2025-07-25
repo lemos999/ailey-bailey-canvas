@@ -1,0 +1,94 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: style_notes.css
+Version: 13.1 (Editor Upgrade & Bugfix)
+Architect: [Username] & System Architect Ailey
+Description: Styles for the enhanced Notes App, including the Toast UI Editor.
+*/
+
+/* ... (All styles from the previous step for Action Bar, Dropdown, Projects are kept) ... */
+
+/* Notes App Panel General */
+#notes-app-panel { bottom: 100px; left: 100px; width: 400px; height: 600px; padding: 0; }
+.notes-view { display: none; flex-direction: column; height: 100%; }
+.notes-view.active { display: flex; }
+#note-editor-view { height: 100%; overflow: hidden; /* Prevent internal scrollbars */ }
+
+/* Action Bar Styles */
+/* ... (unchanged) ... */
+
+/* Note List & Project Styles */
+/* ... (unchanged) ... */
+
+
+/* [MODIFIED] Note Editor Styles for Toast UI */
+#note-editor-view .editor-header {
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color-dark);
+    flex-shrink: 0;
+}
+body:not(.dark-mode) #note-editor-view .editor-header {
+    border-bottom-color: var(--border-color-light);
+}
+
+#note-title-input {
+    font-size: 1.2em;
+    font-weight: bold;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 10px 15px;
+    color: inherit;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color-dark);
+}
+body:not(.dark-mode) #note-title-input {
+    border-bottom-color: var(--border-color-light);
+}
+
+
+/* [NEW] Toast UI Editor Container */
+#note-content-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Important for editor height */
+    position: relative;
+}
+
+#toast-editor-container {
+    flex-grow: 1;
+    min-height: 0; /* Allows the editor to shrink properly */
+}
+
+/* Override Toast UI styles for better integration */
+.toastui-editor-defaultUI {
+    border: none !important;
+}
+
+.toastui-editor-toolbar {
+    border-bottom: 1px solid var(--border-color-dark) !important;
+}
+body:not(.dark-mode) .toastui-editor-toolbar {
+    border-bottom-color: var(--border-color-light) !important;
+}
+
+.toastui-editor-md-container, .toastui-editor-ww-container {
+    background-color: transparent !important;
+}
+
+#auto-save-status {
+    position: absolute;
+    bottom: 10px;
+    right: 15px;
+    z-index: 10;
+    font-size: 0.8em;
+    opacity: 0.7;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
