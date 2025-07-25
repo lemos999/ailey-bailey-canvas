@@ -1,7 +1,7 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_state.js
-Version: 13.0 (Full Enhancement Groundwork)
+Version: 13.2 (Note App UX Enhancement)
 Architect: [Username] & System Architect Ailey
 Description: Declares all global state variables and DOM element constants. This file must be loaded first to ensure all other script modules can access this shared state.
 */
@@ -84,6 +84,7 @@ let unsubscribeFromNotes = null, unsubscribeFromNoteProjects = null, unsubscribe
 let currentNoteId = null;
 let newlyCreatedNoteProjectId = null;
 let currentNoteSort = 'updatedAt_desc'; // NEW: Default sort order
+let draggedNoteId = null; // [NEW] For drag & drop state tracking
 
 // -- Chat & Project State --
 let chatSessionsCollectionRef, projectsCollectionRef;
