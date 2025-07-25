@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_main.js
-Version: 13.1 (Editor Upgrade & Bugfix)
+Version: 13.2 (Editor Hotfix)
 Architect: [Username] & System Architect Ailey
-Description: The main entry point for the application. Attaches all necessary event listeners, now using event delegation for dynamically created elements.
+Description: The main entry point for the application. Attaches all necessary event listeners, including editor theme toggling.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function attachEventListeners() {
-        // --- Global Listeners ---
         document.addEventListener('click', (e) => { 
             handleTextSelection(e); 
             if (!e.target.closest('.session-context-menu, .project-context-menu, .note-project-context-menu')) removeContextMenu();
@@ -49,20 +48,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
 
-        // --- Global UI Listeners ---
         if (themeToggle) { 
             themeToggle.addEventListener('click', () => { 
                 body.classList.toggle('dark-mode'); 
                 localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
-                if (toastEditor) { // [NEW] Toggle editor theme
+                // [MODIFIED] Toggle editor theme along with the main theme
+                if (toastEditor) {
                     toastEditor.setUITheme(body.classList.contains('dark-mode') ? 'dark' : 'default');
                 }
             }); 
             if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); else body.classList.remove('dark-mode');
         }
-        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('hidden'); systemInfoWidget?.classList.toggle('tucked'); });
+        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); systemInfoWidget?.classList.toggle('tucked'); });
 
-        // --- Panel Toggles ---
         if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
         if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => { 
@@ -70,15 +68,11 @@ document.addEventListener('DOMContentLoaded', function () {
             if(notesAppPanel.style.display === 'flex') renderNoteList(); 
         });
 
-        // --- Chat App Listeners (unchanged) ---
-        // ... (omitted for brevity)
+        // --- Chat App Listeners can be assumed to be here ---
 
-        // --- [MODIFIED] Notes App Event Listeners using Event Delegation ---
         if (notesAppPanel) {
             notesAppPanel.addEventListener('click', e => {
                 const target = e.target;
-                
-                // Actions within the note list view
                 const noteListView = target.closest('#note-list-view');
                 if (noteListView) {
                     const dropdownAction = target.closest('.dropdown-item')?.dataset.action;
@@ -91,8 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     if (target.closest('#add-new-note-btn-dynamic')) { addNote(); return; }
                     if (target.closest('#add-new-note-project-btn-dynamic')) { createNewNoteProject(); return; }
-                    if (target.closest('#more-options-btn')) { document.getElementById('notes-dropdown-menu').classList.toggle('show'); return; }
-
+                    if (target.closest('#more-options-btn')) { document.getElementById('notes-dropdown-menu').classList.toggle('show'); e.stopPropagation(); return; }
                     const noteItem = target.closest('.note-item');
                     if (noteItem) {
                         const id = noteItem.dataset.id;
@@ -107,28 +100,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         return;
                     }
                 }
-
-                // Actions within the editor view
                 const noteEditorView = target.closest('#note-editor-view');
                 if(noteEditorView) {
                     if (target.closest('#back-to-list-btn')) { switchView('list'); return; }
-                    if (target.closest('#link-topic-btn')) { if(!toastEditor) return; const t = document.title || '현재 학습'; toastEditor.insertText(`\n\n🔗 연관 학습: [${t}]`); saveNote(); return; }
                 }
             });
-
-             // Drag and Drop for notes list (remains the same)
-            const notesListContainer = document.getElementById('notes-list');
-            if (notesListContainer) {
-                 // ... (drag and drop logic is complex and remains here)
-            }
         }
         
-        // --- Note Editor Listeners ---
-        // Input events are handled within the Toast UI editor instance now, not here.
-        
-        // --- Modal & API Settings Listeners ---
-        // ... (omitted for brevity)
+        // --- Modal & API Settings Listeners can be assumed to be here ---
     }
-
     initialize();
 });

@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_notes_app.js
-Version: 13.1 (Editor Upgrade & Bugfix)
+Version: 13.2 (Editor Hotfix)
 Architect: [Username] & System Architect Ailey
-Description: Implements the Toast UI Editor, smart title functionality, and robust event handling.
+Description: Implements the Toast UI Editor, relying on a static container provided by the HTML shell.
 */
 
 let toastEditor = null; // Global reference for the editor instance
@@ -11,17 +11,8 @@ let toastEditor = null; // Global reference for the editor instance
 // --- 3.1: Project/Folder Management (unchanged) ---
 // ... (omitted for brevity)
 
-// --- 3.2: Main UI Rendering ---
-function renderNoteList() { 
-    // This function remains largely the same as the previous version,
-    // which dynamically creates the Action Bar and lists projects/notes.
-    // ... (omitted for brevity, assume the full function from previous step is here)
-}
-
-function createNoteItem(noteData) {
-    // This function also remains the same.
-    // ... (omitted for brevity)
-}
+// --- 3.2: Main UI Rendering (unchanged) ---
+// ... (omitted for brevity)
 
 // --- 3.3: Note CRUD & Core Logic ---
 
@@ -61,7 +52,6 @@ function switchView(view) {
         noteEditorView?.classList.remove('active'); 
         noteListView?.classList.add('active'); 
         currentNoteId = null; 
-        // [CRITICAL] Destroy editor instance on view switch to prevent memory leaks
         if (toastEditor) {
             toastEditor.destroy();
             toastEditor = null;
@@ -79,33 +69,21 @@ function openNoteEditor(id, isNewNote = false) {
     const titleInput = document.getElementById('note-title-input');
     titleInput.value = note.title || '';
 
-    // [NEW] Smart Title functionality
     if (isNewNote && titleInput.value === '새 메모') {
         const clearOnFocus = () => {
-            if (titleInput.value === '새 메모') {
-                titleInput.value = '';
-            }
+            if (titleInput.value === '새 메모') titleInput.value = '';
             titleInput.removeEventListener('focus', clearOnFocus);
         };
         titleInput.addEventListener('focus', clearOnFocus);
     }
     
-    // [NEW] Toast UI Editor implementation
     if (toastEditor) {
         toastEditor.destroy();
         toastEditor = null;
     }
 
-    const editorContainer = document.getElementById('toast-editor-container');
-    if (!editorContainer) {
-        // Create the container if it doesn't exist
-        const contentTextarea = document.getElementById('note-content-textarea');
-        const container = document.createElement('div');
-        container.id = 'toast-editor-container';
-        contentTextarea.parentNode.insertBefore(container, contentTextarea);
-        contentTextarea.style.display = 'none'; // Hide the original textarea
-    }
-    
+    // [OPTIMIZED] Assumes the container element is always present in the HTML shell.
+    // The defensive code to create the container is removed for cleaner architecture.
     toastEditor = new toastui.Editor({
         el: document.querySelector('#toast-editor-container'),
         height: '100%',
@@ -115,7 +93,6 @@ function openNoteEditor(id, isNewNote = false) {
         theme: document.body.classList.contains('dark-mode') ? 'dark' : 'default',
         events: {
             change: () => {
-                // Debounced save on content change
                 updateStatus('입력 중...', true);
                 if (debounceTimer) clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(saveNote, 1500);
@@ -123,7 +100,6 @@ function openNoteEditor(id, isNewNote = false) {
         }
     });
 
-    // Debounced save for title input
     titleInput.oninput = () => {
         updateStatus('입력 중...', true);
         if (debounceTimer) clearTimeout(debounceTimer);
@@ -131,6 +107,5 @@ function openNoteEditor(id, isNewNote = false) {
     };
 }
 
-
-// --- 3.4: Other Functions ---
-// ... (All other functions like handleSystemReset, export, import remain the same)
+// --- 3.4: Other Functions (unchanged) ---
+// ... (omitted for brevity)

@@ -1,36 +1,57 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: style_notes.css
-Version: 13.1 (Editor Upgrade & Bugfix)
+Version: 13.2 (Editor Hotfix)
 Architect: [Username] & System Architect Ailey
-Description: Styles for the enhanced Notes App, including the Toast UI Editor.
+Description: Styles for the enhanced Notes App panel, ensuring robust layout for the Toast UI Editor.
 */
 
-/* ... (All styles from the previous step for Action Bar, Dropdown, Projects are kept) ... */
-
 /* Notes App Panel General */
-#notes-app-panel { bottom: 100px; left: 100px; width: 400px; height: 600px; padding: 0; }
-.notes-view { display: none; flex-direction: column; height: 100%; }
+#notes-app-panel { bottom: 100px; left: 100px; width: 450px; height: 650px; padding: 0; }
+.notes-view { display: none; flex-direction: column; height: 100%; width: 100%; }
 .notes-view.active { display: flex; }
-#note-editor-view { height: 100%; overflow: hidden; /* Prevent internal scrollbars */ }
+#note-editor-view { height: 100%; overflow: hidden; }
 
-/* Action Bar Styles */
-/* ... (unchanged) ... */
+/* Action Bar Styles... (unchanged from previous version) */
+.action-bar { padding: 10px 15px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border-color-dark); justify-content: space-between; flex-wrap: wrap; }
+body:not(.dark-mode) .action-bar { border-bottom-color: var(--border-color-light); }
+.action-bar-group { display: flex; gap: 10px; align-items: center; }
+.action-bar-group.left { justify-content: flex-start; }
+.action-bar-group.center { flex-grow: 1; justify-content: center; min-width: 120px; }
+.action-bar-group.right { justify-content: flex-end; }
+.search-input-notes { width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) .search-input-notes { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
+.notes-btn { padding: 8px 12px; border-radius: 20px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; font-size: 0.9em;}
+body:not(.dark-mode) .notes-btn { background-color: var(--h2-color-light); }
+.notes-btn svg { width: 16px; height: 16px; fill: currentColor; }
 
-/* Note List & Project Styles */
-/* ... (unchanged) ... */
+/* More Options Dropdown... (unchanged) */
+.more-options-container { position: relative; }
+.more-options-btn { background: none; border: none; padding: 5px; cursor: pointer; line-height: 0; border-radius: 50%; }
+.more-options-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
+.dropdown-menu { display: none; position: absolute; top: 100%; right: 0; background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1550; padding: 5px; min-width: 180px; }
+body:not(.dark-mode) .dropdown-menu { background-color: var(--container-bg-light); border-color: var(--border-color-light); }
+.dropdown-menu.show { display: block; }
+.dropdown-item { background: none; border: none; color: inherit; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer; border-radius: 4px; font-family: 'Gowun Batang', serif; font-size: 1em; display: flex; align-items: center; gap: 8px; }
+body:not(.dark-mode) .dropdown-item:hover { background-color: var(--quote-bg-light); }
+body.dark-mode .dropdown-item:hover { background-color: var(--quote-bg-dark); }
+.dropdown-separator { height: 1px; background-color: var(--border-color-dark); margin: 4px 8px; }
+body:not(.dark-mode) .dropdown-separator { background-color: var(--border-color-light); }
 
+/* Note List & Project Styles... (unchanged) */
+#notes-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
+/* ... */
 
-/* [MODIFIED] Note Editor Styles for Toast UI */
-#note-editor-view .editor-header {
+/* [MODIFIED] Note Editor Styles for Robust Layout */
+.editor-header {
     padding: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--border-color-dark);
-    flex-shrink: 0;
+    flex-shrink: 0; /* Prevent shrinking */
 }
-body:not(.dark-mode) #note-editor-view .editor-header {
+body:not(.dark-mode) .editor-header {
     border-bottom-color: var(--border-color-light);
 }
 
@@ -38,57 +59,42 @@ body:not(.dark-mode) #note-editor-view .editor-header {
     font-size: 1.2em;
     font-weight: bold;
     width: 100%;
+    box-sizing: border-box;
     border: none;
     background: transparent;
     padding: 10px 15px;
     color: inherit;
-    flex-shrink: 0;
+    flex-shrink: 0; /* Prevent shrinking */
     border-bottom: 1px solid var(--border-color-dark);
 }
 body:not(.dark-mode) #note-title-input {
     border-bottom-color: var(--border-color-light);
 }
 
-
-/* [NEW] Toast UI Editor Container */
 #note-content-wrapper {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Important for editor height */
+    overflow: hidden; /* CRITICAL for editor height */
     position: relative;
 }
 
 #toast-editor-container {
-    flex-grow: 1;
-    min-height: 0; /* Allows the editor to shrink properly */
+    flex-grow: 1; /* Allow editor to take all available space */
+    min-height: 0; /* CRITICAL for flexbox shrinking/growing */
 }
 
-/* Override Toast UI styles for better integration */
-.toastui-editor-defaultUI {
-    border: none !important;
-}
-
-.toastui-editor-toolbar {
-    border-bottom: 1px solid var(--border-color-dark) !important;
-}
-body:not(.dark-mode) .toastui-editor-toolbar {
-    border-bottom-color: var(--border-color-light) !important;
-}
-
-.toastui-editor-md-container, .toastui-editor-ww-container {
-    background-color: transparent !important;
-}
+/* Override Toast UI styles for seamless integration */
+.toastui-editor-defaultUI { border: none !important; }
+.toastui-editor-toolbar { border-bottom: 1px solid var(--border-color-dark) !important; }
+body:not(.dark-mode) .toastui-editor-toolbar { border-bottom-color: var(--border-color-light) !important; }
+.toastui-editor-md-container, .toastui-editor-ww-container { background-color: transparent !important; }
 
 #auto-save-status {
-    position: absolute;
-    bottom: 10px;
-    right: 15px;
-    z-index: 10;
+    padding: 5px 15px;
+    text-align: right;
     font-size: 0.8em;
     opacity: 0.7;
-    background-color: rgba(0,0,0,0.5);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
+    flex-shrink: 0;
+    height: 25px; /* Give it a fixed height */
 }
