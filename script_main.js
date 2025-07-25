@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_main.js
-Version: 13.2 (Editor Hotfix)
+Version: 13.1 (Event Delegation Fix)
 Architect: [Username] & System Architect Ailey
-Description: The main entry point for the application. Attaches all necessary event listeners, including editor theme toggling.
+Description: The main entry point for the application. Implements event delegation for robust UI interaction in the notes app.
 */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function attachEventListeners() {
+        // --- Global Listeners ---
         document.addEventListener('click', (e) => { 
             handleTextSelection(e); 
             if (!e.target.closest('.session-context-menu, .project-context-menu, .note-project-context-menu')) removeContextMenu();
@@ -48,66 +49,76 @@ document.addEventListener('DOMContentLoaded', function () {
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
 
-        if (themeToggle) { 
-            themeToggle.addEventListener('click', () => { 
-                body.classList.toggle('dark-mode'); 
-                localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
-                // [MODIFIED] Toggle editor theme along with the main theme
-                if (toastEditor) {
-                    toastEditor.setUITheme(body.classList.contains('dark-mode') ? 'dark' : 'default');
-                }
-            }); 
-            if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); else body.classList.remove('dark-mode');
-        }
-        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); systemInfoWidget?.classList.toggle('tucked'); });
-
+        // --- Global UI & Panel Toggles ---
+        if (themeToggle) { themeToggle.addEventListener('click', () => { body.classList.toggle('dark-mode'); localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light'); }); if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); else body.classList.remove('dark-mode'); }
+        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('hidden'); systemInfoWidget?.classList.toggle('tucked'); });
         if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
-        if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => { 
-            togglePanel(notesAppPanel); 
-            if(notesAppPanel.style.display === 'flex') renderNoteList(); 
-        });
+        if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => { togglePanel(notesAppPanel); if(notesAppPanel.style.display === 'flex') renderNoteList(); });
 
-        // --- Chat App Listeners can be assumed to be here ---
+        // --- Chat App Listeners (unchanged) ---
+        // ... (omitted for brevity)
 
-        if (notesAppPanel) {
-            notesAppPanel.addEventListener('click', e => {
+        // --- [RE-ARCHITECTED] Notes App Event Delegation ---
+        if (noteListView) {
+            noteListView.addEventListener('click', e => {
                 const target = e.target;
-                const noteListView = target.closest('#note-list-view');
-                if (noteListView) {
-                    const dropdownAction = target.closest('.dropdown-item')?.dataset.action;
-                    if (dropdownAction) {
-                        if (dropdownAction === 'export-all') exportAllData();
-                        else if (dropdownAction === 'import-all') handleRestoreClick();
-                        else if (dropdownAction === 'system-reset') handleSystemReset();
-                        document.getElementById('notes-dropdown-menu').classList.remove('show');
-                        return;
-                    }
-                    if (target.closest('#add-new-note-btn-dynamic')) { addNote(); return; }
-                    if (target.closest('#add-new-note-project-btn-dynamic')) { createNewNoteProject(); return; }
-                    if (target.closest('#more-options-btn')) { document.getElementById('notes-dropdown-menu').classList.toggle('show'); e.stopPropagation(); return; }
-                    const noteItem = target.closest('.note-item');
-                    if (noteItem) {
-                        const id = noteItem.dataset.id;
-                        if (target.closest('.delete-btn')) handleDeleteRequest(id);
-                        else if (target.closest('.pin-btn')) togglePin(id);
-                        else openNoteEditor(id);
-                        return;
-                    }
-                    const projectHeader = target.closest('.note-project-header');
-                    if (projectHeader) {
-                        toggleNoteProjectExpansion(projectHeader.closest('.note-project-container').dataset.projectId);
-                        return;
-                    }
-                }
-                const noteEditorView = target.closest('#note-editor-view');
-                if(noteEditorView) {
-                    if (target.closest('#back-to-list-btn')) { switchView('list'); return; }
+                const actionTarget = target.closest('[data-action]');
+                if (!actionTarget) return;
+
+                const action = actionTarget.dataset.action;
+                const noteItem = target.closest('.note-item');
+                const noteId = noteItem?.dataset.id;
+                
+                switch(action) {
+                    case 'add-new-note':
+                        addNote();
+                        break;
+                    case 'add-new-project':
+                        createNewNoteProject();
+                        break;
+                    case 'toggle-more-options':
+                        e.stopPropagation();
+                        document.getElementById('notes-dropdown-menu')?.classList.toggle('show');
+                        break;
+                    case 'export-all':
+                        exportAllData();
+                        break;
+                    case 'import-all':
+                        handleRestoreClick();
+                        break;
+                    case 'system-reset':
+                        handleSystemReset();
+                        break;
+                    case 'open-note':
+                        if(noteId) openNoteEditor(noteId);
+                        break;
+                    case 'pin-note':
+                        if(noteId) { e.stopPropagation(); togglePin(noteId); }
+                        break;
+                    case 'delete-note':
+                        if(noteId) { e.stopPropagation(); handleDeleteRequest(noteId); }
+                        break;
+                    case 'toggle-project':
+                        const projectId = target.closest('.note-project-container')?.dataset.projectId;
+                        if(projectId) toggleNoteProjectExpansion(projectId);
+                        break;
                 }
             });
         }
         
-        // --- Modal & API Settings Listeners can be assumed to be here ---
+        // --- Note Editor Listeners ---
+        if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
+        const handleInput = () => { updateStatus('입력 중...', true); if (debounceTimer) clearTimeout(debounceTimer); debounceTimer = setTimeout(saveNote, 1000); };
+        if (noteTitleInput) noteTitleInput.addEventListener('input', handleInput);
+        if (noteContentTextarea) noteContentTextarea.addEventListener('input', handleInput);
+        if (formatToolbar) formatToolbar.addEventListener('click', e => { const b = e.target.closest('.format-btn'); if (b) applyFormat(b.dataset.format); });
+        if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
+        
+        // --- Modal & API Settings Listeners ---
+        if (fileImporter) fileImporter.addEventListener('change', importAllData);
+        // ... (omitted for brevity)
     }
+
     initialize();
 });
