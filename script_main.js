@@ -1,7 +1,7 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_main.js
-Version: 13.1 (Data Functions Hotfix)
+Version: 13.2 (UX Enhancement)
 Architect: [Username] & System Architect Ailey
 Description: The main entry point for the application. Attaches all necessary event listeners using robust patterns.
 */
@@ -63,14 +63,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
         if (notesAppToggleBtn) notesAppToggleBtn.addEventListener('click', () => { 
-            togglePanel(notesAppPanel, true); 
-            renderNoteList(); 
+            // [FIXED] Changed from force 'true' to a proper toggle
+            togglePanel(notesAppPanel);
+            if(notesAppPanel.style.display === 'flex') renderNoteList();
         });
 
         // --- Notes App Listeners (REVISED with Event Delegation) ---
         if (noteListView) {
+            // --- Click Event Delegation ---
             noteListView.addEventListener('click', e => {
-                // Delegation for Dropdown Menu
                 const dropdownAction = e.target.closest('.dropdown-item')?.dataset.action;
                 if(dropdownAction) {
                     if (dropdownAction === 'export-all') exportAllData();
@@ -80,7 +81,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                // Delegation for Note Items
                 const noteItem = e.target.closest('.note-item');
                 if (noteItem) {
                     const id = noteItem.dataset.id; 
@@ -90,14 +90,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                // Delegation for Project Headers
                 const projectHeader = e.target.closest('.note-project-header');
-                if(projectHeader) {
+                if(projectHeader && !e.target.closest('input')) {
                     toggleNoteProjectExpansion(projectHeader.closest('.note-project-container').dataset.projectId);
                     return;
                 }
                 
-                // Delegation for dynamically created buttons in Action Bar
                 const newNoteBtn = e.target.closest('#add-new-note-btn-dynamic');
                 if (newNoteBtn) { addNote(); return; }
                 const newProjectBtn = e.target.closest('#add-new-note-project-btn-dynamic');
@@ -106,6 +104,60 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (moreOptionsBtn) { document.getElementById('notes-dropdown-menu')?.classList.toggle('show'); return; }
             });
 
+            // --- Context Menu (Right-click) Delegation ---
+            noteListView.addEventListener('contextmenu', e => {
+                const projectHeader = e.target.closest('.note-project-header');
+                if (projectHeader) {
+                    e.preventDefault();
+                    showNoteProjectContextMenu(projectHeader.closest('.note-project-container').dataset.projectId, e);
+                }
+            });
+
+            // --- Drag and Drop Delegation ---
+            let draggedNoteId = null;
+            noteListView.addEventListener('dragstart', e => {
+                const noteItem = e.target.closest('.note-item');
+                if (noteItem) {
+                    draggedNoteId = noteItem.dataset.id;
+                    e.dataTransfer.setData('text/plain', draggedNoteId);
+                    // Use a timeout to allow the browser to create its drag image before we apply our class
+                    setTimeout(() => noteItem.classList.add('is-dragging'), 0);
+                }
+            });
+
+            noteListView.addEventListener('dragover', e => {
+                e.preventDefault(); // Necessary to allow dropping
+                const projectHeader = e.target.closest('.note-project-header');
+                if (projectHeader) {
+                    projectHeader.classList.add('drag-over');
+                }
+            });
+
+            noteListView.addEventListener('dragleave', e => {
+                const projectHeader = e.target.closest('.note-project-header');
+                if (projectHeader) {
+                    projectHeader.classList.remove('drag-over');
+                }
+            });
+
+            noteListView.addEventListener('drop', e => {
+                e.preventDefault();
+                const projectHeader = e.target.closest('.note-project-header');
+                if (projectHeader && draggedNoteId) {
+                    const projectId = projectHeader.closest('.note-project-container').dataset.projectId;
+                    moveNoteToProject(draggedNoteId, projectId);
+                    projectHeader.classList.remove('drag-over');
+                }
+            });
+
+            noteListView.addEventListener('dragend', e => {
+                 const noteItem = document.querySelector(`.note-item[data-id='${draggedNoteId}']`);
+                 if(noteItem) noteItem.classList.remove('is-dragging');
+                 draggedNoteId = null;
+            });
+
+
+            // --- Search Input ---
             noteListView.addEventListener('input', e => {
                 if (e.target.id === 'search-input-dynamic') {
                     renderNoteList();
@@ -123,8 +175,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (linkTopicBtn) linkTopicBtn.addEventListener('click', () => { if(!noteContentTextarea) return; const t = document.title || '현재 학습'; noteContentTextarea.value += `\n\n🔗 연관 학습: [${t}]`; saveNote(); });
         
         // --- Other Listeners (Chat, Modals, API settings, etc.) ---
-        // These listeners are assumed to be correct and are omitted for brevity.
-        // The original script content for them remains valid.
         if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
         if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
         if (deleteSessionBtn) deleteSessionBtn.addEventListener('click', () => handleDeleteSession(currentSessionId));
@@ -132,7 +182,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
         if (searchSessionsInput) searchSessionsInput.addEventListener('input', renderSidebarContent);
         if (apiSettingsBtn) apiSettingsBtn.addEventListener('click', openApiSettingsModal);
-        // ... and so on for all other event listeners.
     }
 
     initialize();

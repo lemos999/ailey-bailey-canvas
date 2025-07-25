@@ -1,9 +1,9 @@
 /*
 --- Ailey & Bailey Canvas ---
 File: script_notes_app.js
-Version: 13.1 (Data Functions Hotfix)
+Version: 13.2 (UX Enhancement)
 Architect: [Username] & System Architect Ailey
-Description: Contains all business logic and UI rendering for the enhanced Notes App.
+Description: Contains all business logic and UI rendering for the enhanced Notes App, including drag-and-drop, context menus, and inline editing.
 */
 
 // --- 3.1: Project/Folder Management ---
@@ -69,6 +69,21 @@ function toggleNoteProjectExpansion(projectId) {
     const project = localNoteProjectsCache.find(p => p.id === projectId);
     if (project) { project.isExpanded = !project.isExpanded; renderNoteList(); }
 }
+
+// [NEW] Move note to a different project
+async function moveNoteToProject(noteId, newProjectId) {
+    if (!noteId || !notesCollectionRef) return;
+    try {
+        await notesCollectionRef.doc(noteId).update({
+            projectId: newProjectId,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error moving note:", error);
+        alert("메모 이동에 실패했습니다.");
+    }
+}
+
 
 // --- 3.2: Main UI Rendering ---
 function renderNoteList() { 
@@ -159,6 +174,44 @@ function createNoteItem(noteData) {
     item.appendChild(tagContainer);
     return item;
 }
+
+// [NEW] Show context menu for note projects
+function showNoteProjectContextMenu(projectId, event) {
+    removeContextMenu(); // Close any existing menus
+    const project = localNoteProjectsCache.find(p => p.id === projectId);
+    if (!project) return;
+
+    const menu = document.createElement('div');
+    menu.className = 'note-project-context-menu';
+    menu.innerHTML = `
+        <button class="dropdown-item" data-action="rename">이름 변경</button>
+        <div class="dropdown-separator"></div>
+        <button class="dropdown-item" data-action="delete" style="color: #d9534f;">삭제</button>
+    `;
+
+    document.body.appendChild(menu);
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
+    const bodyWidth = document.body.clientWidth;
+    const bodyHeight = document.body.clientHeight;
+    menu.style.left = `${event.clientX + menuWidth > bodyWidth ? event.clientX - menuWidth : event.clientX}px`;
+    menu.style.top = `${event.clientY + menuHeight > bodyHeight ? event.clientY - menuHeight : event.clientY}px`;
+    menu.style.display = 'block';
+
+    currentOpenContextMenu = menu;
+
+    menu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = e.target.closest('.dropdown-item')?.dataset.action;
+        if (action === 'rename') {
+            startNoteProjectRename(projectId);
+        } else if (action === 'delete') {
+            deleteNoteProject(projectId);
+        }
+        removeContextMenu();
+    });
+}
+
 
 async function addNote(content = '') { 
     if (!notesCollectionRef) return; 
