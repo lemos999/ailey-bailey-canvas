@@ -1,17 +1,9 @@
-
 /*
 --- Ailey & Bailey Canvas ---
 File: script_state.js
 Version: 13.3 (Toast UI Editor Integration)
 Architect: [Username] & System Architect Ailey
-Description: Declares all global state variables and DOM element constants for the application.
-*/
-/*
---- Ailey & Bailey Canvas ---
-File: script_state.js
-Version: 13.3 (Toast UI Editor Integration)
-Architect: [Username] & System Architect Ailey
-Description: Declares all global state variables and DOM element constants for the application.
+Description: Declares all global state variables and DOM element constants. This file must be loaded first to ensure all other script modules can access this shared state.
 */
 
 // --- 1. Element Declarations (Global Scope) ---
@@ -37,8 +29,15 @@ const chatSendBtn = document.getElementById('chat-send-btn');
 const notesAppPanel = document.getElementById('notes-app-panel');
 const noteListView = document.getElementById('note-list-view');
 const noteEditorView = document.getElementById('note-editor-view');
+const notesList = document.getElementById('notes-list');
+const searchInput = document.getElementById('search-input');
+const addNewNoteBtn = document.getElementById('add-new-note-btn');
 const backToListBtn = document.getElementById('back-to-list-btn');
 const noteTitleInput = document.getElementById('note-title-input');
+// [REMOVED] The old textarea and format toolbar are no longer needed
+// const noteContentTextarea = document.getElementById('note-content-textarea');
+// const formatToolbar = document.querySelector('.format-toolbar');
+// const linkTopicBtn = document.getElementById('link-topic-btn');
 const autoSaveStatus = document.getElementById('auto-save-status');
 const customModal = document.getElementById('custom-modal');
 const modalMessage = document.getElementById('modal-message');
@@ -61,6 +60,8 @@ const deleteSessionBtn = document.getElementById('delete-session-btn');
 const chatWelcomeMessage = document.getElementById('chat-welcome-message');
 const searchSessionsInput = document.getElementById('search-sessions-input');
 const aiModelSelector = document.getElementById('ai-model-selector');
+
+// -- Backup & Restore UI Elements (Now part of dropdown) --
 const fileImporter = document.getElementById('file-importer');
 
 // -- API Settings UI Elements (dynamically created) --
@@ -83,8 +84,9 @@ let localNotesCache = [], localNoteProjectsCache = [], localTagsCache = [], note
 let unsubscribeFromNotes = null, unsubscribeFromNoteProjects = null, unsubscribeFromTags = null, unsubscribeFromNoteTemplates = null;
 let currentNoteId = null;
 let newlyCreatedNoteProjectId = null;
+let currentNoteSort = 'updatedAt_desc';
 let draggedNoteId = null;
-let toastEditor = null; // [NEW] To hold the Toast UI Editor instance
+let toastEditor = null; // [NEW] For Toast UI Editor instance
 
 // -- Chat & Project State --
 let chatSessionsCollectionRef, projectsCollectionRef;

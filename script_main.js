@@ -1,17 +1,9 @@
-
 /*
 --- Ailey & Bailey Canvas ---
 File: script_main.js
 Version: 13.3 (Toast UI Editor Integration)
 Architect: [Username] & System Architect Ailey
-Description: The main entry point for the application, adapted for Toast UI Editor.
-*/
-/*
---- Ailey & Bailey Canvas ---
-File: script_main.js
-Version: 13.3 (Toast UI Editor Integration)
-Architect: [Username] & System Architect Ailey
-Description: The main entry point for the application, adapted for Toast UI Editor.
+Description: The main entry point for the application. Attaches all necessary event listeners.
 */
 
 // --- Utility Functions ---
@@ -48,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
             setupNavigator(); 
             setupChatModeSelector(); 
             initializeTooltips(); 
-            makePanelDraggable(chatPanel);
+            makePanelDraggable(chatPanel); 
             handleNewChat();
         });
 
@@ -70,11 +62,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (themeToggle) { 
             themeToggle.addEventListener('click', () => { 
                 body.classList.toggle('dark-mode'); 
-                localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
-                // [NEW] Update editor theme on toggle
-                if (toastEditor) {
-                    toastEditor.setUITheme(body.classList.contains('dark-mode') ? 'dark' : 'default');
-                }
+                localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light'); 
+                // [NEW] Toggle editor theme as well
+                if(toastEditor) toastEditor.setUITheme(body.classList.contains('dark-mode') ? 'dark' : 'default');
             }); 
             if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); else body.classList.remove('dark-mode');
         }
@@ -90,8 +80,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     ensureNotePanelHeader();
                     renderNoteList();
                 } else {
-                    // When closing, destroy the editor instance to save resources
-                    if (toastEditor) {
+                    // Clean up editor instance when panel is closed
+                    if(toastEditor) {
                         toastEditor.destroy();
                         toastEditor = null;
                     }
@@ -99,25 +89,58 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
         
-        // --- Notes App Event Delegation (Unchanged) ---
-        // Drag/drop, context menu, and other list view listeners remain the same.
-        // ...
-
+        // --- Notes App Event Delegation ---
+        if (noteListView) {
+            noteListView.addEventListener('click', e => {
+                const dropdownAction = e.target.closest('.dropdown-item')?.dataset.action;
+                if(dropdownAction) {
+                    if (dropdownAction === 'export-all') exportAllData();
+                    else if (dropdownAction === 'import-all') handleRestoreClick();
+                    else if (dropdownAction === 'system-reset') handleSystemReset();
+                    document.getElementById('notes-dropdown-menu')?.classList.remove('show');
+                    return;
+                }
+                const noteItem = e.target.closest('.note-item');
+                if (noteItem) { openNoteEditor(noteItem.dataset.id); return; }
+                const projectHeader = e.target.closest('.note-project-header');
+                if(projectHeader) { toggleNoteProjectExpansion(projectHeader.closest('.note-project-container').dataset.projectId); return; }
+                const newNoteBtn = e.target.closest('#add-new-note-btn-dynamic');
+                if (newNoteBtn) { addNote(); return; }
+                const newProjectBtn = e.target.closest('#add-new-note-project-btn-dynamic');
+                if (newProjectBtn) { createNewNoteProject(); return; }
+                const moreOptionsBtn = e.target.closest('#more-options-btn');
+                if (moreOptionsBtn) { document.getElementById('notes-dropdown-menu')?.classList.toggle('show'); return; }
+            });
+            noteListView.addEventListener('contextmenu', e => showContextMenu(e.target, e));
+            const debouncedRender = debounce(renderNoteList, 300);
+            noteListView.addEventListener('input', e => { if (e.target.id === 'search-input-dynamic') debouncedRender(); });
+            noteListView.addEventListener('dragstart', e => { const noteItem = e.target.closest('.note-item'); if (noteItem) { draggedNoteId = noteItem.dataset.id; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => noteItem.classList.add('is-dragging'), 0); } });
+            noteListView.addEventListener('dragover', e => { e.preventDefault(); const projectHeader = e.target.closest('.note-project-header'); if (projectHeader) { e.dataTransfer.dropEffect = 'move'; projectHeader.classList.add('drag-over'); } else { e.dataTransfer.dropEffect = 'none'; } });
+            noteListView.addEventListener('dragleave', e => { const projectHeader = e.target.closest('.note-project-header'); if (projectHeader) projectHeader.classList.remove('drag-over'); });
+            noteListView.addEventListener('drop', e => { e.preventDefault(); const projectHeader = e.target.closest('.note-project-header'); if (projectHeader && draggedNoteId) { const projectId = projectHeader.closest('.note-project-container').dataset.projectId; moveNoteToProject(draggedNoteId, projectId); } document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over')); document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging')); draggedNoteId = null; });
+            noteListView.addEventListener('dragend', () => { document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging')); draggedNoteId = null; });
+        }
+        
         if (fileImporter) fileImporter.addEventListener('change', importAllData);
         
-        // --- Note Editor Listeners (Simplified) ---
+        // --- Note Editor Listeners ---
         if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
-        if (noteTitleInput) {
-            const debouncedSave = debounce(saveNote, 1500);
-            noteTitleInput.addEventListener('input', () => {
-                updateStatus('입력 중...', true);
-                debouncedSave();
-            });
+        if (noteEditorView) {
+            // Title input is handled separately from the Toast editor
+            const titleInput = noteEditorView.querySelector('#note-title-input');
+            if (titleInput) {
+                titleInput.addEventListener('input', saveNote);
+            }
         }
-        // [REMOVED] formatToolbar and linkTopicBtn listeners are no longer needed.
         
-        // --- Chat and other listeners (unchanged) ---
-        // ...
+        // --- Chat and other listeners ---
+        if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
+        if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
+        if (deleteSessionBtn) deleteSessionBtn.addEventListener('click', () => handleDeleteSession(currentSessionId));
+        if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
+        if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
+        if (searchSessionsInput) searchSessionsInput.addEventListener('input', debounce(renderSidebarContent, 300));
+        if (apiSettingsBtn) apiSettingsBtn.addEventListener('click', openApiSettingsModal);
     }
 
     initialize();

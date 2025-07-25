@@ -1,17 +1,9 @@
-
 /*
 --- Ailey & Bailey Canvas ---
 File: style_notes.css
 Version: 13.3 (Toast UI Editor Integration)
 Architect: [Username] & System Architect Ailey
-Description: Styles for the enhanced Notes App panel, now fully integrated with Toast UI Editor.
-*/
-/*
---- Ailey & Bailey Canvas ---
-File: style_notes.css
-Version: 13.3 (Toast UI Editor Integration)
-Architect: [Username] & System Architect Ailey
-Description: Styles for the enhanced Notes App panel, now fully integrated with Toast UI Editor.
+Description: Styles for the enhanced Notes App panel, now with Toast UI Editor integration.
 */
 
 /* Notes App Panel General */
@@ -24,9 +16,7 @@ Description: Styles for the enhanced Notes App panel, now fully integrated with 
 .action-bar { padding: 10px 15px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border-color-dark); justify-content: space-between; flex-wrap: wrap; }
 body:not(.dark-mode) .action-bar { border-bottom-color: var(--border-color-light); }
 .action-bar-group { display: flex; gap: 10px; align-items: center; }
-.action-bar-group.left { justify-content: flex-start; }
 .action-bar-group.center { flex-grow: 1; justify-content: center; min-width: 120px; }
-.action-bar-group.right { justify-content: flex-end; }
 .search-input-notes { flex-grow: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
 body:not(.dark-mode) .search-input-notes { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
 .notes-btn { padding: 8px 15px; border-radius: 20px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
@@ -93,20 +83,23 @@ body:not(.dark-mode) .note-item:hover { background-color: var(--quote-bg-light);
 .note-item-title { font-weight: bold; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .note-item-date { font-size: 0.8em; opacity: 0.7; }
 
-/* --- [NEW] Toast UI Editor Integration Styles --- */
-#note-editor-view { padding: 0; }
-#note-editor-view .editor-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
+/* Note Editor & Toast UI Styles */
+#note-editor-view .editor-header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color-dark); flex-shrink: 0; }
 body:not(.dark-mode) #note-editor-view .editor-header { border-bottom-color: var(--border-color-light); }
+#note-title-input { font-size: 1.2em; font-weight: bold; width: 100%; border: none; background: transparent; padding: 10px 15px; color: inherit; flex-shrink: 0; box-sizing: border-box; }
+#auto-save-status { font-size: 0.8em; text-align: right; opacity: 0.7; }
 
-#note-title-input { font-size: 1.2em; font-weight: bold; width: 100%; border: none; background: transparent; padding: 10px 15px; color: inherit; }
-#auto-save-status { font-size: 0.8em; padding: 5px 15px; text-align: right; opacity: 0.7; }
-#toast-editor-container { flex-grow: 1; box-sizing: border-box; overflow: hidden; }
-
-/* Toast UI Editor Theme Overrides */
+/* [NEW] Toast UI Editor Container */
+#toast-editor-container { flex-grow: 1; min-height: 0; /* Important for flexbox layout */ }
 .toastui-editor-defaultUI { border: none !important; }
-.toastui-editor-toolbar { background-color: transparent !important; }
-.toastui-editor-md-container { background-color: transparent !important; }
-.toastui-editor-ww-container { background-color: transparent !important; }
-.toastui-editor-contents { font-family: 'Gowun Batang', serif !important; font-size: 1em !important; line-height: 1.8 !important; }
-body.dark-mode .toastui-editor-contents { color: var(--text-color-dark) !important; }
-body:not(.dark-mode) .toastui-editor-contents { color: var(--text-color-light) !important; }
+.toastui-editor-main-container { font-family: 'Gowun Batang', serif !important; }
+.toastui-editor-contents { font-size: 1em !important; font-family: 'Gowun Batang', serif !important; line-height: 1.8 !important; }
+
+/* Dark Mode Toast UI Overrides */
+body.dark-mode .toastui-editor-defaultUI { background-color: var(--container-bg-dark); }
+body.dark-mode .toastui-editor-toolbar { background-color: #2a2a2a; border-bottom-color: var(--border-color-dark); }
+body.dark-mode .toastui-editor-toolbar button { color: var(--text-color-dark) !important; }
+body.dark-mode .toastui-editor-mode-switch { background-color: #2a2a2a !important; border-top-color: var(--border-color-dark); }
+body.dark-mode .toastui-editor-md-container, body.dark-mode .toastui-editor-ww-container { background-color: var(--container-bg-dark); }
+body.dark-mode .toastui-editor-contents { color: var(--text-color-dark); }
+body.dark-mode .toastui-editor-popup { background-color: #2a2a2a; border-color: var(--border-color-dark); color: var(--text-color-dark); }
