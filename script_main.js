@@ -96,10 +96,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
         if (notesAppToggleBtn) {
             notesAppToggleBtn.addEventListener('click', () => { 
-                togglePanel(notesAppPanel);
-                if (notesAppPanel.style.display === 'flex') {
-                    ensureNotePanelHeader(); // Ensure header exists for dragging
+                const isOpening = notesAppPanel.style.display !== 'flex'; // Check state *before* toggle
+                togglePanel(notesAppPanel); // Toggle the panel
+                
+                if (isOpening) { // If panel is being opened
+                    ensureNotePanelHeader();
                     renderNoteList();
+                } else { // If panel is being closed
+                    switchView('list'); // Reset the view to 'list' to prevent view conflicts
                 }
             });
         }
