@@ -1,0 +1,5 @@
+{
+  "comment": "This is the remote blueprint for the bootstrap process.",
+  "templateUrl": "https://lemos999.github.io/ailey-bailey-canvas/templates/card_template.html",
+  "moduleUrl": "https://lemos999.github.io/ailey-bailey-canvas/modules/ui_module.js"
+}
