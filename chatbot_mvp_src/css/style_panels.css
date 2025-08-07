@@ -1,5 +1,0 @@
-/* --- style_panels.css: Draggable panel styles --- */
-.draggable-panel { position: fixed; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: none; flex-direction: column; resize: both; overflow: auto; z-index: 1100; }
-body.dark-mode .draggable-panel { background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); }
-body:not(.dark-mode) .draggable-panel { background-color: var(--container-bg-light); border: 1px solid var(--border-color-light); }
-.panel-header { padding: 10px; cursor: move; font-weight: bold; user-select: none; display: flex; justify-content: space-between; align-items: center; }
