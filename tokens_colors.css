@@ -1,0 +1,43 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: tokens_colors.css
+Version: 1.0 (Atomic CSS Architecture)
+Description: [LAYER 0: TOKENS] 애플리케이션의 모든 색상 변수를 정의합니다.
+---
+*/
+
+:root {
+    /* Light Theme Colors */
+    --color-bg-light: #FDF8F0;
+    --color-text-light: #4B4237;
+    --color-container-bg-light: #F7F3E9;
+    --color-border-light: #EAE0D3;
+    --color-header-light: #6D5D4B;
+    --color-h2-light: #8C6D46;
+    --color-h2-border-light: #B99C7A;
+    --color-subtext-light: #8C7B6A;
+    --color-quote-bg-light: #F2EEE5;
+    --color-strong-bg-light: #EADCB5;
+    --color-chat-ai-bg-light: #E9E4DB;
+
+    /* Dark Theme Colors */
+    --color-bg-dark: #121212;
+    --color-text-dark: #E0E0E0;
+    --color-container-bg-dark: #1E1E1E;
+    --color-border-dark: #333333;
+    --color-header-dark: #D4B28C;
+    --color-h2-dark: #B99C7A;
+    --color-h2-border-dark: #8C6D46;
+    --color-subtext-dark: #9E9E9E;
+    --color-quote-bg-dark: #2A2A2A;
+    --color-strong-bg-dark: #5a4a3a;
+    --color-chat-ai-bg-dark: #2C2C2C;
+
+    /* Semantic Colors */
+    --color-highlight: #ffe875;
+    --color-pin: #e58a8a;
+    --color-correct: #3e8e41;
+    --color-incorrect: #d9534f;
+    --color-correct-dark: #66bb6a;
+    --color-incorrect-dark: #ef5350;
+}

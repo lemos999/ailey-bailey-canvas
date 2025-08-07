@@ -1,0 +1,40 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: state_conditional.css
+Version: 1.0 (Atomic CSS Architecture)
+Description: [LAYER 6: STATE] .is-active, .is-dragging 등 JavaScript에 의해 제어되는 조건부 상태 스타일을 정의합니다.
+---
+*/
+
+/* Active States */
+.session-item.active {
+    background-color: var(--color-strong-bg-light);
+    color: var(--color-h2-light);
+    font-weight: var(--font-weight-bold);
+}
+.dark-mode .session-item.active {
+    background-color: var(--color-strong-bg-dark);
+    color: var(--color-header-dark);
+}
+
+.notes-view.active {
+    display: flex;
+}
+
+/* Dragging States */
+.draggable-panel.is-dragging {
+    z-index: 1200;
+    opacity: 0.9;
+}
+.note-item.is-dragging {
+    opacity: 0.5;
+    background-color: var(--color-h2-border-light);
+}
+.dark-mode .note-item.is-dragging {
+    background-color: var(--color-h2-border-dark);
+}
+
+/* Visibility States */
+.hidden {
+    display: none !important;
+}

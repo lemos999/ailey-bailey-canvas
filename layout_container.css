@@ -1,0 +1,23 @@
+/*
+--- Ailey & Bailey Canvas ---
+File: layout_container.css
+Version: 1.0 (Atomic CSS Architecture)
+Description: [LAYER 2: LAYOUT] .container 클래스의 스타일을 정의합니다.
+---
+*/
+
+.container {
+    max-width: 800px;
+    flex-grow: 1;
+    padding: 30px 40px;
+    border-radius: 12px;
+    transition: background-color 0.3s, border-color 0.3s, max-width 0.4s ease;
+}
+
+.wrapper.toc-hidden .container {
+    max-width: 100%;
+}
+
+body:not(.dark-mode) .container {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.07);
+}
