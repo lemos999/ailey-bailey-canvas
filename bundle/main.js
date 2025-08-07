@@ -1,14 +1,15 @@
-/* Auto-generated bundle from 2025-08-07T21:28:37.711Z */
+/* Auto-generated bundle from 2025-08-07T22:41:44.395Z */
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: 001_state_globalVars.js
-Version: 1.0 (Bundled)
-Description: Declares all global state variables and DOM element constants. This file must be loaded first to ensure all other script modules can access this shared state.
+Version: 1.1 (Refactored for Context Injection)
+Description: Declares all global DOM constants and a single state container object.
+             This isolates mutable state from constant element references.
 */
 
-// --- 1. Element Declarations (Global Scope) ---
+// --- 1. DOM Element Constants (Initialized once, never reassigned) ---
 const learningContent = document.getElementById('learning-content');
 const wrapper = document.querySelector('.wrapper');
 const body = document.body;
@@ -51,8 +52,6 @@ const promptCancelBtn = document.getElementById('prompt-cancel-btn');
 const themeToggle = document.getElementById('theme-toggle');
 const chatToggleBtn = document.getElementById('chat-toggle-btn');
 const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
-
-// -- Chat Session & Project UI Elements --
 const newChatBtn = document.getElementById('new-chat-btn');
 const newProjectBtn = document.getElementById('new-project-btn');
 const sessionListContainer = document.getElementById('session-list-container');
@@ -61,53 +60,65 @@ const deleteSessionBtn = document.getElementById('delete-session-btn');
 const chatWelcomeMessage = document.getElementById('chat-welcome-message');
 const searchSessionsInput = document.getElementById('search-sessions-input');
 const aiModelSelector = document.getElementById('ai-model-selector');
-
-// -- Backup & Restore UI Elements (Now part of dropdown) --
 const fileImporter = document.getElementById('file-importer');
-
-// -- API Settings UI Elements (dynamically created) --
 let apiSettingsBtn, apiSettingsModalOverlay, apiKeyInput, verifyApiKeyBtn, apiKeyStatus,
     apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn,
     apiSettingsSaveBtn, apiSettingsCancelBtn;
 
-// --- 2. State Management (Global Scope) ---
+// --- 2. Global State Container (The single source of mutable state) ---
 const canvasId = document.querySelector('meta[name="canvas-id"]')?.content || 'global_fallback_id';
-let db;
-let currentUser = null;
-const appId = 'AileyBailey_Global_Space';
-let debounceTimer = null;
-let lastSelectedText = '';
-let currentOpenContextMenu = null;
 
-// -- Notes App State --
-let notesCollectionRef, noteProjectsCollectionRef, tagsCollectionRef, noteTemplatesCollectionRef;
-let localNotesCache = [], localNoteProjectsCache = [], localTagsCache = [], noteTemplatesCache = [];
-let unsubscribeFromNotes = null, unsubscribeFromNoteProjects = null, unsubscribeFromTags = null, unsubscribeFromNoteTemplates = null;
-let currentNoteId = null;
-let newlyCreatedNoteProjectId = null;
-let currentNoteSort = 'updatedAt_desc';
-let draggedNoteId = null; // [NEW] For drag & drop
+const globalState = {
+    db: null,
+    currentUser: null,
+    appId: 'AileyBailey_Global_Space',
+    debounceTimer: null,
+    lastSelectedText: '',
+    currentOpenContextMenu: null,
 
-// -- Chat & Project State --
-let chatSessionsCollectionRef, projectsCollectionRef;
-let localChatSessionsCache = [], localProjectsCache = [];
-let currentSessionId = null;
-let unsubscribeFromChatSessions = null, unsubscribeFromProjects = null;
-let newlyCreatedProjectId = null;
-const activeTimers = {};
+    // Notes App State
+    notesCollectionRef: null,
+    noteProjectsCollectionRef: null,
+    tagsCollectionRef: null,
+    noteTemplatesCollectionRef: null,
+    localNotesCache: [],
+    localNoteProjectsCache: [],
+    localTagsCache: [],
+    noteTemplatesCache: [],
+    unsubscribeFromNotes: null,
+    unsubscribeFromNoteProjects: null,
+    unsubscribeFromTags: null,
+    unsubscribeFromNoteTemplates: null,
+    currentNoteId: null,
+    newlyCreatedNoteProjectId: null,
+    currentNoteSort: 'updatedAt_desc',
+    draggedNoteId: null,
 
-// -- AI & Learning State --
-let selectedMode = 'ailey_coaching';
-let defaultModel = 'gemini-2.5-flash-preview-04-17';
-let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
-let currentQuizData = null;
-let noteGraphData = { nodes: [], edges: [] };
+    // Chat & Project State
+    chatSessionsCollectionRef: null,
+    projectsCollectionRef: null,
+    localChatSessionsCache: [],
+    localProjectsCache: [],
+    currentSessionId: null,
+    unsubscribeFromChatSessions: null,
+    unsubscribeFromProjects: null,
+    newlyCreatedProjectId: null,
+    activeTimers: {},
 
-// -- API Settings State --
-let userApiSettings = {
-    provider: null, apiKey: '', selectedModel: '', availableModels: [],
-    maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 }
+    // AI & Learning State
+    selectedMode: 'ailey_coaching',
+    defaultModel: 'gemini-2.5-flash-preview-04-17',
+    customPrompt: localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.',
+    currentQuizData: null,
+    noteGraphData: { nodes: [], edges: [] },
+
+    // API Settings State
+    userApiSettings: {
+        provider: null, apiKey: '', selectedModel: '', availableModels: [],
+        maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 }
+    }
 };
+
 
 /* --- Source: src\02_utils\010_utils_debounce.js --- */
 /*
@@ -127,743 +138,16 @@ function debounce(func, delay) {
 }
 
 /* --- Source: src\02_utils\011_utils_helpers.js --- */
-/*
---- Ailey & Bailey Canvas ---
-File: 011_utils_helpers.js
-Version: 1.0 (Bundled)
-Description: Contains generic, reusable UI helper functions.
-*/
-
-function updateClock() { 
-    const clockElement = document.getElementById('real-time-clock'); 
-    if (!clockElement) return; 
-    const now = new Date(); 
-    const options = { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }; 
-    clockElement.textContent = now.toLocaleString('ko-KR', options); 
-}
-
-function setupSystemInfoWidget() { 
-    if (!systemInfoWidget || !currentUser) return; 
-    const canvasIdDisplay = document.getElementById('canvas-id-display'); 
-    if (canvasIdDisplay) { 
-        canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; 
-    } 
-    const copyBtn = document.getElementById('copy-canvas-id'); 
-    if (copyBtn) { 
-        copyBtn.addEventListener('click', () => { 
-            navigator.clipboard.writeText(canvasId).then(() => { 
-                copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" /></svg>'; 
-                setTimeout(() => { 
-                    copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" /></svg>'; 
-                }, 1500); 
-            }); 
-        }); 
-    } 
-    const tooltip = document.createElement('div'); 
-    tooltip.className = 'system-tooltip'; 
-    tooltip.innerHTML = `<div><strong>Canvas ID:</strong> ${canvasId}</div><div><strong>User ID:</strong> ${currentUser.uid}</div>`; 
-    systemInfoWidget.appendChild(tooltip); 
-}
-
-function initializeTooltips() { 
-    document.querySelectorAll('.keyword-chip[data-tooltip]').forEach(chip => { 
-        if (chip.querySelector('.tooltip')) { 
-            chip.classList.add('has-tooltip'); 
-            chip.querySelector('.tooltip').textContent = chip.dataset.tooltip; 
-        } 
-    }); 
-    document.querySelectorAll('.content-section strong[data-tooltip]').forEach(highlight => { 
-        if(!highlight.querySelector('.tooltip')) { 
-            highlight.classList.add('has-tooltip'); 
-            const tooltipElement = document.createElement('span'); 
-            tooltipElement.className = 'tooltip'; 
-            tooltipElement.textContent = highlight.dataset.tooltip; 
-            highlight.appendChild(tooltipElement); 
-        } 
-    }); 
-}
-
-function makePanelDraggable(panelElement) { 
-    if(!panelElement) return; 
-    const header = panelElement.querySelector('.panel-header'); 
-    if(!header) return; 
-    let isDragging = false, offset = { x: 0, y: 0 }; 
-    const onMouseMove = (e) => { 
-        if (isDragging) { 
-            panelElement.style.left = (e.clientX + offset.x) + 'px'; 
-            panelElement.style.top = (e.clientY + offset.y) + 'px'; 
-        } 
-    }; 
-    const onMouseUp = () => { 
-        isDragging = false; 
-        panelElement.classList.remove('is-dragging'); 
-        document.removeEventListener('mousemove', onMouseMove); 
-        document.removeEventListener('mouseup', onMouseUp); 
-    }; 
-    header.addEventListener('mousedown', e => { 
-        if (e.target.closest('button, input, select, .close-btn, #delete-session-btn, #chat-mode-selector, #api-settings-btn')) return; 
-        isDragging = true; 
-        panelElement.classList.add('is-dragging'); 
-        offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; 
-        document.addEventListener('mousemove', onMouseMove); 
-        document.addEventListener('mouseup', onMouseUp); 
-    }); 
-}
-
-function togglePanel(panelElement, forceShow = null) { 
-    if (!panelElement) return; 
-    const show = forceShow !== null ? forceShow : panelElement.style.display !== 'flex'; 
-    panelElement.style.display = show ? 'flex' : 'none'; 
-}
-
-function setupNavigator() { 
-    const scrollNav = document.getElementById('scroll-nav'); 
-    if (!scrollNav || !learningContent) return; 
-    const headers = learningContent.querySelectorAll('h2, #section-4 h3, #section-5 h3, #section-6 h3'); 
-    if (headers.length === 0) { 
-        scrollNav.style.display = 'none'; 
-        if(wrapper) wrapper.classList.add('toc-hidden'); 
-        return; 
-    } 
-    scrollNav.style.display = 'block'; 
-    if(wrapper) wrapper.classList.remove('toc-hidden'); 
-    const navList = document.createElement('ul'); 
-    headers.forEach((header, index) => { 
-        let targetElement = header.closest('.content-section'); 
-        if (targetElement && !targetElement.id) targetElement.id = `nav-target-${index}`; 
-        if (targetElement) { 
-            const listItem = document.createElement('li'); 
-            const link = document.createElement('a'); 
-            let navText = header.textContent.trim().replace(/[\[\]🤓⏳📖]/g, '').trim(); 
-            link.textContent = navText.substring(0, 25); 
-            link.href = `#${targetElement.id}`; 
-            if (header.tagName === 'H3') { 
-                link.style.paddingLeft = '25px'; 
-                link.style.fontSize = '0.9em'; 
-            } 
-            listItem.appendChild(link); 
-            navList.appendChild(listItem); 
-        } 
-    }); 
-    scrollNav.innerHTML = '<h3>학습 내비게이션</h3>'; 
-    scrollNav.appendChild(navList); 
-    const links = scrollNav.querySelectorAll('a'); 
-    const observer = new IntersectionObserver(entries => { 
-        entries.forEach(entry => { 
-            const id = entry.target.getAttribute('id'); 
-            const navLink = scrollNav.querySelector(`a[href="#${id}"]`); 
-            if (navLink && entry.isIntersecting && entry.intersectionRatio > 0.5) { 
-                links.forEach(l => l.classList.remove('active')); 
-                navLink.classList.add('active'); 
-            } 
-        }); 
-    }, { rootMargin: "0px 0px -70% 0px", threshold: 0.6 }); 
-    headers.forEach(header => { 
-        const target = header.closest('.content-section'); 
-        if (target) observer.observe(target); 
-    }); 
-}
-
-function handleTextSelection(e) { 
-    if (e.target.closest('.draggable-panel, #selection-popover, .fixed-tool-container, #system-info-widget, .project-context-menu, .session-context-menu')) return; 
-    const selection = window.getSelection(); 
-    const selectedText = selection.toString().trim(); 
-    removeContextMenu(); 
-    if (selectedText.length > 3) { 
-        lastSelectedText = selectedText; 
-        const range = selection.getRangeAt(0); 
-        const rect = range.getBoundingClientRect(); 
-        const popover = selectionPopover; 
-        let top = rect.top + window.scrollY - popover.offsetHeight - 10; 
-        let left = rect.left + window.scrollX + (rect.width / 2) - (popover.offsetWidth / 2); 
-        popover.style.top = `${top < window.scrollY ? rect.bottom + window.scrollY + 10 : top}px`; 
-        popover.style.left = `${Math.max(5, Math.min(left, window.innerWidth - popover.offsetWidth - 5))}px`; 
-        popover.style.display = 'flex'; 
-    } else if (!e.target.closest('#selection-popover')) { 
-        selectionPopover.style.display = 'none'; 
-    } 
-}
-
-function handlePopoverAskAi() { 
-    if (!lastSelectedText || !chatInput) return; 
-    togglePanel(chatPanel, true); 
-    handleNewChat(); 
-    setTimeout(() => { 
-        chatInput.value = `"${lastSelectedText}"\n\n이 내용에 대해 더 자세히 설명해줄래?`; 
-        chatInput.style.height = (chatInput.scrollHeight) + 'px'; 
-        chatInput.focus(); 
-    }, 100); 
-    selectionPopover.style.display = 'none'; 
-}
-
-function handlePopoverAddNote() { 
-    if (!lastSelectedText) return; 
-    addNote(`> ${lastSelectedText}\n\n`); 
-    selectionPopover.style.display = 'none'; 
-}
-
-function openPromptModal() { 
-    if (customPromptInput) customPromptInput.value = customPrompt; 
-    if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; 
-}
-
-function closePromptModal() { 
-    if (promptModalOverlay) promptModalOverlay.style.display = 'none'; 
-}
-
-function saveCustomPrompt() { 
-    if (customPromptInput) { 
-        customPrompt = customPromptInput.value; 
-        localStorage.setItem('customTutorPrompt', customPrompt); 
-        closePromptModal(); 
-    } 
-}
-
-function showModal(message, onConfirm) { 
-    if (!customModal || !modalMessage || !modalConfirmBtn || !modalCancelBtn) return; 
-    modalMessage.textContent = message; 
-    customModal.style.display = 'flex'; 
-    modalConfirmBtn.onclick = () => { 
-        onConfirm(); 
-        customModal.style.display = 'none'; 
-    }; 
-    modalCancelBtn.onclick = () => { 
-        customModal.style.display = 'none'; 
-    }; 
-}
-
-function updateStatus(msg, success) { 
-    if (!autoSaveStatus) return; 
-    autoSaveStatus.textContent = msg; 
-    autoSaveStatus.style.color = success ? 'lightgreen' : 'lightcoral'; 
-    setTimeout(() => { autoSaveStatus.textContent = ''; }, 3000); 
-}
-
-function applyFormat(fmt) { 
-    if (!noteContentTextarea) return; 
-    const s = noteContentTextarea.selectionStart, e = noteContentTextarea.selectionEnd, t = noteContentTextarea.value.substring(s, e); 
-    const m = fmt === 'bold' ? '**' : (fmt === 'italic' ? '*' : '`'); 
-    noteContentTextarea.value = `${noteContentTextarea.value.substring(0,s)}${m}${t}${m}${noteContentTextarea.value.substring(e)}`; 
-    noteContentTextarea.focus(); 
-}
-
-async function startQuiz() { 
-    if (!quizModalOverlay) return; 
-    const k = Array.from(document.querySelectorAll('.keyword-chip')).map(c => c.textContent.trim()).join(', '); 
-    if (!k) { 
-        showModal("퀴즈 생성 키워드가 없습니다.", ()=>{}); 
-        return; 
-    } 
-    if (quizContainer) quizContainer.innerHTML = '<div class="loading-indicator">퀴즈 생성 중...</div>'; 
-    if (quizResults) quizResults.innerHTML = ''; 
-    quizModalOverlay.style.display = 'flex'; 
-    try { 
-        const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); 
-        currentQuizData = JSON.parse(res); 
-        renderQuiz(currentQuizData); 
-    } catch (e) { 
-        if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; 
-    } 
-}
-
-function renderQuiz(data) { 
-    if (!quizContainer || !data.questions) return; 
-    quizContainer.innerHTML = ''; 
-    data.questions.forEach((q, i) => { 
-        const b = document.createElement('div'); 
-        b.className = 'quiz-question-block'; 
-        const p = document.createElement('p'); 
-        p.textContent = `${i + 1}. ${q.q}`; 
-        const o = document.createElement('div'); 
-        o.className = 'quiz-options'; 
-        q.o.forEach(opt => { 
-            const l = document.createElement('label'); 
-            const r = document.createElement('input'); 
-            r.type = 'radio'; 
-            r.name = `q-${i}`; 
-            r.value = opt; 
-            l.append(r,` ${opt}`); 
-            o.appendChild(l); 
-        }); 
-        b.append(p, o); 
-        quizContainer.appendChild(b); 
-    }); 
-}
+utf8
 
 /* --- Source: src\03_core\100_core_firebase.js --- */
-/*
---- Ailey & Bailey Canvas ---
-File: 100_core_firebase.js
-Version: 1.0 (Bundled)
-Description: Handles all Firebase-related initialization and sets up real-time listeners for all data collections.
-*/
-
-async function initializeFirebase() {
-    try {
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        if (!firebaseConfig) { throw new Error("Firebase config not found."); }
-        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-        
-        const auth = firebase.auth();
-        db = firebase.firestore();
-        
-        if (initialAuthToken) {
-            await auth.signInWithCustomToken(initialAuthToken).catch(async (err) => {
-               console.warn("Custom token sign-in failed, trying anonymous.", err);
-               await auth.signInAnonymously();
-            });
-        } else {
-            await auth.signInAnonymously();
-        }
-        
-        currentUser = auth.currentUser;
-
-        if (currentUser) {
-            const userPath = `artifacts/${appId}/users/${currentUser.uid}`;
-            
-            // Note App refs
-            notesCollectionRef = db.collection(`${userPath}/notes`);
-            noteProjectsCollectionRef = db.collection(`${userPath}/noteProjects`);
-            tagsCollectionRef = db.collection(`${userPath}/noteTags`); // NEW
-            noteTemplatesCollectionRef = db.collection(`${userPath}/noteTemplates`); // NEW
-
-            // Chat App refs
-            const chatHistoryPath = `${userPath}/chatHistories/${canvasId}`;
-            chatSessionsCollectionRef = db.collection(`${chatHistoryPath}/sessions`);
-            projectsCollectionRef = db.collection(`${chatHistoryPath}/projects`);
-
-            await Promise.all([
-                listenToNotes(),
-                listenToNoteProjects(),
-                listenToTags(), // NEW
-                listenToNoteTemplates(), // NEW
-                listenToChatSessions(),
-                listenToProjects()
-            ]);
-            
-            setupSystemInfoWidget();
-        }
-    } catch (error) {
-        console.error("Firebase 초기화 또는 인증 실패:", error);
-        if (notesList) notesList.innerHTML = '<div>클라우드 메모장을 불러오는 데 실패했습니다.</div>';
-        if (chatMessages) chatMessages.innerHTML = '<div>AI 러닝메이트 연결에 실패했습니다.</div>';
-    }
-}
-
-function getRelativeDateGroup(timestamp, isPinned = false) {
-    if (isPinned) return { key: 0, label: '📌 고정됨' };
-    if (!timestamp) return { key: 99, label: '날짜 정보 없음' };
-    const now = new Date();
-    const date = timestamp instanceof Date ? timestamp : timestamp.toDate();
-    now.setHours(0, 0, 0, 0);
-    date.setHours(0, 0, 0, 0);
-    const diffTime = now.getTime() - date.getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    if (diffDays < 1) return { key: 1, label: '오늘' };
-    if (diffDays < 2) return { key: 2, label: '어제' };
-    if (diffDays < 7) return { key: 3, label: '지난 7일' };
-    const nowMonth = now.getMonth(), dateMonth = date.getMonth(), nowYear = now.getFullYear(), dateYear = date.getFullYear();
-    if (nowYear === dateYear && nowMonth === dateMonth) return { key: 4, label: '이번 달' };
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    if (dateYear === lastMonth.getFullYear() && dateMonth === lastMonth.getMonth()) return { key: 5, label: '지난 달' };
-    return { key: 6 + (nowYear - dateYear) * 12 + (nowMonth - dateMonth), label: `${dateYear}년 ${dateMonth + 1}월` };
-}
+utf8
 
 /* --- Source: src\03_core\110_core_api_settings.js --- */
-/*
---- Ailey & Bailey Canvas ---
-File: 110_core_api_settings.js
-Version: 1.0 (Bundled)
-Description: Manages all logic for the API Settings (BYOK) modal.
-*/
-
-function createApiSettingsModal() {
-    const modal = document.createElement('div');
-    modal.id = 'api-settings-modal-overlay';
-    modal.className = 'custom-modal-overlay';
-    modal.innerHTML = `
-        <div class="custom-modal api-settings-modal">
-            <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg> 개인 API 설정 (BYOK)</h3>
-            <p class="api-modal-desc">기본 제공되는 모델 외에, 개인 API 키를 사용하여 더 다양하고 강력한 모델을 이용할 수 있습니다.</p>
-            <div class="api-form-section">
-                <label for="api-key-input">API 키</label>
-                <div class="api-key-wrapper">
-                    <input type="password" id="api-key-input" placeholder="sk-..., sk-ant-..., 또는 Google API 키를 입력하세요">
-                    <button id="verify-api-key-btn">키 검증 & 모델 로드</button>
-                </div>
-                <div id="api-key-status"></div>
-            </div>
-            <div class="api-form-section">
-                <label for="api-model-select">사용 모델</label>
-                <select id="api-model-select" disabled>
-                    <option value="">API 키를 먼저 검증해주세요</option>
-                </select>
-            </div>
-            <div class="api-form-section">
-                <label>토큰 한도 설정</label>
-                <div class="token-limit-wrapper">
-                    <input type="number" id="max-output-tokens-input" placeholder="최대 출력 (예: 2048)">
-                </div>
-                <small>모델이 생성할 응답의 최대 길이를 제한합니다. (입력값 없을 시 모델 기본값 사용)</small>
-            </div>
-            <div class="api-form-section token-usage-section">
-                <label>누적 토큰 사용량 (개인 키)</label>
-                <div id="token-usage-display">
-                    <span>입력: 0</span> | <span>출력: 0</span> | <strong>총합: 0</strong>
-                </div>
-                <button id="reset-token-usage-btn">사용량 초기화</button>
-                <small>Google 유료 모델은 응답에 토큰 정보를 포함하지 않아 집계되지 않습니다.</small>
-            </div>
-            <div class="custom-modal-actions">
-                <button id="api-settings-cancel-btn" class="modal-btn">취소</button>
-                <button id="api-settings-save-btn" class="modal-btn">저장</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-
-    apiSettingsModalOverlay = document.getElementById('api-settings-modal-overlay');
-    apiKeyInput = document.getElementById('api-key-input');
-    verifyApiKeyBtn = document.getElementById('verify-api-key-btn');
-    apiKeyStatus = document.getElementById('api-key-status');
-    apiModelSelect = document.getElementById('api-model-select');
-    maxOutputTokensInput = document.getElementById('max-output-tokens-input');
-    tokenUsageDisplay = document.getElementById('token-usage-display');
-    resetTokenUsageBtn = document.getElementById('reset-token-usage-btn');
-    apiSettingsSaveBtn = document.getElementById('api-settings-save-btn');
-    apiSettingsCancelBtn = document.getElementById('api-settings-cancel-btn');
-}
-
-function openApiSettingsModal() {
-    loadApiSettings();
-    apiKeyInput.value = userApiSettings.apiKey;
-    maxOutputTokensInput.value = userApiSettings.maxOutputTokens;
-    populateModelSelector(userApiSettings.availableModels, userApiSettings.provider, userApiSettings.selectedModel);
-    if (userApiSettings.apiKey) {
-         apiKeyStatus.textContent = `✅ [${userApiSettings.provider}] 키가 활성화되어 있습니다.`;
-         apiKeyStatus.className = 'status-success';
-    } else {
-         apiKeyStatus.textContent = '';
-         apiKeyStatus.className = '';
-    }
-    renderTokenUsage();
-    apiSettingsModalOverlay.style.display = 'flex';
-}
-
-function closeApiSettingsModal() {
-    apiSettingsModalOverlay.style.display = 'none';
-    loadApiSettings(); 
-    updateChatHeaderModelSelector();
-}
-
-function loadApiSettings() {
-    const savedSettings = localStorage.getItem('userApiSettings');
-    if (savedSettings) {
-        userApiSettings = JSON.parse(savedSettings);
-        if (!userApiSettings.tokenUsage) { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; }
-        if (!userApiSettings.availableModels) { userApiSettings.availableModels = []; }
-    }
-}
-
-function saveApiSettings(closeModal = true) {
-    const key = apiKeyInput.value.trim();
-    if (key) {
-        userApiSettings.apiKey = key;
-        userApiSettings.selectedModel = apiModelSelect.value;
-        userApiSettings.maxOutputTokens = Number(maxOutputTokensInput.value) || 2048;
-        if (apiModelSelect && apiModelSelect.options.length > 0 && !apiModelSelect.disabled) {
-             userApiSettings.availableModels = Array.from(apiModelSelect.options).map(opt => opt.value);
-        }
-    } else {
-        userApiSettings = { provider: null, apiKey: '', selectedModel: '', availableModels: [], maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 } };
-    }
-    localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
-    updateChatHeaderModelSelector();
-    if (closeModal) { closeApiSettingsModal(); }
-}
-
-function detectProvider(key) {
-    if (key.startsWith('sk-ant-api')) return 'anthropic';
-    if (key.startsWith('sk-')) return 'openai';
-    if (key.length > 35 && key.startsWith('AIza')) return 'google_paid';
-    return null;
-}
-
-async function handleVerifyApiKey() {
-    const key = apiKeyInput.value.trim();
-    if (!key) { apiKeyStatus.textContent = 'API 키를 입력해주세요.'; apiKeyStatus.className = 'status-error'; return; }
-    const provider = detectProvider(key);
-    if (!provider) { apiKeyStatus.textContent = '알 수 없는 형식의 API 키입니다. (OpenAI, Anthropic, Google 지원)'; apiKeyStatus.className = 'status-error'; return; }
-    userApiSettings.provider = provider;
-    apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`; apiKeyStatus.className = 'status-loading'; verifyApiKeyBtn.disabled = true;
-    try {
-        const models = await fetchAvailableModels(provider, key);
-        populateModelSelector(models, provider);
-        apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하고 저장하세요.`; apiKeyStatus.className = 'status-success'; apiModelSelect.disabled = false;
-    } catch (error) {
-        console.error("API Key Verification Error:", error);
-        apiKeyStatus.textContent = `❌ [${provider}] 키 검증 실패: ${error.message}`; apiKeyStatus.className = 'status-error'; apiModelSelect.innerHTML = '<option>키 검증에 실패했습니다</option>'; apiModelSelect.disabled = true;
-    } finally { verifyApiKeyBtn.disabled = false; }
-}
-
-async function fetchAvailableModels(provider, key) {
-    if (provider === 'openai') {
-        const response = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': `Bearer ${key}` } });
-        if (!response.ok) throw new Error('OpenAI 서버에서 모델 목록을 가져올 수 없습니다.');
-        const data = await response.json();
-        return data.data.filter(m => m.id.includes('gpt')).map(m => m.id).sort().reverse();
-    } else if (provider === 'anthropic') {
-        return ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-2.1'];
-    } else if (provider === 'google_paid') {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-        if (!response.ok) throw new Error('Google 서버에서 모델 목록을 가져올 수 없습니다.');
-        const data = await response.json();
-        return data.models.map(m => m.name.replace('models/', '')).filter(m => m.includes('gemini'));
-    }
-    return [];
-}
-
-function populateModelSelector(models, provider, selectedModel = null) {
-    apiModelSelect.innerHTML = '';
-    const effectiveModels = models || [];
-    if (provider && effectiveModels.length === 0) { if (provider === 'anthropic') { effectiveModels.push('claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'); } }
-    if (effectiveModels.length > 0) { effectiveModels.forEach(modelId => { const option = document.createElement('option'); option.value = modelId; option.textContent = modelId; if (modelId === selectedModel) { option.selected = true; } apiModelSelect.appendChild(option); }); apiModelSelect.disabled = false; }
-    else { apiModelSelect.innerHTML = '<option>사용 가능한 모델 없음</option>'; apiModelSelect.disabled = true; }
-}
-
-function renderTokenUsage() {
-    const { prompt, completion } = userApiSettings.tokenUsage;
-    const total = prompt + completion;
-    tokenUsageDisplay.innerHTML = `<span>입력: ${prompt.toLocaleString()}</span> | <span>출력: ${completion.toLocaleString()}</span> | <strong>총합: ${total.toLocaleString()}</strong>`;
-}
-
-function resetTokenUsage() { showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; saveApiSettings(false); renderTokenUsage(); }); }
+utf8
 
 /* --- Source: src\03_core\120_core_main_initializer.js --- */
-/*
---- Ailey & Bailey Canvas ---
-File: 120_core_main_initializer.js
-Version: 1.1 (Bundled & Corrected)
-Description: The main entry point for the application. Initializes the app and attaches all primary event listeners.
-*/
-
-document.addEventListener('DOMContentLoaded', function () {
-
-    /**
-     * 애플리케이션을 초기화합니다.
-     */
-    function initialize() {
-        if (!body || !wrapper) { console.error("Core layout elements not found."); return; }
-        
-        // Basic UI setup
-        updateClock(); 
-        setInterval(updateClock, 1000);
-        
-        // Dynamically create and inject the API settings modal and its trigger button
-        createApiSettingsModal();
-        const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
-        if (chatHeader) {
-            apiSettingsBtn = document.createElement('span'); 
-            apiSettingsBtn.id = 'api-settings-btn'; 
-            apiSettingsBtn.title = '개인 API 설정';
-            apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
-            const deleteBtn = chatHeader.querySelector('#delete-session-btn');
-            if (deleteBtn) {
-                deleteBtn.insertAdjacentElement('beforebegin', apiSettingsBtn);
-            } else {
-                 chatHeader.appendChild(apiSettingsBtn);
-            }
-        }
-        
-        // Load settings and initialize Firebase
-        loadApiSettings();
-        updateChatHeaderModelSelector();
-        
-        initializeFirebase().then(() => { 
-            // Initialize UI components that depend on data
-            setupNavigator(); 
-            setupChatModeSelector(); 
-            initializeTooltips(); 
-            makePanelDraggable(chatPanel); 
-            // Note: Notes panel is made draggable dynamically when first opened
-            handleNewChat(); // Start with a clean chat slate
-        });
-
-        attachEventListeners();
-    }
-
-    /**
-     * 애플리케이션의 모든 주요 이벤트 리스너를 첨부합니다.
-     */
-    function attachEventListeners() {
-        // --- Global Listeners ---
-        document.addEventListener('click', (e) => { 
-            handleTextSelection(e); 
-            // Close context menus if clicked outside
-            if (!e.target.closest('.note-context-menu, .session-context-menu, .project-context-menu')) {
-                removeContextMenu();
-            }
-            // Close notes dropdown if clicked outside
-            if (!e.target.closest('.more-options-container')) {
-                document.getElementById('notes-dropdown-menu')?.classList.remove('show');
-            }
-        });
-        
-        if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
-        if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
-
-        // --- Global UI Listeners ---
-        if (themeToggle) { 
-            themeToggle.addEventListener('click', () => { 
-                body.classList.toggle('dark-mode'); 
-                localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
-                // Also update editor theme if it's open
-                if (toastEditorInstance) {
-                    toastEditorInstance.setTheme(body.classList.contains('dark-mode') ? 'dark' : 'default');
-                }
-            }); 
-            if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); else body.classList.remove('dark-mode');
-        }
-        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); systemInfoWidget?.classList.toggle('tucked'); });
-
-        // --- Panel Toggles ---
-        if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
-        if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
-        if (notesAppToggleBtn) {
-            notesAppToggleBtn.addEventListener('click', () => { 
-                togglePanel(notesAppPanel);
-                if (notesAppPanel.style.display === 'flex') {
-                    ensureNotePanelHeader(); // Ensure header exists for dragging
-                    renderNoteList();
-                }
-            });
-        }
-        
-        // --- Notes App Event Delegation ---
-        if (noteListView) {
-            noteListView.addEventListener('click', e => {
-                const target = e.target;
-                const dropdownAction = target.closest('.dropdown-item')?.dataset.action;
-                if (dropdownAction) {
-                    if (dropdownAction === 'export-all') exportAllData();
-                    else if (dropdownAction === 'import-all') handleRestoreClick();
-                    else if (dropdownAction === 'system-reset') handleSystemReset();
-                    document.getElementById('notes-dropdown-menu')?.classList.remove('show');
-                    return;
-                }
-                
-                const noteItem = target.closest('.note-item');
-                if (noteItem) { openNoteEditor(noteItem.dataset.id); return; }
-
-                const projectHeader = target.closest('.note-project-header');
-                if (projectHeader) { toggleNoteProjectExpansion(projectHeader.closest('.note-project-container').dataset.projectId); return; }
-                
-                if (target.closest('#add-new-note-btn-dynamic')) { handleAddNewNote(); return; }
-                if (target.closest('#add-new-note-project-btn-dynamic')) { createNewNoteProject(); return; }
-                if (target.closest('#more-options-btn')) { document.getElementById('notes-dropdown-menu')?.classList.toggle('show'); return; }
-            });
-
-            noteListView.addEventListener('contextmenu', e => showContextMenu(e.target, e));
-
-            const debouncedRender = debounce(renderNoteList, 300);
-            noteListView.addEventListener('input', e => {
-                if (e.target.id === 'search-input-dynamic') {
-                    debouncedRender();
-                }
-            });
-
-            // Drag and Drop listeners
-            noteListView.addEventListener('dragstart', e => {
-                const noteItem = e.target.closest('.note-item');
-                if (noteItem) {
-                    draggedNoteId = noteItem.dataset.id;
-                    e.dataTransfer.effectAllowed = 'move';
-                    setTimeout(() => noteItem.classList.add('is-dragging'), 0);
-                }
-            });
-
-            noteListView.addEventListener('dragover', e => {
-                e.preventDefault();
-                const projectHeader = e.target.closest('.note-project-header');
-                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-                if (projectHeader) {
-                    e.dataTransfer.dropEffect = 'move';
-                    projectHeader.classList.add('drag-over');
-                } else {
-                    e.dataTransfer.dropEffect = 'none';
-                }
-            });
-            
-            noteListView.addEventListener('dragleave', e => {
-                const projectHeader = e.target.closest('.note-project-header');
-                if (projectHeader) projectHeader.classList.remove('drag-over');
-            });
-
-            noteListView.addEventListener('drop', e => {
-                e.preventDefault();
-                const projectHeader = e.target.closest('.note-project-header');
-                if (projectHeader && draggedNoteId) {
-                    const projectId = projectHeader.closest('.note-project-container').dataset.projectId;
-                    moveNoteToProject(draggedNoteId, projectId);
-                }
-                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-                draggedNoteId = null;
-            });
-            
-            noteListView.addEventListener('dragend', () => {
-                document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging'));
-                draggedNoteId = null;
-            });
-        }
-        
-        if (fileImporter) fileImporter.addEventListener('change', importAllData);
-        
-        // --- Note Editor Listeners ---
-        if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
-        const handleNoteTitleEdit = debounce(() => saveNote(), 1500);
-        if (noteTitleInput) noteTitleInput.addEventListener('input', () => { updateStatus('입력 중...', true); handleNoteTitleEdit(); });
-
-        // --- Chat App Event Delegation ---
-        if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
-        if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
-        if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
-        if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
-        if (searchSessionsInput) searchSessionsInput.addEventListener('input', debounce(renderSidebarContent, 300));
-
-        if (sessionListContainer) {
-             sessionListContainer.addEventListener('click', e => {
-                 const sessionItem = e.target.closest('.session-item');
-                 if(sessionItem) { selectSession(sessionItem.dataset.sessionId); return; }
-
-                 const pinBtn = e.target.closest('.session-pin-btn');
-                 if(pinBtn) { toggleChatPin(pinBtn.closest('.session-item').dataset.sessionId); return; }
-                 
-                 const projectHeader = e.target.closest('.project-header');
-                 if(projectHeader) {
-                    const actionsBtn = e.target.closest('.project-actions-btn');
-                    if(actionsBtn) { showProjectContextMenu(projectHeader.closest('.project-container').dataset.projectId, actionsBtn); }
-                    else { toggleProjectExpansion(projectHeader.closest('.project-container').dataset.projectId); }
-                    return;
-                 }
-             });
-             sessionListContainer.addEventListener('contextmenu', e => {
-                const sessionItem = e.target.closest('.session-item');
-                if(sessionItem) { e.preventDefault(); showSessionContextMenu(sessionItem.dataset.sessionId, e.clientX, e.clientY); }
-             });
-        }
-
-        // --- API & Modal Listeners ---
-        // This listener needs to be attached to the body because the button is created dynamically.
-        document.body.addEventListener('click', e => {
-            if (e.target.closest('#api-settings-btn')) {
-                openApiSettingsModal();
-            }
-        });
-    }
-
-    initialize();
-});
+utf8
 
 /* --- Source: src\04_features_chat\200_chat_data.js --- */
 /*
@@ -874,35 +158,35 @@ Description: Handles all data layer interactions with Firebase Firestore for the
 */
 
 // --- Chat Data Listeners (moved from firebase.js) ---
-function listenToProjects() {
+function listenToProjects(state) {
     return new Promise((resolve) => {
-        if (!projectsCollectionRef) return resolve();
-        if (unsubscribeFromProjects) unsubscribeFromProjects();
-        unsubscribeFromProjects = projectsCollectionRef.onSnapshot(snapshot => {
-            const oldCache = [...localProjectsCache];
-            localProjectsCache = snapshot.docs.map(doc => ({
+        if (!state.projectsCollectionRef) return resolve();
+        if (state.unsubscribeFromProjects) state.unsubscribeFromProjects();
+        state.unsubscribeFromProjects = state.projectsCollectionRef.onSnapshot(snapshot => {
+            const oldCache = [...state.localProjectsCache];
+            state.localProjectsCache = snapshot.docs.map(doc => ({
                 id: doc.id,
                 isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true, ...doc.data()
             }));
             renderSidebarContent();
-            if (newlyCreatedProjectId) {
-                const newProjectElement = document.querySelector(`.project-container[data-project-id="${newlyCreatedProjectId}"]`);
-                if (newProjectElement) { startProjectRename(newlyCreatedProjectId); newlyCreatedProjectId = null; }
+            if (state.newlyCreatedProjectId) {
+                const newProjectElement = document.querySelector(`.project-container[data-project-id="${state.newlyCreatedProjectId}"]`);
+                if (newProjectElement) { startProjectRename(state.newlyCreatedProjectId); state.newlyCreatedProjectId = null; }
             }
             resolve();
         }, error => { console.error("Project listener error:", error); resolve(); });
     });
 }
 
-function listenToChatSessions() {
+function listenToChatSessions(state) {
     return new Promise((resolve) => {
-        if (!chatSessionsCollectionRef) return resolve();
-        if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
-        unsubscribeFromChatSessions = chatSessionsCollectionRef.onSnapshot(snapshot => {
-            localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (!state.chatSessionsCollectionRef) return resolve();
+        if (state.unsubscribeFromChatSessions) state.unsubscribeFromChatSessions();
+        state.unsubscribeFromChatSessions = state.chatSessionsCollectionRef.onSnapshot(snapshot => {
+            state.localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderSidebarContent();
-            if (currentSessionId) {
-                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+            if (state.currentSessionId) {
+                const currentSessionData = state.localChatSessionsCache.find(s => s.id === state.currentSessionId);
                 if (!currentSessionData) handleNewChat();
                 else renderChatMessages(currentSessionData);
             }
@@ -912,25 +196,25 @@ function listenToChatSessions() {
 }
 
 // --- Chat Data Management Functions ---
-async function createNewProject() {
+async function createNewProject(state) {
     const newName = getNewProjectDefaultName();
     try {
-        const newProjectRef = await projectsCollectionRef.add({
+        const newProjectRef = await state.projectsCollectionRef.add({
             name: newName,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        newlyCreatedProjectId = newProjectRef.id;
+        state.newlyCreatedProjectId = newProjectRef.id;
     } catch (error) {
         console.error("Error creating new project:", error);
         alert("프로젝트 생성에 실패했습니다.");
     }
 }
 
-async function renameProject(projectId, newName) {
+async function renameProject(state, projectId, newName) {
     if (!newName || !newName.trim() || !projectId) return;
     try {
-        await projectsCollectionRef.doc(projectId).update({
+        await state.projectsCollectionRef.doc(projectId).update({
             name: newName.trim(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -940,20 +224,20 @@ async function renameProject(projectId, newName) {
     }
 }
 
-async function deleteProject(projectId) {
-    const project = localProjectsCache.find(p => p.id === projectId);
+async function deleteProject(state, projectId) {
+    const project = state.localProjectsCache.find(p => p.id === projectId);
     if (!project) return;
 
     const message = `프로젝트 '${project.name}'를 삭제하시겠습니까? 프로젝트 안의 모든 대화는 '일반 대화'로 이동됩니다.`;
     showModal(message, async () => {
         try {
-            const batch = db.batch();
-            const sessionsToMove = localChatSessionsCache.filter(s => s.projectId === projectId);
+            const batch = state.db.batch();
+            const sessionsToMove = state.localChatSessionsCache.filter(s => s.projectId === projectId);
             sessionsToMove.forEach(session => {
-                const sessionRef = chatSessionsCollectionRef.doc(session.id);
+                const sessionRef = state.chatSessionsCollectionRef.doc(session.id);
                 batch.update(sessionRef, { projectId: null });
             });
-            const projectRef = projectsCollectionRef.doc(projectId);
+            const projectRef = state.projectsCollectionRef.doc(projectId);
             batch.delete(projectRef);
             await batch.commit();
         } catch (error) {
@@ -963,17 +247,17 @@ async function deleteProject(projectId) {
     });
 }
 
-async function moveSessionToProject(sessionId, newProjectId) {
-    const session = localChatSessionsCache.find(s => s.id === sessionId);
+async function moveSessionToProject(state, sessionId, newProjectId) {
+    const session = state.localChatSessionsCache.find(s => s.id === sessionId);
     if (!session || session.projectId === newProjectId) return;
 
     try {
-        await chatSessionsCollectionRef.doc(sessionId).update({
+        await state.chatSessionsCollectionRef.doc(sessionId).update({
             projectId: newProjectId,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         if (newProjectId) {
-            await projectsCollectionRef.doc(newProjectId).update({
+            await state.projectsCollectionRef.doc(newProjectId).update({
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
@@ -983,10 +267,10 @@ async function moveSessionToProject(sessionId, newProjectId) {
     }
 }
 
-async function toggleChatPin(sessionId) {
-    if (!chatSessionsCollectionRef || !sessionId) return;
-    const sessionRef = chatSessionsCollectionRef.doc(sessionId);
-    const currentSession = localChatSessionsCache.find(s => s.id === sessionId);
+async function toggleChatPin(state, sessionId) {
+    if (!state.chatSessionsCollectionRef || !sessionId) return;
+    const sessionRef = state.chatSessionsCollectionRef.doc(sessionId);
+    const currentSession = state.localChatSessionsCache.find(s => s.id === sessionId);
     if (!currentSession) return;
     try {
         await sessionRef.update({
@@ -998,10 +282,10 @@ async function toggleChatPin(sessionId) {
     }
 }
 
-async function renameSession(sessionId, newTitle) {
+async function renameSession(state, sessionId, newTitle) {
     if (!newTitle || !sessionId) return;
     try {
-        await chatSessionsCollectionRef.doc(sessionId).update({
+        await state.chatSessionsCollectionRef.doc(sessionId).update({
             title: newTitle,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -1011,16 +295,16 @@ async function renameSession(sessionId, newTitle) {
     }
 }
 
-function handleDeleteSession(sessionId) {
+function handleDeleteSession(state, sessionId) {
     if (!sessionId) return;
-    const sessionToDelete = localChatSessionsCache.find(s => s.id === sessionId);
+    const sessionToDelete = state.localChatSessionsCache.find(s => s.id === sessionId);
     if (!sessionToDelete) return;
 
     showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => {
-        if (chatSessionsCollectionRef) {
-            chatSessionsCollectionRef.doc(sessionId).delete().then(() => {
+        if (state.chatSessionsCollectionRef) {
+            state.chatSessionsCollectionRef.doc(sessionId).delete().then(() => {
                 console.log("Session deleted successfully");
-                if (currentSessionId === sessionId) {
+                if (state.currentSessionId === sessionId) {
                     handleNewChat();
                 }
             }).catch(e => {
@@ -1039,7 +323,7 @@ Version: 1.0 (Bundled)
 Description: The core engine for chat functionality, including API requests and response parsing.
 */
 
-async function handleChatSend() {
+async function handleChatSend(state) {
     if (!chatInput || chatInput.disabled) return;
     const query = chatInput.value.trim();
     if (!query) return;
@@ -1056,7 +340,7 @@ async function handleChatSend() {
     let currentMessages = [];
     let isNewSession = false;
 
-    if (!currentSessionId) {
+    if (!state.currentSessionId) {
         isNewSession = true;
         const activeProject = document.querySelector('.project-header.active-drop-target');
         const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
@@ -1070,18 +354,18 @@ async function handleChatSend() {
         const newSessionData = {
             title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
             messages: [userMessage],
-            mode: selectedMode,
+            mode: state.selectedMode,
             projectId: newSessionProjectId,
             isPinned: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-        sessionRef = await chatSessionsCollectionRef.add(newSessionData);
-        currentSessionId = sessionRef.id;
+        sessionRef = await state.chatSessionsCollectionRef.add(newSessionData);
+        state.currentSessionId = sessionRef.id;
 
     } else {
-        sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
-        const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+        sessionRef = state.chatSessionsCollectionRef.doc(state.currentSessionId);
+        const currentSessionData = state.localChatSessionsCache.find(s => s.id === state.currentSessionId);
         
         currentMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
         renderChatMessages({ messages: currentMessages });
@@ -1095,22 +379,22 @@ async function handleChatSend() {
     const startTime = performance.now();
     try {
         let aiRes, usageData;
-        const historyForApi = isNewSession ? [userMessage] : (localChatSessionsCache.find(s => s.id === currentSessionId)?.messages.slice(-20) || [userMessage]);
+        const historyForApi = isNewSession ? [userMessage] : (state.localChatSessionsCache.find(s => s.id === state.currentSessionId)?.messages.slice(-20) || [userMessage]);
 
-        if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
-            const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
+        if (state.userApiSettings.provider && state.userApiSettings.apiKey && state.userApiSettings.state.selectedModel) {
+            const requestDetails = buildApiRequest(state.userApiSettings.provider, state.userApiSettings.state.selectedModel, historyForApi, state.userApiSettings.maxOutputTokens);
             const res = await fetch(requestDetails.url, requestDetails.options);
             if (!res.ok) { 
                 const errorBody = await res.text(); 
                 throw new Error(`API Error ${res.status}: ${errorBody}`); 
             }
             const result = await res.json();
-            const parsed = parseApiResponse(userApiSettings.provider, result);
+            const parsed = parseApiResponse(state.userApiSettings.provider, result);
             aiRes = parsed.content;
             usageData = parsed.usage;
             if (usageData) { 
-                userApiSettings.tokenUsage.prompt += usageData.prompt; 
-                userApiSettings.tokenUsage.completion += usageData.completion; 
+                state.userApiSettings.tokenUsage.prompt += usageData.prompt; 
+                state.userApiSettings.tokenUsage.completion += usageData.completion; 
                 saveApiSettings(false); 
                 renderTokenUsage(); 
             }
@@ -1120,7 +404,7 @@ async function handleChatSend() {
             promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
             
             const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
-            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
+            const selectedDefaultModel = localStorage.getItem('selectedAiModel') || state.defaultModel;
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1152,12 +436,12 @@ async function handleChatSend() {
         chatSendBtn.disabled = false;
         chatInput.focus();
         if (isNewSession) {
-            selectSession(currentSessionId);
+            selectSession(state.currentSessionId);
         }
     }
 }
 
-function buildApiRequest(provider, model, messages, maxTokens) {
+function buildApiRequest(state, provider, model, messages, maxTokens) {
     const history = messages.map(msg => ({
         role: msg.role === 'ai' ? 'assistant' : 'user',
         content: msg.content
@@ -1166,12 +450,12 @@ function buildApiRequest(provider, model, messages, maxTokens) {
     if (provider === 'openai') {
         return {
             url: 'https://api.openai.com/v1/chat/completions',
-            options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userApiSettings.apiKey}` }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
+            options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.userApiSettings.apiKey}` }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
         };
     } else if (provider === 'anthropic') {
          return {
             url: 'https://api.anthropic.com/v1/messages',
-            options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': userApiSettings.apiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
+            options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': state.userApiSettings.apiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
         };
     } else if (provider === 'google_paid') {
         const googleHistory = messages.map(msg => ({
@@ -1179,14 +463,14 @@ function buildApiRequest(provider, model, messages, maxTokens) {
             parts: [{ text: msg.content }]
         }));
         return {
-            url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userApiSettings.apiKey}`,
+            url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${state.userApiSettings.apiKey}`,
             options: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: googleHistory, generationConfig: { maxOutputTokens: Number(maxTokens) || 2048 } }) }
         };
     }
     throw new Error(`Unsupported provider: ${provider}`);
 }
 
-function parseApiResponse(provider, result) {
+function parseApiResponse(state, provider, result) {
     try {
         if (provider === 'openai') {
             return { content: result.choices[0].message.content, usage: { prompt: result.usage.prompt_tokens, completion: result.usage.completion_tokens } };
@@ -1210,7 +494,7 @@ Version: 1.0 (Bundled)
 Description: Handles all UI rendering for the chat application, including messages and sidebar.
 */
 
-function renderChatMessages(sessionData) {
+function renderChatMessages(state, sessionData) {
     if (!chatMessages || !sessionData) return;
     
     if (sessionData && chatWelcomeMessage) {
@@ -1252,7 +536,7 @@ function renderChatMessages(sessionData) {
             const match = content.match(reasoningRegex);
 
             if (match) {
-                const reasoningBlockId = `reasoning-${currentSessionId}-${index}`;
+                const reasoningBlockId = `reasoning-${state.currentSessionId}-${index}`;
                 const reasoningRaw = match[1];
                 const finalAnswer = content.replace(reasoningRegex, '').trim();
 
@@ -1355,10 +639,10 @@ function renderMathInElement(element) {
     }
 }
 
-function startSummaryAnimation(blockElement, reasoningSteps) {
+function startSummaryAnimation(state, blockElement, reasoningSteps) {
     const blockId = blockElement.id;
     clearTimers(blockId);
-    activeTimers[blockId] = [];
+    state.activeTimers[blockId] = [];
 
     const summaryElement = blockElement.querySelector('.reasoning-summary');
     if (!summaryElement || !reasoningSteps || reasoningSteps.length === 0) return;
@@ -1379,23 +663,23 @@ function startSummaryAnimation(blockElement, reasoningSteps) {
                     stepIndex = (stepIndex + 1) % reasoningSteps.length;
                     summaryElement.style.opacity = '1';
                 }, 500);
-                if (!activeTimers[blockId]) activeTimers[blockId] = [];
-                activeTimers[blockId].push(fadeTimer);
+                if (!state.activeTimers[blockId]) state.activeTimers[blockId] = [];
+                state.activeTimers[blockId].push(fadeTimer);
             }, 2000);
-            if (!activeTimers[blockId]) activeTimers[blockId] = [];
-            activeTimers[blockId].push(waitTimer);
+            if (!state.activeTimers[blockId]) state.activeTimers[blockId] = [];
+            state.activeTimers[blockId].push(waitTimer);
         });
     };
     
     cycleSummary();
     const summaryInterval = setInterval(cycleSummary, 4500);
-    if (!activeTimers[blockId]) activeTimers[blockId] = [];
-    activeTimers[blockId].push(summaryInterval);
+    if (!state.activeTimers[blockId]) state.activeTimers[blockId] = [];
+    state.activeTimers[blockId].push(summaryInterval);
     
     blockElement.addEventListener('toggle', () => { isCycling = false; }, { once: true });
 }
 
-function typewriterEffect(element, text, onComplete) {
+function typewriterEffect(state, element, text, onComplete) {
     if (!element || !text) {
         if (onComplete) onComplete();
         return;
@@ -1424,26 +708,26 @@ function typewriterEffect(element, text, onComplete) {
     
     element.typingInterval = typingInterval;
 
-    if (blockId && activeTimers[blockId]) {
-        activeTimers[blockId].push(typingInterval);
+    if (blockId && state.activeTimers[blockId]) {
+        state.activeTimers[blockId].push(typingInterval);
     }
 }
 
-function clearTimers(blockId) {
-    if (activeTimers[blockId]) {
-        activeTimers[blockId].forEach(clearInterval);
-        delete activeTimers[blockId];
+function clearTimers(state, blockId) {
+    if (state.activeTimers[blockId]) {
+        state.activeTimers[blockId].forEach(clearInterval);
+        delete state.activeTimers[blockId];
     }
 }
 
-function renderSidebarContent() {
+function renderSidebarContent(state) {
     if (!sessionListContainer) return;
     const searchTerm = searchSessionsInput.value.toLowerCase();
     sessionListContainer.innerHTML = ''; 
     const fragment = document.createDocumentFragment();
 
-    const projectsToDisplay = localProjectsCache
-        .filter(p => searchTerm ? p.name?.toLowerCase().includes(searchTerm) || localChatSessionsCache.some(s => s.projectId === p.id && (s.title || '').toLowerCase().includes(searchTerm)) : true)
+    const projectsToDisplay = state.localProjectsCache
+        .filter(p => searchTerm ? p.name?.toLowerCase().includes(searchTerm) || state.localChatSessionsCache.some(s => s.projectId === p.id && (s.title || '').toLowerCase().includes(searchTerm)) : true)
         .sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
 
     if (projectsToDisplay.length > 0) {
@@ -1457,7 +741,7 @@ function renderSidebarContent() {
         });
     }
 
-    const unassignedSessions = localChatSessionsCache
+    const unassignedSessions = state.localChatSessionsCache
         .filter(s => !s.projectId)
         .filter(s => searchTerm ? (s.title || '새 대화').toLowerCase().includes(searchTerm) : true);
 
@@ -1492,7 +776,7 @@ function renderSidebarContent() {
     sessionListContainer.appendChild(fragment);
 }
 
-function createProjectContainer(project, searchTerm) {
+function createProjectContainer(state, project, searchTerm) {
     const projectContainer = document.createElement('div');
     projectContainer.className = 'project-container';
     projectContainer.dataset.projectId = project.id;
@@ -1520,7 +804,7 @@ function createProjectContainer(project, searchTerm) {
     const sessionsContainer = document.createElement('div');
     sessionsContainer.className = `sessions-in-project ${project.isExpanded ? 'expanded' : ''}`;
     
-    localChatSessionsCache
+    state.localChatSessionsCache
         .filter(s => s.projectId === project.id)
         .filter(s => searchTerm ? (s.title || '새 대화').toLowerCase().includes(searchTerm) : true)
         .sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0))
@@ -1531,12 +815,12 @@ function createProjectContainer(project, searchTerm) {
     return projectContainer;
 }
 
-function createSessionItem(session) {
+function createSessionItem(state, session) {
     const item = document.createElement('div');
     item.className = 'session-item';
     item.dataset.sessionId = session.id;
     item.draggable = true;
-    if (session.id === currentSessionId) item.classList.add('active');
+    if (session.id === state.currentSessionId) item.classList.add('active');
     
     const createdAt = session.createdAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || '정보 없음';
     const updatedAt = session.updatedAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || createdAt;
@@ -1559,12 +843,12 @@ function createSessionItem(session) {
     return item;
 }
 
-function removeContextMenu() {
-    currentOpenContextMenu?.remove();
-    currentOpenContextMenu = null;
+function removeContextMenu(state) {
+    state.currentOpenContextMenu?.remove();
+    state.currentOpenContextMenu = null;
 }
 
-function showProjectContextMenu(projectId, buttonElement) {
+function showProjectContextMenu(state, projectId, buttonElement) {
     removeContextMenu();
     const rect = buttonElement.getBoundingClientRect();
     const menu = document.createElement('div');
@@ -1580,7 +864,7 @@ function showProjectContextMenu(projectId, buttonElement) {
     if (sessionListContainer) {
         sessionListContainer.appendChild(menu);
         menu.style.display = 'block';
-        currentOpenContextMenu = menu;
+        state.currentOpenContextMenu = menu;
 
         menu.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1597,15 +881,15 @@ function showProjectContextMenu(projectId, buttonElement) {
     }
 }
 
-function showSessionContextMenu(sessionId, x, y) {
-    const session = localChatSessionsCache.find(s => s.id === sessionId);
+function showSessionContextMenu(state, sessionId, x, y) {
+    const session = state.localChatSessionsCache.find(s => s.id === sessionId);
     if (!session) return;
     removeContextMenu();
     
     const menu = document.createElement('div');
     menu.className = 'session-context-menu';
     
-    let moveToSubMenuHTML = localProjectsCache
+    let moveToSubMenuHTML = state.localProjectsCache
         .sort((a,b) => (a.name > b.name) ? 1 : -1)
         .map(p => `<button class="context-menu-item" data-project-id="${p.id}" ${session.projectId === p.id ? 'disabled' : ''}>${p.name}</button>`).join('');
     
@@ -1641,7 +925,7 @@ function showSessionContextMenu(sessionId, x, y) {
     menu.style.left = `${x + menuWidth > bodyWidth ? x - menuWidth : x}px`;
     menu.style.top = `${y + menuHeight > bodyHeight ? y - menuHeight : y}px`;
     menu.style.display = 'block';
-    currentOpenContextMenu = menu;
+    state.currentOpenContextMenu = menu;
 
     menu.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1662,7 +946,7 @@ function showSessionContextMenu(sessionId, x, y) {
     });
 }
 
-function updateChatHeaderModelSelector() {
+function updateChatHeaderModelSelector(state) {
     if (!aiModelSelector) return;
     const DEFAULT_MODELS = [
         { value: 'gemini-2.5-flash-preview-04-17', text: '⚡️ Gemini 2.5 Flash (최신)' },
@@ -1670,10 +954,10 @@ function updateChatHeaderModelSelector() {
     ];
     aiModelSelector.innerHTML = '';
 
-    if (userApiSettings.provider && userApiSettings.apiKey) {
-        const models_to_show = userApiSettings.availableModels || [];
-        if(models_to_show.length === 0 && userApiSettings.selectedModel) {
-            models_to_show.push(userApiSettings.selectedModel);
+    if (state.userApiSettings.provider && state.userApiSettings.apiKey) {
+        const models_to_show = state.userApiSettings.availableModels || [];
+        if(models_to_show.length === 0 && state.userApiSettings.selectedModel) {
+            models_to_show.push(state.userApiSettings.selectedModel);
         }
         
         models_to_show.forEach(modelId => {
@@ -1683,8 +967,8 @@ function updateChatHeaderModelSelector() {
             aiModelSelector.appendChild(option);
         });
         
-        aiModelSelector.value = userApiSettings.selectedModel;
-        aiModelSelector.title = `${userApiSettings.provider} 모델을 선택합니다. (개인 키 사용 중)`;
+        aiModelSelector.value = state.userApiSettings.selectedModel;
+        aiModelSelector.title = `${state.userApiSettings.provider} 모델을 선택합니다. (개인 키 사용 중)`;
     } else {
         DEFAULT_MODELS.forEach(model => {
             const option = document.createElement('option');
@@ -1692,7 +976,7 @@ function updateChatHeaderModelSelector() {
             option.textContent = model.text;
             aiModelSelector.appendChild(option);
         });
-        const savedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
+        const savedDefaultModel = localStorage.getItem('selectedAiModel') || state.defaultModel;
         aiModelSelector.value = savedDefaultModel;
         aiModelSelector.title = 'AI 모델을 선택합니다.';
     }
@@ -1706,9 +990,9 @@ Version: 1.0 (Bundled)
 Description: Acts as the main controller for the Chat App, handling user interactions and top-level state.
 */
 
-function getNewProjectDefaultName() {
+function getNewProjectDefaultName(state) {
     const baseName = "새 프로젝트";
-    const existingNames = new Set(localProjectsCache.map(p => p.name));
+    const existingNames = new Set(state.localProjectsCache.map(p => p.name));
     if (!existingNames.has(baseName)) {
         return baseName;
     }
@@ -1719,15 +1003,15 @@ function getNewProjectDefaultName() {
     return `${baseName} ${i}`;
 }
 
-function toggleProjectExpansion(projectId) {
-    const project = localProjectsCache.find(p => p.id === projectId);
+function toggleProjectExpansion(state, projectId) {
+    const project = state.localProjectsCache.find(p => p.id === projectId);
     if (project) {
         project.isExpanded = !project.isExpanded;
         renderSidebarContent();
     }
 }
 
-function startProjectRename(projectId) {
+function startProjectRename(state, projectId) {
     const projectContainer = document.querySelector(`.project-container[data-project-id="${projectId}"]`);
     if (!projectContainer) return;
     const titleSpan = projectContainer.querySelector('.project-title');
@@ -1763,7 +1047,7 @@ function startProjectRename(projectId) {
     });
 }
 
-function startSessionRename(sessionId) {
+function startSessionRename(state, sessionId) {
     const sessionItem = document.querySelector(`.session-item[data-session-id="${sessionId}"]`);
     if (!sessionItem) return;
     const titleSpan = sessionItem.querySelector('.session-item-title');
@@ -1796,14 +1080,14 @@ function startSessionRename(sessionId) {
     });
 }
 
-function selectSession(sessionId) {
+function selectSession(state, sessionId) {
     removeContextMenu();
     if (!sessionId) return;
-    const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
+    const sessionData = state.localChatSessionsCache.find(s => s.id === sessionId);
     if (!sessionData) return;
 
-    currentSessionId = sessionId;
-    Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
+    state.currentSessionId = sessionId;
+    Object.values(state.activeTimers).forEach(timers => timers.forEach(clearInterval));
 
     renderSidebarContent();
     if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
@@ -1820,9 +1104,9 @@ function selectSession(sessionId) {
     chatInput.focus();
 }
 
-function handleNewChat() { 
-    currentSessionId = null; 
-    Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
+function handleNewChat(state) { 
+    state.currentSessionId = null; 
+    Object.values(state.activeTimers).forEach(timers => timers.forEach(clearInterval));
     renderSidebarContent();
 
     if (chatMessages) {
@@ -1846,7 +1130,7 @@ function handleNewChat() {
     if (chatSendBtn) chatSendBtn.disabled = false; 
 }
 
-function setupChatModeSelector() { 
+function setupChatModeSelector(state) { 
     if (!chatModeSelector) return; 
     chatModeSelector.innerHTML = ''; 
     const modes = [
@@ -1858,12 +1142,12 @@ function setupChatModeSelector() {
         const b = document.createElement('button'); 
         b.dataset.mode = m.id; 
         b.innerHTML = `${m.i}<span>${m.t}</span>`; 
-        if (m.id === selectedMode) b.classList.add('active'); 
+        if (m.id === state.selectedMode) b.classList.add('active'); 
         b.addEventListener('click', () => { 
-            selectedMode = m.id; 
+            state.selectedMode = m.id; 
             chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); 
             b.classList.add('active'); 
-            if (selectedMode === 'custom') openPromptModal();
+            if (state.selectedMode === 'custom') openPromptModal();
         }); 
         chatModeSelector.appendChild(b); 
     }); 
@@ -1878,32 +1162,32 @@ Description: Handles all data layer interactions with Firebase Firestore for the
 */
 
 // --- Notes Data Listeners (moved from firebase.js) ---
-function listenToNotes() { 
+function listenToNotes(state) { 
     return new Promise(resolve => { 
-        if (!notesCollectionRef) return resolve(); 
-        if (unsubscribeFromNotes) unsubscribeFromNotes(); 
-        unsubscribeFromNotes = notesCollectionRef.onSnapshot(s => { 
-            localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); 
+        if (!state.notesCollectionRef) return resolve(); 
+        if (state.unsubscribeFromNotes) state.unsubscribeFromNotes(); 
+        state.unsubscribeFromNotes = state.notesCollectionRef.onSnapshot(s => { 
+            state.localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); 
             if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList(); 
             resolve(); 
         }, e => { console.error("노트 수신 오류:", e); resolve(); }); 
     }); 
 }
 
-function listenToNoteProjects() {
+function listenToNoteProjects(state) {
     return new Promise((resolve) => {
-        if (!noteProjectsCollectionRef) return resolve();
-        if (unsubscribeFromNoteProjects) unsubscribeFromNoteProjects();
-        unsubscribeFromNoteProjects = noteProjectsCollectionRef.onSnapshot(snapshot => {
-            const oldCache = [...localNoteProjectsCache];
-            localNoteProjectsCache = snapshot.docs.map(doc => ({
+        if (!state.noteProjectsCollectionRef) return resolve();
+        if (state.unsubscribeFromNoteProjects) state.unsubscribeFromNoteProjects();
+        state.unsubscribeFromNoteProjects = state.noteProjectsCollectionRef.onSnapshot(snapshot => {
+            const oldCache = [...state.localNoteProjectsCache];
+            state.localNoteProjectsCache = snapshot.docs.map(doc => ({
                 id: doc.id,
                 isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true, ...doc.data()
             }));
             if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList();
-            if (newlyCreatedNoteProjectId) {
-                const newProjectElement = document.querySelector(`.note-project-container[data-project-id="${newlyCreatedNoteProjectId}"]`);
-                if (newProjectElement) { startNoteProjectRename(newlyCreatedNoteProjectId); newlyCreatedNoteProjectId = null; }
+            if (state.newlyCreatedNoteProjectId) {
+                const newProjectElement = document.querySelector(`.note-project-container[data-project-id="${state.newlyCreatedNoteProjectId}"]`);
+                if (newProjectElement) { startNoteProjectRename(state.newlyCreatedNoteProjectId); state.newlyCreatedNoteProjectId = null; }
             }
             resolve();
         }, error => { console.error("Note Project listener error:", error); resolve(); });
@@ -1933,13 +1217,13 @@ function listenToNoteTemplates() {
 }
 
 // --- Notes Data Management Functions ---
-async function addNote(content = '') {
-    if (!notesCollectionRef) return null;
+async function addNote(state, content = '') {
+    if (!state.notesCollectionRef) return null;
     try {
         const activeProject = document.querySelector('.note-project-header.active-drop-target');
         const projectId = activeProject ? activeProject.closest('.note-project-container').dataset.projectId : null;
         
-        const ref = await notesCollectionRef.add({
+        const ref = await state.notesCollectionRef.add({
             title: '',
             content: content,
             projectId: projectId,
@@ -1955,24 +1239,24 @@ async function addNote(content = '') {
     }
 }
 
-function deleteNote(noteId) {
+function deleteNote(state, noteId) {
     showModal('이 메모를 영구적으로 삭제하시겠습니까?', () => {
-        if (notesCollectionRef && noteId) {
-            notesCollectionRef.doc(noteId).delete().catch(e => {
+        if (state.notesCollectionRef && noteId) {
+            state.notesCollectionRef.doc(noteId).delete().catch(e => {
                 console.error("메모 삭제 실패:", e);
                 alert("메모 삭제에 실패했습니다.");
             });
-            if (currentNoteId === noteId) {
+            if (state.currentNoteId === noteId) {
                 switchView('list');
             }
         }
     });
 }
 
-async function renameNote(noteId, newTitle) {
-    if (!newTitle?.trim() || !noteId || !notesCollectionRef) return;
+async function renameNote(state, noteId, newTitle) {
+    if (!newTitle?.trim() || !noteId || !state.notesCollectionRef) return;
     try {
-        await notesCollectionRef.doc(noteId).update({
+        await state.notesCollectionRef.doc(noteId).update({
             title: newTitle.trim(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -1982,12 +1266,12 @@ async function renameNote(noteId, newTitle) {
     }
 }
 
-async function togglePin(noteId) {
-    if (!notesCollectionRef) return;
-    const note = localNotesCache.find(n => n.id === noteId);
+async function togglePin(state, noteId) {
+    if (!state.notesCollectionRef) return;
+    const note = state.localNotesCache.find(n => n.id === noteId);
     if (note) {
         try {
-            await notesCollectionRef.doc(noteId).update({
+            await state.notesCollectionRef.doc(noteId).update({
                 isPinned: !note.isPinned
             });
         } catch (error) {
@@ -1997,11 +1281,11 @@ async function togglePin(noteId) {
     }
 }
 
-async function moveNoteToProject(noteId, projectId) {
-    if (!notesCollectionRef || !noteId) return;
+async function moveNoteToProject(state, noteId, projectId) {
+    if (!state.notesCollectionRef || !noteId) return;
     const targetProjectId = projectId === "null" ? null : projectId;
     try {
-        await notesCollectionRef.doc(noteId).update({
+        await state.notesCollectionRef.doc(noteId).update({
             projectId: targetProjectId,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -2011,25 +1295,25 @@ async function moveNoteToProject(noteId, projectId) {
     }
 }
 
-async function createNewNoteProject() {
-    if (!noteProjectsCollectionRef) return;
+async function createNewNoteProject(state) {
+    if (!state.noteProjectsCollectionRef) return;
     try {
-        const newProjectRef = await noteProjectsCollectionRef.add({
+        const newProjectRef = await state.noteProjectsCollectionRef.add({
             name: getNewNoteProjectDefaultName(),
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        newlyCreatedNoteProjectId = newProjectRef.id;
+        state.newlyCreatedNoteProjectId = newProjectRef.id;
     } catch (error) {
         console.error("Error creating new note project:", error);
         alert("새 폴더 생성에 실패했습니다.");
     }
 }
 
-async function renameNoteProject(projectId, newName) {
-    if (!newName?.trim() || !projectId || !noteProjectsCollectionRef) return;
+async function renameNoteProject(state, projectId, newName) {
+    if (!newName?.trim() || !projectId || !state.noteProjectsCollectionRef) return;
     try {
-        await noteProjectsCollectionRef.doc(projectId).update({
+        await state.noteProjectsCollectionRef.doc(projectId).update({
             name: newName.trim(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -2039,17 +1323,17 @@ async function renameNoteProject(projectId, newName) {
     }
 }
 
-async function deleteNoteProject(projectId) {
-    const project = localNoteProjectsCache.find(p => p.id === projectId);
+async function deleteNoteProject(state, projectId) {
+    const project = state.localNoteProjectsCache.find(p => p.id === projectId);
     if (!project) return;
 
     showModal(`폴더 '${project.name}'를 삭제하시겠습니까? 폴더 안의 모든 메모는 '일반 메모'로 이동됩니다.`, async () => {
         try {
-            const batch = db.batch();
-            localNotesCache.filter(n => n.projectId === projectId).forEach(note => {
-                batch.update(notesCollectionRef.doc(note.id), { projectId: null });
+            const batch = state.db.batch();
+            state.localNotesCache.filter(n => n.projectId === projectId).forEach(note => {
+                batch.update(state.notesCollectionRef.doc(note.id), { projectId: null });
             });
-            batch.delete(noteProjectsCollectionRef.doc(projectId));
+            batch.delete(state.noteProjectsCollectionRef.doc(projectId));
             await batch.commit();
         } catch (error) {
             console.error("Error deleting note project:", error);
@@ -2066,10 +1350,10 @@ Version: 1.0 (Bundled)
 Description: Manages the Toast UI Editor instance for the Notes App.
 */
 
-let toastEditorInstance = null;
+// let state.toastEditorInstance = null; -> This will be managed within the state if needed, or locally.
 
-function openNoteEditor(noteId) {
-    const note = localNotesCache.find(n => n.id === noteId);
+function openNoteEditor(state, noteId) {
+    const note = state.localNotesCache.find(n => n.id === noteId);
     if (!note) return;
     
     switchView('editor');
@@ -2080,12 +1364,12 @@ function openNoteEditor(noteId) {
         return;
     }
 
-    if (toastEditorInstance) {
-        toastEditorInstance.destroy();
-        toastEditorInstance = null;
+    if (state.toastEditorInstance) {
+        state.toastEditorInstance.destroy();
+        state.toastEditorInstance = null;
     }
 
-    toastEditorInstance = new toastui.Editor({
+    state.toastEditorInstance = new toastui.Editor({
         el: editorEl,
         initialValue: note.content || '',
         initialEditType: 'wysiwyg',
@@ -2101,17 +1385,17 @@ function openNoteEditor(noteId) {
         }
     });
 
-    currentNoteId = noteId;
+    state.currentNoteId = noteId;
     if(noteTitleInput) noteTitleInput.value = note.title || '';
     if(noteTitleInput) noteTitleInput.focus();
 }
 
-function saveNote() {
-    if (debounceTimer) clearTimeout(debounceTimer);
-    if (!currentNoteId || !notesCollectionRef || !toastEditorInstance) return;
+function saveNote(state) {
+    if (state.debounceTimer) clearTimeout(state.debounceTimer);
+    if (!state.currentNoteId || !state.notesCollectionRef || !state.toastEditorInstance) return;
 
     let titleValue = noteTitleInput.value.trim();
-    const contentValue = toastEditorInstance.getMarkdown();
+    const contentValue = state.toastEditorInstance.getMarkdown();
 
     if (titleValue === '' && contentValue.trim() !== '') {
         titleValue = generateTitleFromContent(contentValue);
@@ -2127,7 +1411,7 @@ function saveNote() {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    notesCollectionRef.doc(currentNoteId).update(dataToUpdate)
+    state.notesCollectionRef.doc(state.currentNoteId).update(dataToUpdate)
         .then(() => {
             updateStatus('저장됨 ✓', true);
         })
@@ -2155,7 +1439,7 @@ Version: 1.0 (Bundled)
 Description: Handles all UI rendering logic for the Notes App list view.
 */
 
-function renderNoteList() {
+function renderNoteList(state) {
     if (!noteListView) return;
 
     const actionBarHTML = `
@@ -2185,7 +1469,7 @@ function renderNoteList() {
 
     const searchInput = document.getElementById('search-input-dynamic');
     const term = searchInput.value.toLowerCase();
-    const filteredNotes = localNotesCache.filter(n => term ? ((n.title||'').toLowerCase().includes(term) || (n.content||'').toLowerCase().includes(term)) : true);
+    const filteredNotes = state.localNotesCache.filter(n => term ? ((n.title||'').toLowerCase().includes(term) || (n.content||'').toLowerCase().includes(term)) : true);
 
     const notesListContainer = document.getElementById('notes-list');
     const fragment = document.createDocumentFragment();
@@ -2203,7 +1487,7 @@ function renderNoteList() {
             .forEach(note => fragment.appendChild(createNoteItem(note)));
     }
 
-    localNoteProjectsCache
+    state.localNoteProjectsCache
         .sort((a,b) => a.name.localeCompare(b.name, 'ko'))
         .forEach(project => {
             const notesInProject = unpinnedNotes.filter(n => n.projectId === project.id);
@@ -2217,7 +1501,7 @@ function renderNoteList() {
                     <span class="note-project-toggle-icon ${project.isExpanded !== false ? 'expanded' : ''}"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" /></svg></span>
                     <span class="note-project-icon"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2Z" /></svg></span>
                     <span class="note-project-title">${project.name}</span>
-                    <span class="note-count">(${localNotesCache.filter(n => n.projectId === project.id).length})</span>
+                    <span class="note-count">(${state.localNotesCache.filter(n => n.projectId === project.id).length})</span>
                 </div>
                 <div class="notes-in-project ${project.isExpanded !== false ? 'expanded' : ''}"></div>
             `;
@@ -2264,7 +1548,7 @@ function createNoteItem(noteData) {
     return item;
 }
 
-function showContextMenu(target, event) {
+function showContextMenu(state, target, event) {
     event.preventDefault();
     removeContextMenu();
 
@@ -2288,17 +1572,17 @@ function showContextMenu(target, event) {
     menu.style.left = `${event.clientX + menuWidth > bodyWidth ? event.clientX - menuWidth : event.clientX}px`;
     menu.style.top = `${event.clientY + menuHeight > bodyHeight ? event.clientY - menuHeight : event.clientY}px`;
     menu.style.display = 'block';
-    currentOpenContextMenu = menu;
+    state.currentOpenContextMenu = menu;
 }
 
-function createNoteContextMenu(noteId) {
-    const note = localNotesCache.find(n => n.id === noteId);
+function createNoteContextMenu(state, noteId) {
+    const note = state.localNotesCache.find(n => n.id === noteId);
     if (!note) return;
 
     const menu = document.createElement('div');
     menu.className = 'note-context-menu';
 
-    let moveToSubMenuHTML = localNoteProjectsCache
+    let moveToSubMenuHTML = state.localNoteProjectsCache
         .sort((a,b) => a.name.localeCompare(b.name, 'ko'))
         .map(p => `<button class="context-menu-item" data-action="move-to" data-project-id="${p.id}" ${note.projectId === p.id ? 'disabled' : ''}><span class="icon">📁</span><span>${p.name}</span></button>`).join('');
 
@@ -2322,8 +1606,8 @@ function createNoteContextMenu(noteId) {
     return menu;
 }
 
-function createProjectContextMenu(projectId) {
-    const project = localNoteProjectsCache.find(p => p.id === projectId);
+function createProjectContextMenu(state, projectId) {
+    const project = state.localNoteProjectsCache.find(p => p.id === projectId);
     if (!project) return;
 
     const menu = document.createElement('div');
@@ -2345,8 +1629,8 @@ Version: 1.0 (Bundled)
 Description: Provides utility functions for the Notes App, such as data backup and restoration.
 */
 
-function exportAllData() {
-    const allCaches = [localNotesCache, localNoteProjectsCache, localChatSessionsCache, localProjectsCache];
+function exportAllData(state) {
+    const allCaches = [state.localNotesCache, state.localNoteProjectsCache, state.localChatSessionsCache, state.localProjectsCache];
     if (allCaches.every(cache => cache.length === 0)) { 
         showModal("백업할 데이터가 없습니다.", () => {}); 
         return; 
@@ -2370,10 +1654,10 @@ function exportAllData() {
     const dataToExport = { 
         backupVersion: '4.0',
         backupDate: new Date().toISOString(), 
-        notes: localNotesCache.map(processTimestamp), 
-        noteProjects: localNoteProjectsCache.map(processTimestamp),
-        chatSessions: localChatSessionsCache.map(processTimestamp), 
-        projects: localProjectsCache.map(processTimestamp) 
+        notes: state.localNotesCache.map(processTimestamp), 
+        noteProjects: state.localNoteProjectsCache.map(processTimestamp),
+        chatSessions: state.localChatSessionsCache.map(processTimestamp), 
+        projects: state.localProjectsCache.map(processTimestamp) 
     };
 
     const str = JSON.stringify(dataToExport, null, 2);
@@ -2393,7 +1677,7 @@ function handleRestoreClick() {
     if (fileImporter) fileImporter.click(); 
 }
 
-async function importAllData(event) {
+async function importAllData(state, event) {
     const file = event.target.files[0]; 
     if (!file) return;
 
@@ -2411,13 +1695,13 @@ async function importAllData(event) {
             showModal(message, async () => {
                 try {
                     updateStatus('복원 중...', true);
-                    const batch = db.batch();
+                    const batch = state.db.batch();
                     const toFirestoreTimestamp = ts => ts ? firebase.firestore.Timestamp.fromDate(new Date(ts)) : firebase.firestore.FieldValue.serverTimestamp();
                     
-                    (data.notes || []).forEach(note => { const { id, ...dataToWrite } = note; dataToWrite.createdAt = toFirestoreTimestamp(note.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(note.updatedAt); batch.set(notesCollectionRef.doc(id), dataToWrite); });
-                    (data.noteProjects || []).forEach(project => { const { id, ...dataToWrite } = project; dataToWrite.createdAt = toFirestoreTimestamp(project.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(project.updatedAt); batch.set(noteProjectsCollectionRef.doc(id), dataToWrite); });
-                    (data.chatSessions || []).forEach(session => { const { id, ...dataToWrite } = session; dataToWrite.createdAt = toFirestoreTimestamp(session.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(session.updatedAt); if(dataToWrite.messages) dataToWrite.messages.forEach(m=>m.timestamp=toFirestoreTimestamp(m.timestamp)); batch.set(chatSessionsCollectionRef.doc(id), dataToWrite); });
-                    (data.projects || []).forEach(project => { const { id, ...dataToWrite } = project; dataToWrite.createdAt = toFirestoreTimestamp(project.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(project.updatedAt); batch.set(projectsCollectionRef.doc(id), dataToWrite); });
+                    (data.notes || []).forEach(note => { const { id, ...dataToWrite } = note; dataToWrite.createdAt = toFirestoreTimestamp(note.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(note.updatedAt); batch.set(state.notesCollectionRef.doc(id), dataToWrite); });
+                    (data.noteProjects || []).forEach(project => { const { id, ...dataToWrite } = project; dataToWrite.createdAt = toFirestoreTimestamp(project.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(project.updatedAt); batch.set(state.noteProjectsCollectionRef.doc(id), dataToWrite); });
+                    (data.chatSessions || []).forEach(session => { const { id, ...dataToWrite } = session; dataToWrite.createdAt = toFirestoreTimestamp(session.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(session.updatedAt); if(dataToWrite.messages) dataToWrite.messages.forEach(m=>m.timestamp=toFirestoreTimestamp(m.timestamp)); batch.set(state.chatSessionsCollectionRef.doc(id), dataToWrite); });
+                    (data.projects || []).forEach(project => { const { id, ...dataToWrite } = project; dataToWrite.createdAt = toFirestoreTimestamp(project.createdAt); dataToWrite.updatedAt = toFirestoreTimestamp(project.updatedAt); batch.set(state.projectsCollectionRef.doc(id), dataToWrite); });
                     
                     await batch.commit();
                     updateStatus('복원 완료 ✓', true);
@@ -2438,22 +1722,22 @@ async function importAllData(event) {
     reader.readAsText(file);
 }
 
-async function handleSystemReset() {
+async function handleSystemReset(state) {
     const message = "정말로 이 캔버스의 모든 데이터를 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.";
     showModal(message, async () => {
-        if (!db || !currentUser) { 
+        if (!db || !state.currentUser) { 
             alert("초기화 실패: DB 연결을 확인해주세요."); 
             return; 
         }
         updateStatus("시스템 초기화 중...", true);
         
         const collectionsToDelete = [
-            notesCollectionRef, noteProjectsCollectionRef, chatSessionsCollectionRef,
-            projectsCollectionRef, tagsCollectionRef, noteTemplatesCollectionRef
+            state.notesCollectionRef, state.noteProjectsCollectionRef, state.chatSessionsCollectionRef,
+            state.projectsCollectionRef, state.tagsCollectionRef, state.noteTemplatesCollectionRef
         ];
 
         try {
-            const batch = db.batch();
+            const batch = state.db.batch();
             for (const ref of collectionsToDelete) {
                 if (ref) {
                     const snapshot = await ref.get();
@@ -2497,27 +1781,27 @@ function ensureNotePanelHeader() {
     }
 }
 
-function switchView(view) {
+function switchView(state, view) {
     if (view === 'editor') {
         noteListView?.classList.remove('active');
         noteEditorView?.classList.add('active');
     } else {
-        if (noteTitleInput && noteTitleInput.value.trim() === '' && currentNoteId && toastEditorInstance) {
-            const content = toastEditorInstance.getMarkdown();
+        if (noteTitleInput && noteTitleInput.value.trim() === '' && state.currentNoteId && state.toastEditorInstance) {
+            const content = state.toastEditorInstance.getMarkdown();
             const newTitle = generateTitleFromContent(content);
             if (newTitle && newTitle !== '무제 노트') {
-                notesCollectionRef.doc(currentNoteId).update({ title: newTitle });
+                state.notesCollectionRef.doc(state.currentNoteId).update({ title: newTitle });
             }
         }
         
-        if (toastEditorInstance) {
-            toastEditorInstance.destroy();
-            toastEditorInstance = null;
+        if (state.toastEditorInstance) {
+            state.toastEditorInstance.destroy();
+            state.toastEditorInstance = null;
         }
 
         noteEditorView?.classList.remove('active');
         noteListView?.classList.add('active');
-        currentNoteId = null;
+        state.currentNoteId = null;
     }
 }
 
@@ -2525,22 +1809,22 @@ function getNewNoteProjectDefaultName() {
     const baseName = "새 폴더";
     let i = 1;
     let newName = baseName;
-    const existingNames = new Set(localNoteProjectsCache.map(p => p.name));
+    const existingNames = new Set(state.localNoteProjectsCache.map(p => p.name));
     while (existingNames.has(newName)) {
         newName = `${baseName} ${++i}`;
     }
     return newName;
 }
 
-function toggleNoteProjectExpansion(projectId) {
-    const project = localNoteProjectsCache.find(p => p.id === projectId);
+function toggleNoteProjectExpansion(state, projectId) {
+    const project = state.localNoteProjectsCache.find(p => p.id === projectId);
     if (project) {
         project.isExpanded = !project.isExpanded;
         renderNoteList();
     }
 }
 
-function startNoteProjectRename(projectId) {
+function startNoteProjectRename(state, projectId) {
     const titleSpan = document.querySelector(`.note-project-container[data-project-id="${projectId}"] .note-project-title`);
     if (!titleSpan) return;
     const originalTitle = titleSpan.textContent;
@@ -2569,7 +1853,7 @@ function startNoteProjectRename(projectId) {
     input.addEventListener('keydown', onKeydown);
 }
 
-function startNoteRename(noteId) {
+function startNoteRename(state, noteId) {
     const titleSpan = document.querySelector(`.note-item[data-id="${noteId}"] .note-item-title`);
     if (!titleSpan) return;
     const originalTitle = titleSpan.textContent;
@@ -2598,7 +1882,7 @@ function startNoteRename(noteId) {
     input.addEventListener('keydown', onKeydown);
 }
 
-async function handleAddNewNote() {
+async function handleAddNewNote(state) {
     const newNoteId = await addNote();
     if (newNoteId) {
         openNoteEditor(newNoteId);
