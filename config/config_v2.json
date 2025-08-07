@@ -1,0 +1,1 @@
+{\n  "meta": {\n    "title": "Hyper-Minimal Loader Test Page",\n    "stylesheets": [\n      "css/main.css"\n    ]\n  },\n  "templates": [\n    {\n      "targetElementId": "root",\n      "path": "templates/card_template.html"\n    }\n  ],\n  "modules": [\n    "modules/ui_module.js"\n  ]\n}

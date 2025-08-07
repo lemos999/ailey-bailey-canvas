@@ -1,0 +1,1 @@
+console.log("[ui_module] 모듈이 로드되었습니다.");\n\nconst button = document.getElementById('dynamic-button');\nif (button) {\n  button.addEventListener('click', () => {\n    alert('UI Module is alive! The event listener is working.');\n  });\n  console.log("[ui_module] 버튼에 이벤트 리스너가 성공적으로 부착되었습니다.");\n} else {\n  console.error("[ui_module] 에러: 버튼(ID: dynamic-button)을 찾을 수 없습니다.");\n}
