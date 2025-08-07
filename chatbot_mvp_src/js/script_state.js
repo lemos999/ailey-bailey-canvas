@@ -1,1 +1,10 @@
-/* --- script_state.js --- */ let db, currentUser, chatPanel, chatInput, chatSendBtn, chatMessages, apiSettingsModalOverlay, newChatBtn, newProjectBtn, sessionListContainer, chatSessionTitle, deleteSessionBtn, chatWelcomeMessage, searchSessionsInput, aiModelSelector, apiSettingsBtn, apiKeyInput, verifyApiKeyBtn, apiKeyStatus, apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn, apiSettingsSaveBtn, apiSettingsCancelBtn; let currentSessionId = null; let localProjectsCache = [], localChatSessionsCache = []; let unsubscribeFromProjects = null, unsubscribeFromChatSessions = null; let newlyCreatedProjectId = null; const activeTimers = {}; let userApiSettings = { provider: null, apiKey: "", selectedModel: "", availableModels: [], maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 }}; const canvasId = "chatbot-mvp-instance-01"; const appId = "AileyBailey_Global_Space";
+/* --- script_state.js --- */
+let db, currentUser, chatPanel, chatInput, chatSendBtn, chatMessages, apiSettingsModalOverlay, newChatBtn, newProjectBtn, sessionListContainer, chatSessionTitle, deleteSessionBtn, chatWelcomeMessage, searchSessionsInput, aiModelSelector, apiSettingsBtn, apiKeyInput, verifyApiKeyBtn, apiKeyStatus, apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn, apiSettingsSaveBtn, apiSettingsCancelBtn;
+let currentSessionId = null;
+let localProjectsCache = [], localChatSessionsCache = [];
+let unsubscribeFromProjects = null, unsubscribeFromChatSessions = null;
+let newlyCreatedProjectId = null;
+const activeTimers = {};
+let userApiSettings = { provider: null, apiKey: "", selectedModel: "", availableModels: [], maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 }};
+const canvasId = "chatbot-mvp-instance-01";
+const appId = "AileyBailey_Global_Space";

@@ -8,3 +8,4 @@ body:not(.dark-mode) { background-color: var(--bg-color-light); color: var(--tex
 .container { max-width: 800px; flex-grow: 1; }
 .header { text-align: center; padding-bottom: 20px; margin-bottom: 30px; }
 .content-section { margin-bottom: 35px; }
+strong { font-weight: bold; }

@@ -5,16 +5,18 @@ body.dark-mode #chat-session-sidebar { border-right: 1px solid var(--border-colo
 #sidebar-header { padding: 10px; }
 #session-list-container { flex-grow: 1; overflow-y: auto; padding: 10px; }
 .sidebar-button-group { display: flex; gap: 8px; margin-bottom: 10px; }
-.sidebar-button-group button { flex-grow: 1; padding: 8px; border: none; cursor: pointer; }
-.session-item { padding: 12px 10px; border-radius: 6px; cursor: pointer; }
+.sidebar-button-group button { flex-grow: 1; padding: 8px; border: none; cursor: pointer; display:flex; align-items:center; justify-content:center; gap: 5px; }
+.session-item { padding: 12px 10px; border-radius: 6px; cursor: pointer; position: relative; }
 .session-item.active { background-color: var(--strong-bg-dark); }
+.session-pin-btn { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; opacity: 0; }
+.session-item:hover .session-pin-btn, .session-pin-btn.pinned-active { opacity: 1; }
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; }
-.chat-message { max-width: 85%; padding: 10px 15px; border-radius: 18px; }
+.chat-message { max-width: 85%; padding: 10px 15px; border-radius: 18px; line-height: 1.6; word-wrap: break-word; }
 .chat-message.user { background-color: #8C6D46; color: #fff; align-self: flex-end; }
 .chat-message.ai { background-color: var(--chat-ai-bg-dark); align-self: flex-start; }
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid var(--border-color-dark); }
-#chat-input { flex-grow: 1; border-radius: 20px; padding: 10px 15px; resize: none; }
+#chat-input { flex-grow: 1; border-radius: 20px; padding: 10px 15px; resize: none; border: 1px solid var(--border-color-dark); background: #2a2a2a; color: var(--text-color-dark); }
 #chat-send-btn { background: none; border: none; cursor: pointer; padding: 0 10px; }
 #chat-send-btn svg { fill: currentColor; }
 .reasoning-block { border-radius: 12px; border: 1px solid var(--border-color-dark); margin-bottom: 8px; }
