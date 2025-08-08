@@ -1,161 +1,78 @@
-/* Auto-generated bundle from 2025-08-08T06:44:30.344Z */
+/* Auto-generated bundle from 2025-08-08T06:55:58.483Z */
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
 /*
-
 --- Ailey & Bailey Canvas ---
-
 File: 001_state_globalVars.js
-
 Version: 1.1 (Refactored)
-
 Description: Declares all global DOM element constants. All state variables have been moved to state_manager.js.
-
 */
-
-
-
 // --- 1. Element Declarations (Global Scope) ---
-
 // [VPC] Caching DOM elements for performance and easy access.
-
 const learningContent = document.getElementById('learning-content');
-
 const wrapper = document.querySelector('.wrapper');
-
 const body = document.body;
-
 const systemInfoWidget = document.getElementById('system-info-widget');
-
 const selectionPopover = document.getElementById('selection-popover');
-
 const popoverAskAi = document.getElementById('popover-ask-ai');
-
 const popoverAddNote = document.getElementById('popover-add-note');
-
 const tocToggleBtn = document.getElementById('toc-toggle-btn');
-
 const quizModalOverlay = document.getElementById('quiz-modal-overlay');
-
 const quizContainer = document.getElementById('quiz-container');
-
 const quizSubmitBtn = document.getElementById('quiz-submit-btn');
-
 const quizResults = document.getElementById('quiz-results');
-
 const startQuizBtn = document.getElementById('start-quiz-btn');
-
 const chatModeSelector = document.getElementById('chat-mode-selector');
-
 const chatPanel = document.getElementById('chat-panel');
-
 const chatForm = document.getElementById('chat-form');
-
 const chatInput = document.getElementById('chat-input');
-
 const chatMessages = document.getElementById('chat-messages');
-
 const chatSendBtn = document.getElementById('chat-send-btn');
-
 const notesAppPanel = document.getElementById('notes-app-panel');
-
 const noteListView = document.getElementById('note-list-view');
-
 const noteEditorView = document.getElementById('note-editor-view');
-
 const notesList = document.getElementById('notes-list');
-
 const searchInput = document.getElementById('search-input');
-
 const addNewNoteBtn = document.getElementById('add-new-note-btn');
-
 const backToListBtn = document.getElementById('back-to-list-btn');
-
 const noteTitleInput = document.getElementById('note-title-input');
-
 const noteContentTextarea = document.getElementById('note-content-textarea');
-
 const autoSaveStatus = document.getElementById('auto-save-status');
-
 const formatToolbar = document.querySelector('.format-toolbar');
-
 const linkTopicBtn = document.getElementById('link-topic-btn');
-
 const customModal = document.getElementById('custom-modal');
-
 const modalMessage = document.getElementById('modal-message');
-
 const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-
 const modalCancelBtn = document.getElementById('modal-cancel-btn');
-
 const promptModalOverlay = document.getElementById('prompt-modal-overlay');
-
 const customPromptInput = document.getElementById('custom-prompt-input');
-
 const promptSaveBtn = document.getElementById('prompt-save-btn');
-
 const promptCancelBtn = document.getElementById('prompt-cancel-btn');
-
 const themeToggle = document.getElementById('theme-toggle');
-
 const chatToggleBtn = document.getElementById('chat-toggle-btn');
-
 const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
-
-
-
 // -- Chat Session & Project UI Elements --
-
 const newChatBtn = document.getElementById('new-chat-btn');
-
 const newProjectBtn = document.getElementById('new-project-btn');
-
 const sessionListContainer = document.getElementById('session-list-container');
-
 const chatSessionTitle = document.getElementById('chat-session-title');
-
 const deleteSessionBtn = document.getElementById('delete-session-btn');
-
 const chatWelcomeMessage = document.getElementById('chat-welcome-message');
-
 const searchSessionsInput = document.getElementById('search-sessions-input');
-
 const aiModelSelector = document.getElementById('ai-model-selector');
-
-
-
 // -- Backup & Restore UI Elements (Now part of dropdown) --
-
 const fileImporter = document.getElementById('file-importer');
-
-
-
 // -- API Settings UI Elements (dynamically created) --
-
 let apiSettingsBtn, apiSettingsModalOverlay, apiKeyInput, verifyApiKeyBtn, apiKeyStatus,
-
     apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn,
-
     apiSettingsSaveBtn, apiSettingsCancelBtn;
-
-
-
 // --- 2. Shared Variables (Global Scope) ---
-
 // These are simple variables, not application state. State is in state_manager.js
-
 const canvasId = document.querySelector('meta[name="canvas-id"]')?.content || 'global_fallback_id';
-
 const appId = 'AileyBailey_Global_Space';
-
 let debounceTimer = null;
-
 let lastSelectedText = '';
-
 let currentOpenContextMenu = null;
-
-let toastEditorInstance = null; // This is a specific instance, managed in its own module.
 
 /* --- Source: src\01_state\005_state_manager.js --- */
 /*
