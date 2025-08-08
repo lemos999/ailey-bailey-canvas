@@ -1,0 +1,14 @@
+{
+  "name": "ailey-bailey-canvas-refactored",
+  "version": "1.0.0",
+  "description": "Refactored project structure for Ailey & Bailey Canvas.",
+  "main": "bundle/main.js",
+  "scripts": {
+    "build": "node bundler.js",
+    "update-prompt": "node update_prompt.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {}
+}
