@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T15:38:06.152Z */
+/* Auto-generated bundle from 2025-08-08T15:50:51.186Z */
 
 /* --- Source: src\00_shell\000_shell_template.js --- */
 /*
@@ -539,8 +539,8 @@ function renderQuiz(data) {
 /*
 --- Ailey & Bailey Canvas ---
 File: 100_core_firebase.js
-Version: 1.1 (Stable Loader)
-Description: Handles all Firebase-related initialization with a robust, safe loading mechanism.
+Version: 1.2 (CSP Hotfix)
+Description: Handles Firebase initialization with long-polling enabled to bypass CSP restrictions.
 */
 
 // Waits for the global firebase object to be available, then initializes the app.
@@ -568,6 +568,13 @@ async function initializeFirebase() {
         
         const auth = firebase.auth();
         db = firebase.firestore();
+        
+        // [CRITICAL HOTFIX] Force long-polling to bypass WebSocket CSP restrictions in sandboxed environments.
+        try {
+            db.settings({ experimentalForceLongPolling: true });
+        } catch (e) {
+            console.warn("Could not set Firestore long-polling. This might fail in some environments.", e);
+        }
         
         if (auth.currentUser) {
              console.log("User already signed in.");
@@ -610,7 +617,7 @@ async function initializeFirebase() {
         }
     } catch (error) {
         console.error("Firebase 초기화 또는 인증 실패:", error);
-        if (notesList) notesList.innerHTML = '<div>클라우드 메모장을 불러오는 데 실패했습니다.</div>';
+        const chatMessages = document.getElementById('chat-messages');
         if (chatMessages) chatMessages.innerHTML = '<div>AI 러닝메이트 연결에 실패했습니다.</div>';
     }
 }
