@@ -1,14 +1,14 @@
-/* Auto-generated bundle from 2025-08-08T07:37:10.029Z */
+/* Auto-generated bundle from 2025-08-07T21:28:37.711Z */
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: 001_state_globalVars.js
-Version: 1.1 (Refactored)
-Description: Declares all global DOM element constants. All state variables have been moved to state_manager.js.
+Version: 1.0 (Bundled)
+Description: Declares all global state variables and DOM element constants. This file must be loaded first to ensure all other script modules can access this shared state.
 */
+
 // --- 1. Element Declarations (Global Scope) ---
-// [VPC] Caching DOM elements for performance and easy access.
 const learningContent = document.getElementById('learning-content');
 const wrapper = document.querySelector('.wrapper');
 const body = document.body;
@@ -51,6 +51,7 @@ const promptCancelBtn = document.getElementById('prompt-cancel-btn');
 const themeToggle = document.getElementById('theme-toggle');
 const chatToggleBtn = document.getElementById('chat-toggle-btn');
 const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
+
 // -- Chat Session & Project UI Elements --
 const newChatBtn = document.getElementById('new-chat-btn');
 const newProjectBtn = document.getElementById('new-project-btn');
@@ -60,214 +61,53 @@ const deleteSessionBtn = document.getElementById('delete-session-btn');
 const chatWelcomeMessage = document.getElementById('chat-welcome-message');
 const searchSessionsInput = document.getElementById('search-sessions-input');
 const aiModelSelector = document.getElementById('ai-model-selector');
+
 // -- Backup & Restore UI Elements (Now part of dropdown) --
 const fileImporter = document.getElementById('file-importer');
+
 // -- API Settings UI Elements (dynamically created) --
 let apiSettingsBtn, apiSettingsModalOverlay, apiKeyInput, verifyApiKeyBtn, apiKeyStatus,
     apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn,
     apiSettingsSaveBtn, apiSettingsCancelBtn;
-// --- 2. Shared Variables (Global Scope) ---
-// These are simple variables, not application state. State is in state_manager.js
+
+// --- 2. State Management (Global Scope) ---
 const canvasId = document.querySelector('meta[name="canvas-id"]')?.content || 'global_fallback_id';
+let db;
+let currentUser = null;
 const appId = 'AileyBailey_Global_Space';
 let debounceTimer = null;
 let lastSelectedText = '';
 let currentOpenContextMenu = null;
 
-/* --- Source: src\01_state\005_state_manager.js --- */
-/*
+// -- Notes App State --
+let notesCollectionRef, noteProjectsCollectionRef, tagsCollectionRef, noteTemplatesCollectionRef;
+let localNotesCache = [], localNoteProjectsCache = [], localTagsCache = [], noteTemplatesCache = [];
+let unsubscribeFromNotes = null, unsubscribeFromNoteProjects = null, unsubscribeFromTags = null, unsubscribeFromNoteTemplates = null;
+let currentNoteId = null;
+let newlyCreatedNoteProjectId = null;
+let currentNoteSort = 'updatedAt_desc';
+let draggedNoteId = null; // [NEW] For drag & drop
 
---- Ailey & Bailey Canvas ---
+// -- Chat & Project State --
+let chatSessionsCollectionRef, projectsCollectionRef;
+let localChatSessionsCache = [], localProjectsCache = [];
+let currentSessionId = null;
+let unsubscribeFromChatSessions = null, unsubscribeFromProjects = null;
+let newlyCreatedProjectId = null;
+const activeTimers = {};
 
-File: 005_state_manager.js
+// -- AI & Learning State --
+let selectedMode = 'ailey_coaching';
+let defaultModel = 'gemini-2.5-flash-preview-04-17';
+let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
+let currentQuizData = null;
+let noteGraphData = { nodes: [], edges: [] };
 
-Version: 1.0 (Refactored)
-
-Description: Centralized state management for the application. Acts as the Single Source of Truth.
-
-*/
-
-
-
-// [CoreDNA] The core state object, kept private within the module.
-
-const _state = {
-
-    // DB & Auth State
-
-    db: null,
-
-    currentUser: null,
-
-    
-
-    // Notes App State
-
-    notesCollectionRef: null, 
-
-    noteProjectsCollectionRef: null, 
-
-    tagsCollectionRef: null, 
-
-    noteTemplatesCollectionRef: null,
-
-    localNotesCache: [], 
-
-    localNoteProjectsCache: [], 
-
-    localTagsCache: [], 
-
-    noteTemplatesCache: [],
-
-    unsubscribeFromNotes: null, 
-
-    unsubscribeFromNoteProjects: null, 
-
-    unsubscribeFromTags: null, 
-
-    unsubscribeFromNoteTemplates: null,
-
-    currentNoteId: null,
-
-    newlyCreatedNoteProjectId: null,
-
-    currentNoteSort: 'updatedAt_desc',
-
-    draggedNoteId: null,
-
-
-
-    // Chat & Project State
-
-    chatSessionsCollectionRef: null, 
-
-    projectsCollectionRef: null,
-
-    localChatSessionsCache: [], 
-
-    localProjectsCache: [],
-
-    currentSessionId: null,
-
-    unsubscribeFromChatSessions: null, 
-
-    unsubscribeFromProjects: null,
-
-    newlyCreatedProjectId: null,
-
-    activeTimers: {},
-
-
-
-    // AI & Learning State
-
-    selectedMode: 'ailey_coaching',
-
-    defaultModel: 'gemini-2.5-flash-preview-04-17',
-
-    customPrompt: '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.',
-
-    currentQuizData: null,
-
-    noteGraphData: { nodes: [], edges: [] },
-
-
-
-    // API Settings State
-
-    userApiSettings: {
-
-        provider: null, apiKey: '', selectedModel: '', availableModels: [],
-
-        maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 }
-
-    }
-
+// -- API Settings State --
+let userApiSettings = {
+    provider: null, apiKey: '', selectedModel: '', availableModels: [],
+    maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 }
 };
-
-
-
-// [CoreDNA] Subscribers to state changes
-
-const _subscribers = [];
-
-
-
-// [HCA] The public interface for interacting with the state.
-
-const stateManager = {
-
-    /**
-
-     * Returns a readonly copy of the current state.
-
-     * @returns {object} The current state.
-
-     */
-
-    getState: () => {
-
-        return Object.freeze({ ..._state });
-
-    },
-
-
-
-    /**
-
-     * Updates the state with new values and notifies subscribers.
-
-     * @param {object} newState - An object containing the state keys to update.
-
-     */
-
-    setState: (newState) => {
-
-        Object.assign(_state, newState);
-
-        console.log('[StateManager] State updated:', newState);
-
-        _subscribers.forEach(callback => callback());
-
-    },
-
-
-
-    /**
-
-     * Subscribes a callback function to be executed on state changes.
-
-     * @param {function} callback - The function to call when state changes.
-
-     * @returns {function} An unsubscribe function.
-
-     */
-
-    subscribe: (callback) => {
-
-        _subscribers.push(callback);
-
-        return () => {
-
-            const index = _subscribers.indexOf(callback);
-
-            if (index > -1) {
-
-                _subscribers.splice(index, 1);
-
-            }
-
-        };
-
-    }
-
-};
-
-
-
-// Make the stateManager globally accessible (for this bundled architecture)
-
-window.stateManager = stateManager;
 
 /* --- Source: src\02_utils\010_utils_debounce.js --- */
 /*
@@ -303,7 +143,7 @@ function updateClock() {
 }
 
 function setupSystemInfoWidget() { 
-    const { currentUser } = stateManager.getState(); if (!systemInfoWidget || !currentUser) return; 
+    if (!systemInfoWidget || !currentUser) return; 
     const canvasIdDisplay = document.getElementById('canvas-id-display'); 
     if (canvasIdDisplay) { 
         canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; 
@@ -463,7 +303,7 @@ function handlePopoverAddNote() {
 }
 
 function openPromptModal() { 
-    if (customPromptInput) customPromptInput.value = stateManager.getState().customPrompt; 
+    if (customPromptInput) customPromptInput.value = customPrompt; 
     if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; 
 }
 
@@ -473,8 +313,8 @@ function closePromptModal() {
 
 function saveCustomPrompt() { 
     if (customPromptInput) { 
-        stateManager.setState({ customPrompt: customPromptInput.value }); 
-        localStorage.setItem('customTutorPrompt', stateManager.getState().customPrompt); 
+        customPrompt = customPromptInput.value; 
+        localStorage.setItem('customTutorPrompt', customPrompt); 
         closePromptModal(); 
     } 
 }
@@ -519,8 +359,8 @@ async function startQuiz() {
     quizModalOverlay.style.display = 'flex'; 
     try { 
         const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); 
-        stateManager.setState({ currentQuizData: JSON.parse(res) }); 
-        renderQuiz(stateManager.getState().currentQuizData); 
+        currentQuizData = JSON.parse(res); 
+        renderQuiz(currentQuizData); 
     } catch (e) { 
         if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; 
     } 
@@ -552,1439 +392,814 @@ function renderQuiz(data) {
 
 /* --- Source: src\03_core\100_core_firebase.js --- */
 /*
-
 --- Ailey & Bailey Canvas ---
-
 File: 100_core_firebase.js
-
-Version: 1.1 (Refactored)
-
+Version: 1.0 (Bundled)
 Description: Handles all Firebase-related initialization and sets up real-time listeners for all data collections.
-
 */
 
-
-
 async function initializeFirebase() {
-
     try {
-
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
         if (!firebaseConfig) { throw new Error("Firebase config not found."); }
-
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-
         
-
         const auth = firebase.auth();
-
-        const db = firebase.firestore();
-
-        stateManager.setState({ db });
-
+        db = firebase.firestore();
         
-
         if (initialAuthToken) {
-
             await auth.signInWithCustomToken(initialAuthToken).catch(async (err) => {
-
                console.warn("Custom token sign-in failed, trying anonymous.", err);
-
                await auth.signInAnonymously();
-
             });
-
         } else {
-
             await auth.signInAnonymously();
-
         }
-
         
-
-        stateManager.setState({ currentUser: auth.currentUser });
-
-
-
-        const { currentUser } = stateManager.getState();
-
-
+        currentUser = auth.currentUser;
 
         if (currentUser) {
-
             const userPath = `artifacts/${appId}/users/${currentUser.uid}`;
-
             
-
             // Note App refs
-
-            stateManager.setState({
-
-                notesCollectionRef: db.collection(`${userPath}/notes`),
-
-                noteProjectsCollectionRef: db.collection(`${userPath}/noteProjects`),
-
-                tagsCollectionRef: db.collection(`${userPath}/noteTags`),
-
-                noteTemplatesCollectionRef: db.collection(`${userPath}/noteTemplates`)
-
-            });
-
-
+            notesCollectionRef = db.collection(`${userPath}/notes`);
+            noteProjectsCollectionRef = db.collection(`${userPath}/noteProjects`);
+            tagsCollectionRef = db.collection(`${userPath}/noteTags`); // NEW
+            noteTemplatesCollectionRef = db.collection(`${userPath}/noteTemplates`); // NEW
 
             // Chat App refs
-
             const chatHistoryPath = `${userPath}/chatHistories/${canvasId}`;
-
-            stateManager.setState({
-
-                chatSessionsCollectionRef: db.collection(`${chatHistoryPath}/sessions`),
-
-                projectsCollectionRef: db.collection(`${chatHistoryPath}/projects`)
-
-            });
-
-
+            chatSessionsCollectionRef = db.collection(`${chatHistoryPath}/sessions`);
+            projectsCollectionRef = db.collection(`${chatHistoryPath}/projects`);
 
             await Promise.all([
-
                 listenToNotes(),
-
                 listenToNoteProjects(),
-
-                listenToTags(),
-
-                listenToNoteTemplates(),
-
+                listenToTags(), // NEW
+                listenToNoteTemplates(), // NEW
                 listenToChatSessions(),
-
                 listenToProjects()
-
             ]);
-
             
-
             setupSystemInfoWidget();
-
         }
-
     } catch (error) {
-
         console.error("Firebase 초기화 또는 인증 실패:", error);
-
         if (notesList) notesList.innerHTML = '<div>클라우드 메모장을 불러오는 데 실패했습니다.</div>';
-
         if (chatMessages) chatMessages.innerHTML = '<div>AI 러닝메이트 연결에 실패했습니다.</div>';
-
     }
-
 }
 
-
-
 function getRelativeDateGroup(timestamp, isPinned = false) {
-
     if (isPinned) return { key: 0, label: '📌 고정됨' };
-
     if (!timestamp) return { key: 99, label: '날짜 정보 없음' };
-
     const now = new Date();
-
     const date = timestamp instanceof Date ? timestamp : timestamp.toDate();
-
     now.setHours(0, 0, 0, 0);
-
     date.setHours(0, 0, 0, 0);
-
     const diffTime = now.getTime() - date.getTime();
-
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
     if (diffDays < 1) return { key: 1, label: '오늘' };
-
     if (diffDays < 2) return { key: 2, label: '어제' };
-
     if (diffDays < 7) return { key: 3, label: '지난 7일' };
-
     const nowMonth = now.getMonth(), dateMonth = date.getMonth(), nowYear = now.getFullYear(), dateYear = date.getFullYear();
-
     if (nowYear === dateYear && nowMonth === dateMonth) return { key: 4, label: '이번 달' };
-
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
     if (dateYear === lastMonth.getFullYear() && dateMonth === lastMonth.getMonth()) return { key: 5, label: '지난 달' };
-
     return { key: 6 + (nowYear - dateYear) * 12 + (nowMonth - dateMonth), label: `${dateYear}년 ${dateMonth + 1}월` };
-
 }
 
 /* --- Source: src\03_core\110_core_api_settings.js --- */
 /*
-
 --- Ailey & Bailey Canvas ---
-
 File: 110_core_api_settings.js
-
-Version: 1.2 (Refactored & Fixed)
-
+Version: 1.0 (Bundled)
 Description: Manages all logic for the API Settings (BYOK) modal.
-
 */
 
-
-
 function createApiSettingsModal() {
-
     const modal = document.createElement('div');
-
     modal.id = 'api-settings-modal-overlay';
-
     modal.className = 'custom-modal-overlay';
-
     modal.innerHTML = `
-
         <div class="custom-modal api-settings-modal">
-
             <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg> 개인 API 설정 (BYOK)</h3>
-
             <p class="api-modal-desc">기본 제공되는 모델 외에, 개인 API 키를 사용하여 더 다양하고 강력한 모델을 이용할 수 있습니다.</p>
-
             <div class="api-form-section">
-
                 <label for="api-key-input">API 키</label>
-
                 <div class="api-key-wrapper">
-
                     <input type="password" id="api-key-input" placeholder="sk-..., sk-ant-..., 또는 Google API 키를 입력하세요">
-
                     <button id="verify-api-key-btn">키 검증 & 모델 로드</button>
-
                 </div>
-
                 <div id="api-key-status"></div>
-
             </div>
-
             <div class="api-form-section">
-
                 <label for="api-model-select">사용 모델</label>
-
                 <select id="api-model-select" disabled>
-
                     <option value="">API 키를 먼저 검증해주세요</option>
-
                 </select>
-
             </div>
-
             <div class="api-form-section">
-
                 <label>토큰 한도 설정</label>
-
                 <div class="token-limit-wrapper">
-
                     <input type="number" id="max-output-tokens-input" placeholder="최대 출력 (예: 2048)">
-
                 </div>
-
                 <small>모델이 생성할 응답의 최대 길이를 제한합니다. (입력값 없을 시 모델 기본값 사용)</small>
-
             </div>
-
             <div class="api-form-section token-usage-section">
-
                 <label>누적 토큰 사용량 (개인 키)</label>
-
                 <div id="token-usage-display">
-
                     <span>입력: 0</span> | <span>출력: 0</span> | <strong>총합: 0</strong>
-
                 </div>
-
                 <button id="reset-token-usage-btn">사용량 초기화</button>
-
                 <small>Google 유료 모델은 응답에 토큰 정보를 포함하지 않아 집계되지 않습니다.</small>
-
             </div>
-
             <div class="custom-modal-actions">
-
                 <button id="api-settings-cancel-btn" class="modal-btn">취소</button>
-
                 <button id="api-settings-save-btn" class="modal-btn">저장</button>
-
             </div>
-
         </div>
-
     `;
-
     document.body.appendChild(modal);
 
-
-
     apiSettingsModalOverlay = document.getElementById('api-settings-modal-overlay');
-
     apiKeyInput = document.getElementById('api-key-input');
-
     verifyApiKeyBtn = document.getElementById('verify-api-key-btn');
-
     apiKeyStatus = document.getElementById('api-key-status');
-
     apiModelSelect = document.getElementById('api-model-select');
-
     maxOutputTokensInput = document.getElementById('max-output-tokens-input');
-
     tokenUsageDisplay = document.getElementById('token-usage-display');
-
     resetTokenUsageBtn = document.getElementById('reset-token-usage-btn');
-
     apiSettingsSaveBtn = document.getElementById('api-settings-save-btn');
-
     apiSettingsCancelBtn = document.getElementById('api-settings-cancel-btn');
-
-
-
-    // Attach event listeners for the modal
-
-    verifyApiKeyBtn.addEventListener('click', handleVerifyApiKey);
-
-    apiSettingsSaveBtn.addEventListener('click', () => saveApiSettings(true));
-
-    apiSettingsCancelBtn.addEventListener('click', closeApiSettingsModal);
-
-    resetTokenUsageBtn.addEventListener('click', resetTokenUsage);
-
-    apiSettingsModalOverlay.addEventListener('click', (e) => { if(e.target === apiSettingsModalOverlay) closeApiSettingsModal(); });
-
 }
-
-
 
 function openApiSettingsModal() {
-
     loadApiSettings();
-
-    const { userApiSettings } = stateManager.getState();
-
     apiKeyInput.value = userApiSettings.apiKey;
-
     maxOutputTokensInput.value = userApiSettings.maxOutputTokens;
-
     populateModelSelector(userApiSettings.availableModels, userApiSettings.provider, userApiSettings.selectedModel);
-
-    if (userApiSettings.apiKey && userApiSettings.provider) {
-
+    if (userApiSettings.apiKey) {
          apiKeyStatus.textContent = `✅ [${userApiSettings.provider}] 키가 활성화되어 있습니다.`;
-
          apiKeyStatus.className = 'status-success';
-
     } else {
-
          apiKeyStatus.textContent = '';
-
          apiKeyStatus.className = '';
-
     }
-
     renderTokenUsage();
-
-    if (apiSettingsModalOverlay) apiSettingsModalOverlay.style.display = 'flex';
-
+    apiSettingsModalOverlay.style.display = 'flex';
 }
-
-
 
 function closeApiSettingsModal() {
-
-    if (apiSettingsModalOverlay) apiSettingsModalOverlay.style.display = 'none';
-
+    apiSettingsModalOverlay.style.display = 'none';
     loadApiSettings(); 
-
     updateChatHeaderModelSelector();
-
 }
-
-
 
 function loadApiSettings() {
-
     const savedSettings = localStorage.getItem('userApiSettings');
-
     if (savedSettings) {
-
-        let parsedSettings = JSON.parse(savedSettings);
-
-        if (!parsedSettings.tokenUsage) { parsedSettings.tokenUsage = { prompt: 0, completion: 0 }; }
-
-        if (!parsedSettings.availableModels) { parsedSettings.availableModels = []; }
-
-        stateManager.setState({ userApiSettings: parsedSettings });
-
+        userApiSettings = JSON.parse(savedSettings);
+        if (!userApiSettings.tokenUsage) { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; }
+        if (!userApiSettings.availableModels) { userApiSettings.availableModels = []; }
     }
-
 }
-
-
 
 function saveApiSettings(closeModal = true) {
-
-    const { userApiSettings } = stateManager.getState();
-
-    let newSettings = JSON.parse(JSON.stringify(userApiSettings)); // Deep copy
-
     const key = apiKeyInput.value.trim();
-
-
-
     if (key) {
-
-        newSettings.apiKey = key;
-
-        newSettings.provider = detectProvider(key);
-
-        newSettings.selectedModel = apiModelSelect.value;
-
-        newSettings.maxOutputTokens = Number(maxOutputTokensInput.value) || 2048;
-
+        userApiSettings.apiKey = key;
+        userApiSettings.selectedModel = apiModelSelect.value;
+        userApiSettings.maxOutputTokens = Number(maxOutputTokensInput.value) || 2048;
         if (apiModelSelect && apiModelSelect.options.length > 0 && !apiModelSelect.disabled) {
-
-             newSettings.availableModels = Array.from(apiModelSelect.options).map(opt => opt.value);
-
+             userApiSettings.availableModels = Array.from(apiModelSelect.options).map(opt => opt.value);
         }
-
     } else {
-
-        newSettings = { provider: null, apiKey: '', selectedModel: '', availableModels: [], maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 } };
-
+        userApiSettings = { provider: null, apiKey: '', selectedModel: '', availableModels: [], maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 } };
     }
-
-    localStorage.setItem('userApiSettings', JSON.stringify(newSettings));
-
-    stateManager.setState({ userApiSettings: newSettings });
-
+    localStorage.setItem('userApiSettings', JSON.stringify(userApiSettings));
     updateChatHeaderModelSelector();
-
     if (closeModal) { closeApiSettingsModal(); }
-
 }
-
-
 
 function detectProvider(key) {
-
     if (key.startsWith('sk-ant-api')) return 'anthropic';
-
     if (key.startsWith('sk-')) return 'openai';
-
     if (key.length > 35 && key.startsWith('AIza')) return 'google_paid';
-
     return null;
-
 }
-
-
 
 async function handleVerifyApiKey() {
-
     const key = apiKeyInput.value.trim();
-
     if (!key) { apiKeyStatus.textContent = 'API 키를 입력해주세요.'; apiKeyStatus.className = 'status-error'; return; }
-
     const provider = detectProvider(key);
-
     if (!provider) { apiKeyStatus.textContent = '알 수 없는 형식의 API 키입니다. (OpenAI, Anthropic, Google 지원)'; apiKeyStatus.className = 'status-error'; return; }
-
-    
-
+    userApiSettings.provider = provider;
     apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`; apiKeyStatus.className = 'status-loading'; verifyApiKeyBtn.disabled = true;
-
     try {
-
         const models = await fetchAvailableModels(provider, key);
-
         populateModelSelector(models, provider);
-
         apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하고 저장하세요.`; apiKeyStatus.className = 'status-success'; apiModelSelect.disabled = false;
-
     } catch (error) {
-
         console.error("API Key Verification Error:", error);
-
         apiKeyStatus.textContent = `❌ [${provider}] 키 검증 실패: ${error.message}`; apiKeyStatus.className = 'status-error'; apiModelSelect.innerHTML = '<option>키 검증에 실패했습니다</option>'; apiModelSelect.disabled = true;
-
     } finally { verifyApiKeyBtn.disabled = false; }
-
 }
-
-
 
 async function fetchAvailableModels(provider, key) {
-
     if (provider === 'openai') {
-
         const response = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': `Bearer ${key}` } });
-
         if (!response.ok) throw new Error('OpenAI 서버에서 모델 목록을 가져올 수 없습니다.');
-
         const data = await response.json();
-
         return data.data.filter(m => m.id.includes('gpt')).map(m => m.id).sort().reverse();
-
     } else if (provider === 'anthropic') {
-
         return ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-2.1'];
-
     } else if (provider === 'google_paid') {
-
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-
         if (!response.ok) throw new Error('Google 서버에서 모델 목록을 가져올 수 없습니다.');
-
         const data = await response.json();
-
         return data.models.map(m => m.name.replace('models/', '')).filter(m => m.includes('gemini'));
-
     }
-
     return [];
-
 }
-
-
 
 function populateModelSelector(models, provider, selectedModel = null) {
-
     apiModelSelect.innerHTML = '';
-
     const effectiveModels = models || [];
-
     if (provider && effectiveModels.length === 0) { if (provider === 'anthropic') { effectiveModels.push('claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'); } }
-
-    if (effectiveModels.length > 0) { effectiveModels.forEach(modelId => { const option = document.createElement('option'); option.value = modelId; option.textContent = modelId; if (modelId === selectedModel) { option.selected = true; } apiModelSelect.appendChild(option); }); apiModelSelect.disabled = false; } 
-
+    if (effectiveModels.length > 0) { effectiveModels.forEach(modelId => { const option = document.createElement('option'); option.value = modelId; option.textContent = modelId; if (modelId === selectedModel) { option.selected = true; } apiModelSelect.appendChild(option); }); apiModelSelect.disabled = false; }
     else { apiModelSelect.innerHTML = '<option>사용 가능한 모델 없음</option>'; apiModelSelect.disabled = true; }
-
 }
-
-
 
 function renderTokenUsage() {
-
-    const { userApiSettings } = stateManager.getState();
-
     const { prompt, completion } = userApiSettings.tokenUsage;
-
     const total = prompt + completion;
-
     tokenUsageDisplay.innerHTML = `<span>입력: ${prompt.toLocaleString()}</span> | <span>출력: ${completion.toLocaleString()}</span> | <strong>총합: ${total.toLocaleString()}</strong>`;
-
 }
 
-
-
-function resetTokenUsage() { 
-
-    showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => { 
-
-        const { userApiSettings } = stateManager.getState();
-
-        const newSettings = { ...userApiSettings, tokenUsage: { prompt: 0, completion: 0 } };
-
-        stateManager.setState({ userApiSettings: newSettings });
-
-        localStorage.setItem('userApiSettings', JSON.stringify(newSettings));
-
-        renderTokenUsage(); 
-
-    }); 
-
-}
+function resetTokenUsage() { showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; saveApiSettings(false); renderTokenUsage(); }); }
 
 /* --- Source: src\03_core\120_core_main_initializer.js --- */
 /*
-
 --- Ailey & Bailey Canvas ---
-
 File: 120_core_main_initializer.js
-
-Version: 1.2 (Refactored)
-
-Description: The main entry point for the application. Initializes all modules.
-
+Version: 1.1 (Bundled & Corrected)
+Description: The main entry point for the application. Initializes the app and attaches all primary event listeners.
 */
-
-
 
 document.addEventListener('DOMContentLoaded', function () {
 
-
-
     /**
-
-     * Initializes the entire application.
-
+     * 애플리케이션을 초기화합니다.
      */
-
     function initialize() {
-
         if (!body || !wrapper) { console.error("Core layout elements not found."); return; }
-
         
-
         // Basic UI setup
-
         updateClock(); 
-
         setInterval(updateClock, 1000);
-
         
-
         // Dynamically create and inject the API settings modal and its trigger button
-
         createApiSettingsModal();
-
+        const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
+        if (chatHeader) {
+            apiSettingsBtn = document.createElement('span'); 
+            apiSettingsBtn.id = 'api-settings-btn'; 
+            apiSettingsBtn.title = '개인 API 설정';
+            apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
+            const deleteBtn = chatHeader.querySelector('#delete-session-btn');
+            if (deleteBtn) {
+                deleteBtn.insertAdjacentElement('beforebegin', apiSettingsBtn);
+            } else {
+                 chatHeader.appendChild(apiSettingsBtn);
+            }
+        }
         
-
         // Load settings and initialize Firebase
-
         loadApiSettings();
-
         updateChatHeaderModelSelector();
-
         
-
         initializeFirebase().then(() => { 
-
             // Initialize UI components that depend on data
-
             setupNavigator(); 
-
+            setupChatModeSelector(); 
             initializeTooltips(); 
-
             makePanelDraggable(chatPanel); 
-
-            
-
-            // Initialize feature modules
-
-            chatApp.init();
-
-            notesApp.init();
-
-            
-
+            // Note: Notes panel is made draggable dynamically when first opened
             handleNewChat(); // Start with a clean chat slate
-
         });
 
-
-
-        attachPrimaryEventListeners();
-
+        attachEventListeners();
     }
 
-
-
     /**
-
-     * Attaches global, non-feature-specific event listeners.
-
+     * 애플리케이션의 모든 주요 이벤트 리스너를 첨부합니다.
      */
-
-    function attachPrimaryEventListeners() {
-
+    function attachEventListeners() {
+        // --- Global Listeners ---
         document.addEventListener('click', (e) => { 
-
             handleTextSelection(e); 
-
+            // Close context menus if clicked outside
             if (!e.target.closest('.note-context-menu, .session-context-menu, .project-context-menu')) {
-
                 removeContextMenu();
-
             }
-
+            // Close notes dropdown if clicked outside
             if (!e.target.closest('.more-options-container')) {
-
                 document.getElementById('notes-dropdown-menu')?.classList.remove('show');
-
             }
-
         });
-
         
-
         if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
-
         if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
 
-
-
+        // --- Global UI Listeners ---
         if (themeToggle) { 
-
             themeToggle.addEventListener('click', () => { 
-
                 body.classList.toggle('dark-mode'); 
-
                 localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
-
+                // Also update editor theme if it's open
                 if (toastEditorInstance) {
-
                     toastEditorInstance.setTheme(body.classList.contains('dark-mode') ? 'dark' : 'default');
-
                 }
-
             }); 
-
             if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); else body.classList.remove('dark-mode');
-
         }
-
         if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); systemInfoWidget?.classList.toggle('tucked'); });
 
+        // --- Panel Toggles ---
+        if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
+        if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
+        if (notesAppToggleBtn) {
+            notesAppToggleBtn.addEventListener('click', () => { 
+                togglePanel(notesAppPanel);
+                if (notesAppPanel.style.display === 'flex') {
+                    ensureNotePanelHeader(); // Ensure header exists for dragging
+                    renderNoteList();
+                }
+            });
+        }
+        
+        // --- Notes App Event Delegation ---
+        if (noteListView) {
+            noteListView.addEventListener('click', e => {
+                const target = e.target;
+                const dropdownAction = target.closest('.dropdown-item')?.dataset.action;
+                if (dropdownAction) {
+                    if (dropdownAction === 'export-all') exportAllData();
+                    else if (dropdownAction === 'import-all') handleRestoreClick();
+                    else if (dropdownAction === 'system-reset') handleSystemReset();
+                    document.getElementById('notes-dropdown-menu')?.classList.remove('show');
+                    return;
+                }
+                
+                const noteItem = target.closest('.note-item');
+                if (noteItem) { openNoteEditor(noteItem.dataset.id); return; }
 
+                const projectHeader = target.closest('.note-project-header');
+                if (projectHeader) { toggleNoteProjectExpansion(projectHeader.closest('.note-project-container').dataset.projectId); return; }
+                
+                if (target.closest('#add-new-note-btn-dynamic')) { handleAddNewNote(); return; }
+                if (target.closest('#add-new-note-project-btn-dynamic')) { createNewNoteProject(); return; }
+                if (target.closest('#more-options-btn')) { document.getElementById('notes-dropdown-menu')?.classList.toggle('show'); return; }
+            });
 
+            noteListView.addEventListener('contextmenu', e => showContextMenu(e.target, e));
+
+            const debouncedRender = debounce(renderNoteList, 300);
+            noteListView.addEventListener('input', e => {
+                if (e.target.id === 'search-input-dynamic') {
+                    debouncedRender();
+                }
+            });
+
+            // Drag and Drop listeners
+            noteListView.addEventListener('dragstart', e => {
+                const noteItem = e.target.closest('.note-item');
+                if (noteItem) {
+                    draggedNoteId = noteItem.dataset.id;
+                    e.dataTransfer.effectAllowed = 'move';
+                    setTimeout(() => noteItem.classList.add('is-dragging'), 0);
+                }
+            });
+
+            noteListView.addEventListener('dragover', e => {
+                e.preventDefault();
+                const projectHeader = e.target.closest('.note-project-header');
+                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                if (projectHeader) {
+                    e.dataTransfer.dropEffect = 'move';
+                    projectHeader.classList.add('drag-over');
+                } else {
+                    e.dataTransfer.dropEffect = 'none';
+                }
+            });
+            
+            noteListView.addEventListener('dragleave', e => {
+                const projectHeader = e.target.closest('.note-project-header');
+                if (projectHeader) projectHeader.classList.remove('drag-over');
+            });
+
+            noteListView.addEventListener('drop', e => {
+                e.preventDefault();
+                const projectHeader = e.target.closest('.note-project-header');
+                if (projectHeader && draggedNoteId) {
+                    const projectId = projectHeader.closest('.note-project-container').dataset.projectId;
+                    moveNoteToProject(draggedNoteId, projectId);
+                }
+                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                draggedNoteId = null;
+            });
+            
+            noteListView.addEventListener('dragend', () => {
+                document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging'));
+                draggedNoteId = null;
+            });
+        }
+        
+        if (fileImporter) fileImporter.addEventListener('change', importAllData);
+        
+        // --- Note Editor Listeners ---
+        if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
+        const handleNoteTitleEdit = debounce(() => saveNote(), 1500);
+        if (noteTitleInput) noteTitleInput.addEventListener('input', () => { updateStatus('입력 중...', true); handleNoteTitleEdit(); });
+
+        // --- Chat App Event Delegation ---
+        if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
+        if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
+        if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
+        if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
+        if (searchSessionsInput) searchSessionsInput.addEventListener('input', debounce(renderSidebarContent, 300));
+
+        if (sessionListContainer) {
+             sessionListContainer.addEventListener('click', e => {
+                 const sessionItem = e.target.closest('.session-item');
+                 if(sessionItem) { selectSession(sessionItem.dataset.sessionId); return; }
+
+                 const pinBtn = e.target.closest('.session-pin-btn');
+                 if(pinBtn) { toggleChatPin(pinBtn.closest('.session-item').dataset.sessionId); return; }
+                 
+                 const projectHeader = e.target.closest('.project-header');
+                 if(projectHeader) {
+                    const actionsBtn = e.target.closest('.project-actions-btn');
+                    if(actionsBtn) { showProjectContextMenu(projectHeader.closest('.project-container').dataset.projectId, actionsBtn); }
+                    else { toggleProjectExpansion(projectHeader.closest('.project-container').dataset.projectId); }
+                    return;
+                 }
+             });
+             sessionListContainer.addEventListener('contextmenu', e => {
+                const sessionItem = e.target.closest('.session-item');
+                if(sessionItem) { e.preventDefault(); showSessionContextMenu(sessionItem.dataset.sessionId, e.clientX, e.clientY); }
+             });
+        }
+
+        // --- API & Modal Listeners ---
+        // This listener needs to be attached to the body because the button is created dynamically.
         document.body.addEventListener('click', e => {
-
             if (e.target.closest('#api-settings-btn')) {
-
                 openApiSettingsModal();
-
             }
-
         });
-
     }
 
-
-
     initialize();
-
 });
 
 /* --- Source: src\04_features_chat\200_chat_data.js --- */
 /*
-
 --- Ailey & Bailey Canvas ---
-
 File: 200_chat_data.js
-
-Version: 1.2 (Refactoring Complete)
-
+Version: 1.0 (Bundled)
 Description: Handles all data layer interactions with Firebase Firestore for the chat application.
-
 */
 
-
-
+// --- Chat Data Listeners (moved from firebase.js) ---
 function listenToProjects() {
-
     return new Promise((resolve) => {
-
-        const { projectsCollectionRef } = stateManager.getState();
-
         if (!projectsCollectionRef) return resolve();
-
-        
-
-        let { unsubscribeFromProjects, localProjectsCache } = stateManager.getState();
-
         if (unsubscribeFromProjects) unsubscribeFromProjects();
-
-        
-
         unsubscribeFromProjects = projectsCollectionRef.onSnapshot(snapshot => {
-
             const oldCache = [...localProjectsCache];
-
-            const newCache = snapshot.docs.map(doc => ({
-
+            localProjectsCache = snapshot.docs.map(doc => ({
                 id: doc.id,
-
-                isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true, 
-
-                ...doc.data()
-
+                isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true, ...doc.data()
             }));
-
-            stateManager.setState({ localProjectsCache: newCache });
-
-            
-
-            const { newlyCreatedProjectId } = stateManager.getState();
-
+            renderSidebarContent();
             if (newlyCreatedProjectId) {
-
                 const newProjectElement = document.querySelector(`.project-container[data-project-id="${newlyCreatedProjectId}"]`);
-
-                if (newProjectElement) { 
-
-                    startProjectRename(newlyCreatedProjectId); 
-
-                    stateManager.setState({ newlyCreatedProjectId: null }); 
-
-                }
-
+                if (newProjectElement) { startProjectRename(newlyCreatedProjectId); newlyCreatedProjectId = null; }
             }
-
             resolve();
-
         }, error => { console.error("Project listener error:", error); resolve(); });
-
-        
-
-        stateManager.setState({ unsubscribeFromProjects });
-
     });
-
 }
-
-
 
 function listenToChatSessions() {
-
     return new Promise((resolve) => {
-
-        const { chatSessionsCollectionRef } = stateManager.getState();
-
         if (!chatSessionsCollectionRef) return resolve();
-
-        
-
-        let { unsubscribeFromChatSessions } = stateManager.getState();
-
         if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
-
-        
-
         unsubscribeFromChatSessions = chatSessionsCollectionRef.onSnapshot(snapshot => {
-
-            const localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            stateManager.setState({ localChatSessionsCache });
-
+            localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderSidebarContent();
+            if (currentSessionId) {
+                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+                if (!currentSessionData) handleNewChat();
+                else renderChatMessages(currentSessionData);
+            }
             resolve();
-
         }, error => { console.error("Chat session listener error:", error); resolve(); });
-
-        
-
-        stateManager.setState({ unsubscribeFromChatSessions });
-
     });
-
 }
 
-
-
+// --- Chat Data Management Functions ---
 async function createNewProject() {
-
-    const { projectsCollectionRef } = stateManager.getState();
-
     const newName = getNewProjectDefaultName();
-
     try {
-
         const newProjectRef = await projectsCollectionRef.add({
-
             name: newName,
-
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         });
-
-        stateManager.setState({ newlyCreatedProjectId: newProjectRef.id });
-
+        newlyCreatedProjectId = newProjectRef.id;
     } catch (error) {
-
         console.error("Error creating new project:", error);
-
         alert("프로젝트 생성에 실패했습니다.");
-
     }
-
 }
-
-
 
 async function renameProject(projectId, newName) {
-
-    const { projectsCollectionRef } = stateManager.getState();
-
     if (!newName || !newName.trim() || !projectId) return;
-
     try {
-
         await projectsCollectionRef.doc(projectId).update({
-
             name: newName.trim(),
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         });
-
     } catch (error) {
-
         console.error("Error renaming project:", error);
-
         alert("프로젝트 이름 변경에 실패했습니다.");
-
     }
-
 }
-
-
 
 async function deleteProject(projectId) {
-
-    const { localProjectsCache, localChatSessionsCache, db, chatSessionsCollectionRef, projectsCollectionRef } = stateManager.getState();
-
     const project = localProjectsCache.find(p => p.id === projectId);
-
     if (!project) return;
 
-
-
     const message = `프로젝트 '${project.name}'를 삭제하시겠습니까? 프로젝트 안의 모든 대화는 '일반 대화'로 이동됩니다.`;
-
     showModal(message, async () => {
-
         try {
-
             const batch = db.batch();
-
             const sessionsToMove = localChatSessionsCache.filter(s => s.projectId === projectId);
-
             sessionsToMove.forEach(session => {
-
                 const sessionRef = chatSessionsCollectionRef.doc(session.id);
-
                 batch.update(sessionRef, { projectId: null });
-
             });
-
             const projectRef = projectsCollectionRef.doc(projectId);
-
             batch.delete(projectRef);
-
             await batch.commit();
-
         } catch (error) {
-
             console.error("Error deleting project:", error);
-
             alert("프로젝트 삭제에 실패했습니다.");
-
         }
-
     });
-
 }
-
-
 
 async function moveSessionToProject(sessionId, newProjectId) {
-
-    const { localChatSessionsCache, chatSessionsCollectionRef, projectsCollectionRef } = stateManager.getState();
-
     const session = localChatSessionsCache.find(s => s.id === sessionId);
-
     if (!session || session.projectId === newProjectId) return;
 
-
-
     try {
-
         await chatSessionsCollectionRef.doc(sessionId).update({
-
             projectId: newProjectId,
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         });
-
         if (newProjectId) {
-
             await projectsCollectionRef.doc(newProjectId).update({
-
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
             });
-
         }
-
     } catch (error) {
-
         console.error("Error moving session:", error);
-
         alert("세션 이동에 실패했습니다.");
-
     }
-
 }
-
-
 
 async function toggleChatPin(sessionId) {
-
-    const { chatSessionsCollectionRef, localChatSessionsCache } = stateManager.getState();
-
     if (!chatSessionsCollectionRef || !sessionId) return;
-
     const sessionRef = chatSessionsCollectionRef.doc(sessionId);
-
     const currentSession = localChatSessionsCache.find(s => s.id === sessionId);
-
     if (!currentSession) return;
-
     try {
-
         await sessionRef.update({
-
             isPinned: !(currentSession.isPinned || false),
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         });
-
     } catch (error) {
-
         console.error("Error toggling pin status:", error);
-
     }
-
 }
-
-
 
 async function renameSession(sessionId, newTitle) {
-
-    const { chatSessionsCollectionRef } = stateManager.getState();
-
     if (!newTitle || !sessionId) return;
-
     try {
-
         await chatSessionsCollectionRef.doc(sessionId).update({
-
             title: newTitle,
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         });
-
     } catch (error) {
-
         console.error("Error renaming session:", error);
-
         alert("세션 이름 변경에 실패했습니다.");
-
     }
-
 }
 
-
-
 function handleDeleteSession(sessionId) {
-
-    const { chatSessionsCollectionRef, localChatSessionsCache } = stateManager.getState();
-
     if (!sessionId) return;
-
     const sessionToDelete = localChatSessionsCache.find(s => s.id === sessionId);
-
     if (!sessionToDelete) return;
 
-
-
     showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => {
-
         if (chatSessionsCollectionRef) {
-
             chatSessionsCollectionRef.doc(sessionId).delete().then(() => {
-
                 console.log("Session deleted successfully");
-
-                if (stateManager.getState().currentSessionId === sessionId) {
-
+                if (currentSessionId === sessionId) {
                     handleNewChat();
-
                 }
-
             }).catch(e => {
-
                 console.error("세션 삭제 실패:", e);
-
                 alert("세션 삭제에 실패했습니다.");
-
             });
-
         }
-
     });
-
 }
 
 /* --- Source: src\04_features_chat\210_chat_engine.js --- */
 /*
-
 --- Ailey & Bailey Canvas ---
-
 File: 210_chat_engine.js
-
-Version: 1.1 (Refactored & Fixed)
-
+Version: 1.0 (Bundled)
 Description: The core engine for chat functionality, including API requests and response parsing.
-
 */
 
-
-
 async function handleChatSend() {
-
     if (!chatInput || chatInput.disabled) return;
-
     const query = chatInput.value.trim();
-
     if (!query) return;
 
-
-
     chatInput.value = '';
-
     chatInput.style.height = 'auto';
-
     chatInput.disabled = true;
-
     chatInput.placeholder = "AI가 응답하는 중..."
-
     chatSendBtn.disabled = true;
 
-
-
-    const { chatSessionsCollectionRef, localChatSessionsCache, selectedMode } = stateManager.getState();
-
-    let { currentSessionId } = stateManager.getState();
-
-
-
     const userMessage = { role: 'user', content: query, timestamp: new Date() };
-
     const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
-
     let sessionRef;
-
+    let currentMessages = [];
     let isNewSession = false;
 
-
-
     if (!currentSessionId) {
-
         isNewSession = true;
-
         const activeProject = document.querySelector('.project-header.active-drop-target');
-
         const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
 
-
-
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-
         if (chatMessages) chatMessages.style.display = 'flex';
-
         
-
-        renderChatMessages({ messages: [userMessage, loadingMessage] });
-
+        currentMessages = [userMessage, loadingMessage];
+        renderChatMessages({ messages: currentMessages });
         
-
         const newSessionData = {
-
             title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-
             messages: [userMessage],
-
             mode: selectedMode,
-
             projectId: newSessionProjectId,
-
             isPinned: false,
-
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         };
-
         sessionRef = await chatSessionsCollectionRef.add(newSessionData);
-
-        stateManager.setState({ currentSessionId: sessionRef.id });
-
-
+        currentSessionId = sessionRef.id;
 
     } else {
-
         sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
-
         const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-
         
-
-        renderChatMessages({ messages: [...(currentSessionData.messages || []), userMessage, loadingMessage] });
-
+        currentMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
+        renderChatMessages({ messages: currentMessages });
         
-
         await sessionRef.update({
-
             messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         });
-
     }
-
     
-
     const startTime = performance.now();
-
     try {
-
         let aiRes, usageData;
-
-        const { userApiSettings, defaultModel } = stateManager.getState();
-
-        currentSessionId = stateManager.getState().currentSessionId; // Re-fetch in case it was just set
-
-        const historyForApi = isNewSession ? [userMessage] : (stateManager.getState().localChatSessionsCache.find(s => s.id === currentSessionId)?.messages.slice(-20) || [userMessage]);
-
-
+        const historyForApi = isNewSession ? [userMessage] : (localChatSessionsCache.find(s => s.id === currentSessionId)?.messages.slice(-20) || [userMessage]);
 
         if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
-
             const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
-
             const res = await fetch(requestDetails.url, requestDetails.options);
-
             if (!res.ok) { 
-
                 const errorBody = await res.text(); 
-
                 throw new Error(`API Error ${res.status}: ${errorBody}`); 
-
             }
-
             const result = await res.json();
-
             const parsed = parseApiResponse(userApiSettings.provider, result);
-
             aiRes = parsed.content;
-
             usageData = parsed.usage;
-
             if (usageData) { 
-
-                const newUsage = {
-
-                    prompt: userApiSettings.tokenUsage.prompt + usageData.prompt,
-
-                    completion: userApiSettings.tokenUsage.completion + usageData.completion
-
-                }
-
-                saveApiSettings(false); // This will save the latest settings from the modal inputs, which is not ideal.
-
-                // A better approach is to just update the state and local storage directly.
-
-                const updatedSettings = { ...userApiSettings, tokenUsage: newUsage };
-
-                stateManager.setState({ userApiSettings: updatedSettings });
-
-                localStorage.setItem('userApiSettings', JSON.stringify(updatedSettings));
-
+                userApiSettings.tokenUsage.prompt += usageData.prompt; 
+                userApiSettings.tokenUsage.completion += usageData.completion; 
+                saveApiSettings(false); 
                 renderTokenUsage(); 
-
             }
-
         } else {
-
             let promptWithReasoning;
-
             const lastUserMessage = historyForApi[historyForApi.length - 1].content;
-
             promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
-
             
-
             const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
-
             const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
-
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
-
                 method: 'POST',
-
                 headers: { 'Content-Type': 'application/json' },
-
                 body: JSON.stringify({ contents: apiMessages })
-
             });
-
             if (!res.ok) throw new Error(`Google API Error ${res.status}`);
-
             const result = await res.json();
-
             aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
-
         }
-
         
-
         const endTime = performance.now();
-
         const duration = ((endTime - startTime) / 1000).toFixed(2);
-
         const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
-
         
-
         await sessionRef.update({
-
             messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         });
-
-
 
     } catch (e) {
-
         console.error("Chat send error:", e);
-
         const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
-
         await sessionRef.update({ 
-
             messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
-
         });
-
     } finally {
-
         chatInput.disabled = false;
-
         chatInput.placeholder = "AI 러닝메이트에게 질문하기..."
-
         chatSendBtn.disabled = false;
-
         chatInput.focus();
-
         if (isNewSession) {
-
-            selectSession(stateManager.getState().currentSessionId);
-
+            selectSession(currentSessionId);
         }
-
     }
-
 }
-
-
 
 function buildApiRequest(provider, model, messages, maxTokens) {
-
-    const { userApiSettings } = stateManager.getState();
-
     const history = messages.map(msg => ({
-
         role: msg.role === 'ai' ? 'assistant' : 'user',
-
         content: msg.content
-
     }));
 
-
-
     if (provider === 'openai') {
-
         return {
-
             url: 'https://api.openai.com/v1/chat/completions',
-
             options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userApiSettings.apiKey}` }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
-
         };
-
     } else if (provider === 'anthropic') {
-
          return {
-
             url: 'https://api.anthropic.com/v1/messages',
-
             options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': userApiSettings.apiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
-
         };
-
     } else if (provider === 'google_paid') {
-
         const googleHistory = messages.map(msg => ({
-
             role: msg.role === 'ai' ? 'model' : 'user',
-
             parts: [{ text: msg.content }]
-
         }));
-
         return {
-
             url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userApiSettings.apiKey}`,
-
             options: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: googleHistory, generationConfig: { maxOutputTokens: Number(maxTokens) || 2048 } }) }
-
         };
-
     }
-
     throw new Error(`Unsupported provider: ${provider}`);
-
 }
 
-
-
 function parseApiResponse(provider, result) {
-
     try {
-
         if (provider === 'openai') {
-
             return { content: result.choices[0].message.content, usage: { prompt: result.usage.prompt_tokens, completion: result.usage.completion_tokens } };
-
         } else if (provider === 'anthropic') {
-
             return { content: result.content[0].text, usage: { prompt: result.usage.input_tokens, completion: result.usage.output_tokens } };
-
         } else if (provider === 'google_paid') {
-
             return { content: result.candidates[0].content.parts[0].text, usage: null };
-
         }
-
     } catch (error) {
-
         console.error(`Error parsing ${provider} response:`, error, result);
-
         return { content: 'API 응답을 파싱하는 중 오류가 발생했습니다.', usage: null };
-
     }
-
     return { content: '알 수 없는 제공사입니다.', usage: null };
-
 }
 
 /* --- Source: src\04_features_chat\220_chat_ui.js --- */
@@ -2142,8 +1357,8 @@ function renderMathInElement(element) {
 
 function startSummaryAnimation(blockElement, reasoningSteps) {
     const blockId = blockElement.id;
-    const { activeTimers } = stateManager.getState(); clearTimers(blockId, activeTimers);
-    const newActiveTimers = { ...stateManager.getState().activeTimers }; newActiveTimers[blockId] = []; stateManager.setState({ activeTimers: newActiveTimers });
+    clearTimers(blockId);
+    activeTimers[blockId] = [];
 
     const summaryElement = blockElement.querySelector('.reasoning-summary');
     if (!summaryElement || !reasoningSteps || reasoningSteps.length === 0) return;
@@ -2164,18 +1379,18 @@ function startSummaryAnimation(blockElement, reasoningSteps) {
                     stepIndex = (stepIndex + 1) % reasoningSteps.length;
                     summaryElement.style.opacity = '1';
                 }, 500);
-                
-                stateManager.getState().activeTimers[blockId].push(fadeTimer);
+                if (!activeTimers[blockId]) activeTimers[blockId] = [];
+                activeTimers[blockId].push(fadeTimer);
             }, 2000);
-            
-            stateManager.getState().activeTimers[blockId].push(waitTimer);
+            if (!activeTimers[blockId]) activeTimers[blockId] = [];
+            activeTimers[blockId].push(waitTimer);
         });
     };
     
     cycleSummary();
     const summaryInterval = setInterval(cycleSummary, 4500);
-    
-    stateManager.getState().activeTimers[blockId].push(summaryInterval);
+    if (!activeTimers[blockId]) activeTimers[blockId] = [];
+    activeTimers[blockId].push(summaryInterval);
     
     blockElement.addEventListener('toggle', () => { isCycling = false; }, { once: true });
 }
@@ -2210,11 +1425,11 @@ function typewriterEffect(element, text, onComplete) {
     element.typingInterval = typingInterval;
 
     if (blockId && activeTimers[blockId]) {
-        stateManager.getState().activeTimers[blockId].push(typingInterval);
+        activeTimers[blockId].push(typingInterval);
     }
 }
 
-function clearTimers(blockId, activeTimers) {
+function clearTimers(blockId) {
     if (activeTimers[blockId]) {
         activeTimers[blockId].forEach(clearInterval);
         delete activeTimers[blockId];
@@ -2227,8 +1442,7 @@ function renderSidebarContent() {
     sessionListContainer.innerHTML = ''; 
     const fragment = document.createDocumentFragment();
 
-    const { localProjectsCache, localChatSessionsCache } = stateManager.getState();
-    const { localProjectsCache, localChatSessionsCache } = stateManager.getState(); const projectsToDisplay = localProjectsCache
+    const projectsToDisplay = localProjectsCache
         .filter(p => searchTerm ? p.name?.toLowerCase().includes(searchTerm) || localChatSessionsCache.some(s => s.projectId === p.id && (s.title || '').toLowerCase().includes(searchTerm)) : true)
         .sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
 
@@ -2322,7 +1536,7 @@ function createSessionItem(session) {
     item.className = 'session-item';
     item.dataset.sessionId = session.id;
     item.draggable = true;
-    if (session.id === stateManager.getState().currentSessionId) item.classList.add('active');
+    if (session.id === currentSessionId) item.classList.add('active');
     
     const createdAt = session.createdAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || '정보 없음';
     const updatedAt = session.updatedAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || createdAt;
@@ -2456,7 +1670,6 @@ function updateChatHeaderModelSelector() {
     ];
     aiModelSelector.innerHTML = '';
 
-    const { userApiSettings, defaultModel } = stateManager.getState();
     if (userApiSettings.provider && userApiSettings.apiKey) {
         const models_to_show = userApiSettings.availableModels || [];
         if(models_to_show.length === 0 && userApiSettings.selectedModel) {
@@ -2487,447 +1700,173 @@ function updateChatHeaderModelSelector() {
 
 /* --- Source: src\04_features_chat\230_chat_app.js --- */
 /*
-
 --- Ailey & Bailey Canvas ---
-
 File: 230_chat_app.js
-
-Version: 1.2 (Refactoring Complete)
-
-Description: Main controller for the Chat App, handling user interactions and initialization.
-
+Version: 1.0 (Bundled)
+Description: Acts as the main controller for the Chat App, handling user interactions and top-level state.
 */
 
-
-
-const chatApp = {
-
-    init: function() {
-
-        this.attachEventListeners();
-
-        stateManager.subscribe(() => {
-
-            renderSidebarContent();
-
-            const { currentSessionId, localChatSessionsCache } = stateManager.getState();
-
-            if (currentSessionId) {
-
-                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-
-                if (!currentSessionData) {
-
-                    handleNewChat();
-
-                } else {
-
-                    renderChatMessages(currentSessionData);
-
-                }
-
-            }
-
-        });
-
-        console.log("Chat App Initialized");
-
-    },
-
-
-
-    attachEventListeners: function() {
-
-        if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
-
-        if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
-
-        if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
-
-        if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
-
-        if (searchSessionsInput) searchSessionsInput.addEventListener('input', debounce(renderSidebarContent, 300));
-
-        if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
-
-        if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
-
-        setupChatModeSelector();
-
-
-
-        if (sessionListContainer) {
-
-             sessionListContainer.addEventListener('click', e => {
-
-                 const sessionItem = e.target.closest('.session-item');
-
-                 if(sessionItem) { selectSession(sessionItem.dataset.sessionId); return; }
-
-
-
-                 const pinBtn = e.target.closest('.session-pin-btn');
-
-                 if(pinBtn) { toggleChatPin(pinBtn.closest('.session-item').dataset.sessionId); return; }
-
-                 
-
-                 const projectHeader = e.target.closest('.project-header');
-
-                 if(projectHeader) {
-
-                    const actionsBtn = e.target.closest('.project-actions-btn');
-
-                    if(actionsBtn) { showProjectContextMenu(projectHeader.closest('.project-container').dataset.projectId, actionsBtn); }
-
-                    else { toggleProjectExpansion(projectHeader.closest('.project-container').dataset.projectId); }
-
-                    return;
-
-                 }
-
-             });
-
-             sessionListContainer.addEventListener('contextmenu', e => {
-
-                const sessionItem = e.target.closest('.session-item');
-
-                if(sessionItem) { e.preventDefault(); showSessionContextMenu(sessionItem.dataset.sessionId, e.clientX, e.clientY); }
-
-             });
-
-        }
-
-    }
-
-};
-
-
-
 function getNewProjectDefaultName() {
-
-    const { localProjectsCache } = stateManager.getState();
-
     const baseName = "새 프로젝트";
-
     const existingNames = new Set(localProjectsCache.map(p => p.name));
-
     if (!existingNames.has(baseName)) {
-
         return baseName;
-
     }
-
     let i = 2;
-
     while (existingNames.has(`${baseName} ${i}`)) {
-
         i++;
-
     }
-
     return `${baseName} ${i}`;
-
 }
-
-
 
 function toggleProjectExpansion(projectId) {
-
-    const { localProjectsCache } = stateManager.getState();
-
-    const updatedCache = localProjectsCache.map(p => 
-
-        p.id === projectId ? { ...p, isExpanded: !(p.isExpanded ?? true) } : p
-
-    );
-
-    stateManager.setState({ localProjectsCache: updatedCache });
-
+    const project = localProjectsCache.find(p => p.id === projectId);
+    if (project) {
+        project.isExpanded = !project.isExpanded;
+        renderSidebarContent();
+    }
 }
-
-
 
 function startProjectRename(projectId) {
-
     const projectContainer = document.querySelector(`.project-container[data-project-id="${projectId}"]`);
-
     if (!projectContainer) return;
-
     const titleSpan = projectContainer.querySelector('.project-title');
-
     if (!titleSpan) return;
 
-
-
     const originalTitle = titleSpan.textContent;
-
     const input = document.createElement('input');
-
     input.type = 'text';
-
     input.className = 'project-title-input';
-
     input.value = originalTitle;
 
-
-
     titleSpan.replaceWith(input);
-
     input.focus();
-
     input.select();
 
-
-
     const finishEditing = () => {
-
         const newName = input.value.trim();
-
         if (newName && newName !== originalTitle) {
-
              renameProject(projectId, newName);
-
         } else {
-
              renderSidebarContent();
-
         }
-
     };
 
-
-
     input.addEventListener('blur', finishEditing);
-
     input.addEventListener('keydown', (e) => {
-
         if (e.key === 'Enter') {
-
             input.blur();
-
         } else if (e.key === 'Escape') {
-
             input.value = originalTitle;
-
             input.blur();
-
         }
-
     });
-
 }
-
-
 
 function startSessionRename(sessionId) {
-
     const sessionItem = document.querySelector(`.session-item[data-session-id="${sessionId}"]`);
-
     if (!sessionItem) return;
-
     const titleSpan = sessionItem.querySelector('.session-item-title');
-
     if (!titleSpan) return;
-
     const originalTitle = titleSpan.textContent;
-
     const input = document.createElement('input');
-
     input.type = 'text';
-
     input.className = 'project-title-input';
-
     input.value = originalTitle;
-
     titleSpan.replaceWith(input);
-
     input.focus();
-
     input.select();
 
-
-
     const finishEditing = () => {
-
         const newTitle = input.value.trim();
-
         if (newTitle && newTitle !== originalTitle) {
-
             renameSession(sessionId, newTitle);
-
         } else {
-
             renderSidebarContent();
-
         }
-
     };
-
     input.addEventListener('blur', finishEditing);
-
     input.addEventListener('keydown', (e) => {
-
         if (e.key === 'Enter') {
-
             input.blur();
-
         } else if (e.key === 'Escape') {
-
             input.value = originalTitle;
-
             input.blur();
-
         }
-
     });
-
 }
-
-
 
 function selectSession(sessionId) {
-
     removeContextMenu();
-
     if (!sessionId) return;
-
-    const { localChatSessionsCache } = stateManager.getState();
-
     const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
-
     if (!sessionData) return;
 
-
-
-    stateManager.setState({ currentSessionId: sessionId });
-
-
-
-    if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-
-    if (chatMessages) chatMessages.style.display = 'flex';
-
-
-
-    if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화';
-
-    if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block';
-
-    if (chatInput) {
-
-        chatInput.disabled = false;
-
-        chatInput.placeholder = "AI 러닝메이트에게 질문하기..."
-
-    }
-
-    if (chatSendBtn) chatSendBtn.disabled = false;
-
-    chatInput.focus();
-
-}
-
-
-
-function handleNewChat() { 
-
-    stateManager.setState({ currentSessionId: null }); 
-
-    const { activeTimers } = stateManager.getState();
-
+    currentSessionId = sessionId;
     Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
 
-    stateManager.setState({ activeTimers: {} });
+    renderSidebarContent();
+    if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
+    if (chatMessages) chatMessages.style.display = 'flex';
+    renderChatMessages(sessionData);
 
-
-
-    if (chatMessages) {
-
-        chatMessages.innerHTML = '';
-
-        chatMessages.style.display = 'none';
-
-    }
-
-
-
-    if (chatWelcomeMessage) {
-
-        chatWelcomeMessage.style.display = 'flex';
-
-        const p = chatWelcomeMessage.querySelector('p');
-
-        if (p) p.textContent = "아래 입력창에 질문을 입력하여 대화를 시작해보세요!";
-
-    }
-
-    
-
-    if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; 
-
-    if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; 
-
-    if (chatInput) { 
-
+    if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화';
+    if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block';
+    if (chatInput) {
         chatInput.disabled = false;
-
-        chatInput.value = '';
-
         chatInput.placeholder = "AI 러닝메이트에게 질문하기..."
-
-    } 
-
-    if (chatSendBtn) chatSendBtn.disabled = false; 
-
+    }
+    if (chatSendBtn) chatSendBtn.disabled = false;
+    chatInput.focus();
 }
 
+function handleNewChat() { 
+    currentSessionId = null; 
+    Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
+    renderSidebarContent();
 
+    if (chatMessages) {
+        chatMessages.querySelectorAll('.chat-message, .ai-response-container, .reasoning-block').forEach(el => el.remove());
+        chatMessages.style.display = 'flex';
+    }
+
+    if (chatWelcomeMessage) {
+        chatWelcomeMessage.style.display = 'flex';
+        const p = chatWelcomeMessage.querySelector('p');
+        if (p) p.textContent = "아래 입력창에 질문을 입력하여 대화를 시작해보세요!";
+    }
+    
+    if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; 
+    if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; 
+    if (chatInput) { 
+        chatInput.disabled = false;
+        chatInput.value = '';
+        chatInput.placeholder = "AI 러닝메이트에게 질문하기..."
+    } 
+    if (chatSendBtn) chatSendBtn.disabled = false; 
+}
 
 function setupChatModeSelector() { 
-
     if (!chatModeSelector) return; 
-
     chatModeSelector.innerHTML = ''; 
-
     const modes = [
-
         { id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, 
-
         { id: 'deep_learning', t: '심화 학습', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,14A4,4 0 0,1 8,10H10A2,2 0 0,0 12,12A2,2 0 0,0 14,10H16A4,4 0 0,1 12,14M7.5,15.6C8.8,17.2 10.3,18 12,18C13.7,18 15.2,17.2 16.5,15.6C15.2,14.8 13.7,14 12,14C10.3,14 8.8,14.8 7.5,15.6Z" /></svg>' }, 
-
         { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }
-
     ]; 
-
-    const { selectedMode } = stateManager.getState();
-
     modes.forEach(m => { 
-
         const b = document.createElement('button'); 
-
         b.dataset.mode = m.id; 
-
         b.innerHTML = `${m.i}<span>${m.t}</span>`; 
-
         if (m.id === selectedMode) b.classList.add('active'); 
-
         b.addEventListener('click', () => { 
-
-            stateManager.setState({ selectedMode: m.id }); 
-
+            selectedMode = m.id; 
             chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); 
-
             b.classList.add('active'); 
-
-            if (stateManager.getState().selectedMode === 'custom') openPromptModal();
-
+            if (selectedMode === 'custom') openPromptModal();
         }); 
-
         chatModeSelector.appendChild(b); 
-
     }); 
-
 }
 
 /* --- Source: src\05_features_notes\300_notes_data.js --- */
@@ -2941,11 +1880,11 @@ Description: Handles all data layer interactions with Firebase Firestore for the
 // --- Notes Data Listeners (moved from firebase.js) ---
 function listenToNotes() { 
     return new Promise(resolve => { 
-        const { notesCollectionRef } = stateManager.getState(); if (!notesCollectionRef) return resolve(); 
-        let { unsubscribeFromNotes } = stateManager.getState(); if (unsubscribeFromNotes) unsubscribeFromNotes(); 
+        if (!notesCollectionRef) return resolve(); 
+        if (unsubscribeFromNotes) unsubscribeFromNotes(); 
         unsubscribeFromNotes = notesCollectionRef.onSnapshot(s => { 
-            const localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); 
-            stateManager.setState({ localNotesCache });('notes-app-panel')?.style.display === 'flex') renderNoteList(); 
+            localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); 
+            if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList(); 
             resolve(); 
         }, e => { console.error("노트 수신 오류:", e); resolve(); }); 
     }); 
@@ -2961,7 +1900,7 @@ function listenToNoteProjects() {
                 id: doc.id,
                 isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true, ...doc.data()
             }));
-            stateManager.setState({ localNotesCache }); // No direct UI update here('notes-app-panel')?.style.display === 'flex') renderNoteList();
+            if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList();
             if (newlyCreatedNoteProjectId) {
                 const newProjectElement = document.querySelector(`.note-project-container[data-project-id="${newlyCreatedNoteProjectId}"]`);
                 if (newProjectElement) { startNoteProjectRename(newlyCreatedNoteProjectId); newlyCreatedNoteProjectId = null; }
@@ -2995,7 +1934,7 @@ function listenToNoteTemplates() {
 
 // --- Notes Data Management Functions ---
 async function addNote(content = '') {
-    const { notesCollectionRef } = stateManager.getState(); if (!notesCollectionRef) return null;
+    if (!notesCollectionRef) return null;
     try {
         const activeProject = document.querySelector('.note-project-header.active-drop-target');
         const projectId = activeProject ? activeProject.closest('.note-project-container').dataset.projectId : null;
@@ -3023,7 +1962,7 @@ function deleteNote(noteId) {
                 console.error("메모 삭제 실패:", e);
                 alert("메모 삭제에 실패했습니다.");
             });
-            if (stateManager.getState().currentNoteId === noteId) {
+            if (currentNoteId === noteId) {
                 switchView('list');
             }
         }
@@ -3044,7 +1983,7 @@ async function renameNote(noteId, newTitle) {
 }
 
 async function togglePin(noteId) {
-    const { notesCollectionRef } = stateManager.getState(); if (!notesCollectionRef) return;
+    if (!notesCollectionRef) return;
     const note = localNotesCache.find(n => n.id === noteId);
     if (note) {
         try {
@@ -3536,94 +2475,11 @@ async function handleSystemReset() {
 
 /* --- Source: src\05_features_notes\340_notes_app.js --- */
 /*
-
 --- Ailey & Bailey Canvas ---
-
 File: 340_notes_app.js
-
-Version: 1.1 (Refactored)
-
-Description: Main controller for the Notes App, handling view switching and initialization.
-
+Version: 1.0 (Bundled)
+Description: Acts as the main controller for the Notes App, handling view switching and event listening.
 */
-
-
-
-const notesApp = {
-
-    init: function() {
-
-        this.attachEventListeners();
-
-        stateManager.subscribe(renderNoteList);
-
-        console.log("Notes App Initialized");
-
-    },
-
-
-
-    attachEventListeners: function() {
-
-        if (notesAppToggleBtn) {
-
-            notesAppToggleBtn.addEventListener('click', () => { 
-
-                togglePanel(notesAppPanel);
-
-                if (notesAppPanel.style.display === 'flex') {
-
-                    ensureNotePanelHeader();
-
-                    renderNoteList();
-
-                }
-
-            });
-
-        }
-
-        
-
-        if (noteListView) {
-
-            noteListView.addEventListener('click', e => {
-
-                
-
-            });
-
-            noteListView.addEventListener('contextmenu', e => showContextMenu(e.target, e));
-
-            const debouncedRender = debounce(renderNoteList, 300);
-
-            noteListView.addEventListener('input', e => {
-
-                if (e.target.id === 'search-input-dynamic') {
-
-                    debouncedRender();
-
-                }
-
-            });
-
-            
-
-        }
-
-        
-
-        if (fileImporter) fileImporter.addEventListener('change', importAllData);
-
-        if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
-
-        const handleNoteTitleEdit = debounce(() => saveNote(), 1500);
-
-        if (noteTitleInput) noteTitleInput.addEventListener('input', () => { updateStatus('입력 중...', true); handleNoteTitleEdit(); });
-
-    }
-
-};
 
 function ensureNotePanelHeader() {
     if (!notesAppPanel) return;
