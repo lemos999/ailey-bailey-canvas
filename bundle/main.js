@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T07:15:12.305Z */
+/* Auto-generated bundle from 2025-08-08T07:31:13.635Z */
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
 /*
@@ -1267,168 +1267,367 @@ document.addEventListener('DOMContentLoaded', function () {
 
 /* --- Source: src\04_features_chat\200_chat_data.js --- */
 /*
+
 --- Ailey & Bailey Canvas ---
+
 File: 200_chat_data.js
-Version: 1.0 (Bundled)
+
+Version: 1.2 (Refactoring Complete)
+
 Description: Handles all data layer interactions with Firebase Firestore for the chat application.
+
 */
 
-// --- Chat Data Listeners (moved from firebase.js) ---
+
+
 function listenToProjects() {
+
     return new Promise((resolve) => {
+
+        const { projectsCollectionRef } = stateManager.getState();
+
         if (!projectsCollectionRef) return resolve();
+
+        
+
+        let { unsubscribeFromProjects, localProjectsCache } = stateManager.getState();
+
         if (unsubscribeFromProjects) unsubscribeFromProjects();
+
+        
+
         unsubscribeFromProjects = projectsCollectionRef.onSnapshot(snapshot => {
+
             const oldCache = [...localProjectsCache];
-            localProjectsCache = snapshot.docs.map(doc => ({
+
+            const newCache = snapshot.docs.map(doc => ({
+
                 id: doc.id,
-                isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true, ...doc.data()
+
+                isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true, 
+
+                ...doc.data()
+
             }));
-            renderSidebarContent();
+
+            stateManager.setState({ localProjectsCache: newCache });
+
+            
+
+            const { newlyCreatedProjectId } = stateManager.getState();
+
             if (newlyCreatedProjectId) {
+
                 const newProjectElement = document.querySelector(`.project-container[data-project-id="${newlyCreatedProjectId}"]`);
-                if (newProjectElement) { startProjectRename(newlyCreatedProjectId); newlyCreatedProjectId = null; }
+
+                if (newProjectElement) { 
+
+                    startProjectRename(newlyCreatedProjectId); 
+
+                    stateManager.setState({ newlyCreatedProjectId: null }); 
+
+                }
+
             }
+
             resolve();
+
         }, error => { console.error("Project listener error:", error); resolve(); });
+
+        
+
+        stateManager.setState({ unsubscribeFromProjects });
+
     });
+
 }
+
+
 
 function listenToChatSessions() {
+
     return new Promise((resolve) => {
+
+        const { chatSessionsCollectionRef } = stateManager.getState();
+
         if (!chatSessionsCollectionRef) return resolve();
+
+        
+
+        let { unsubscribeFromChatSessions } = stateManager.getState();
+
         if (unsubscribeFromChatSessions) unsubscribeFromChatSessions();
+
+        
+
         unsubscribeFromChatSessions = chatSessionsCollectionRef.onSnapshot(snapshot => {
-            localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderSidebarContent();
-            if (currentSessionId) {
-                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
-                if (!currentSessionData) handleNewChat();
-                else renderChatMessages(currentSessionData);
-            }
+
+            const localChatSessionsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            stateManager.setState({ localChatSessionsCache });
+
             resolve();
+
         }, error => { console.error("Chat session listener error:", error); resolve(); });
+
+        
+
+        stateManager.setState({ unsubscribeFromChatSessions });
+
     });
+
 }
 
-// --- Chat Data Management Functions ---
+
+
 async function createNewProject() {
+
+    const { projectsCollectionRef } = stateManager.getState();
+
     const newName = getNewProjectDefaultName();
+
     try {
+
         const newProjectRef = await projectsCollectionRef.add({
+
             name: newName,
+
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
         });
-        newlyCreatedProjectId = newProjectRef.id;
+
+        stateManager.setState({ newlyCreatedProjectId: newProjectRef.id });
+
     } catch (error) {
+
         console.error("Error creating new project:", error);
+
         alert("프로젝트 생성에 실패했습니다.");
+
     }
+
 }
+
+
 
 async function renameProject(projectId, newName) {
+
+    const { projectsCollectionRef } = stateManager.getState();
+
     if (!newName || !newName.trim() || !projectId) return;
+
     try {
+
         await projectsCollectionRef.doc(projectId).update({
+
             name: newName.trim(),
+
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
         });
+
     } catch (error) {
+
         console.error("Error renaming project:", error);
+
         alert("프로젝트 이름 변경에 실패했습니다.");
+
     }
+
 }
+
+
 
 async function deleteProject(projectId) {
+
+    const { localProjectsCache, localChatSessionsCache, db, chatSessionsCollectionRef, projectsCollectionRef } = stateManager.getState();
+
     const project = localProjectsCache.find(p => p.id === projectId);
+
     if (!project) return;
 
+
+
     const message = `프로젝트 '${project.name}'를 삭제하시겠습니까? 프로젝트 안의 모든 대화는 '일반 대화'로 이동됩니다.`;
+
     showModal(message, async () => {
+
         try {
+
             const batch = db.batch();
+
             const sessionsToMove = localChatSessionsCache.filter(s => s.projectId === projectId);
+
             sessionsToMove.forEach(session => {
+
                 const sessionRef = chatSessionsCollectionRef.doc(session.id);
+
                 batch.update(sessionRef, { projectId: null });
+
             });
+
             const projectRef = projectsCollectionRef.doc(projectId);
+
             batch.delete(projectRef);
+
             await batch.commit();
+
         } catch (error) {
+
             console.error("Error deleting project:", error);
+
             alert("프로젝트 삭제에 실패했습니다.");
+
         }
+
     });
+
 }
+
+
 
 async function moveSessionToProject(sessionId, newProjectId) {
+
+    const { localChatSessionsCache, chatSessionsCollectionRef, projectsCollectionRef } = stateManager.getState();
+
     const session = localChatSessionsCache.find(s => s.id === sessionId);
+
     if (!session || session.projectId === newProjectId) return;
 
+
+
     try {
+
         await chatSessionsCollectionRef.doc(sessionId).update({
+
             projectId: newProjectId,
+
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
         });
+
         if (newProjectId) {
+
             await projectsCollectionRef.doc(newProjectId).update({
+
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
             });
+
         }
+
     } catch (error) {
+
         console.error("Error moving session:", error);
+
         alert("세션 이동에 실패했습니다.");
+
     }
+
 }
+
+
 
 async function toggleChatPin(sessionId) {
+
+    const { chatSessionsCollectionRef, localChatSessionsCache } = stateManager.getState();
+
     if (!chatSessionsCollectionRef || !sessionId) return;
+
     const sessionRef = chatSessionsCollectionRef.doc(sessionId);
+
     const currentSession = localChatSessionsCache.find(s => s.id === sessionId);
+
     if (!currentSession) return;
+
     try {
+
         await sessionRef.update({
+
             isPinned: !(currentSession.isPinned || false),
+
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
         });
+
     } catch (error) {
+
         console.error("Error toggling pin status:", error);
+
     }
+
 }
+
+
 
 async function renameSession(sessionId, newTitle) {
+
+    const { chatSessionsCollectionRef } = stateManager.getState();
+
     if (!newTitle || !sessionId) return;
+
     try {
+
         await chatSessionsCollectionRef.doc(sessionId).update({
+
             title: newTitle,
+
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
         });
+
     } catch (error) {
+
         console.error("Error renaming session:", error);
+
         alert("세션 이름 변경에 실패했습니다.");
+
     }
+
 }
 
+
+
 function handleDeleteSession(sessionId) {
+
+    const { chatSessionsCollectionRef, localChatSessionsCache } = stateManager.getState();
+
     if (!sessionId) return;
+
     const sessionToDelete = localChatSessionsCache.find(s => s.id === sessionId);
+
     if (!sessionToDelete) return;
 
+
+
     showModal(`'${sessionToDelete?.title || '이 대화'}'를 삭제하시겠습니까?`, () => {
+
         if (chatSessionsCollectionRef) {
+
             chatSessionsCollectionRef.doc(sessionId).delete().then(() => {
+
                 console.log("Session deleted successfully");
-                if (currentSessionId === sessionId) {
+
+                if (stateManager.getState().currentSessionId === sessionId) {
+
                     handleNewChat();
+
                 }
+
             }).catch(e => {
+
                 console.error("세션 삭제 실패:", e);
+
                 alert("세션 삭제에 실패했습니다.");
+
             });
+
         }
+
     });
+
 }
 
 /* --- Source: src\04_features_chat\210_chat_engine.js --- */
@@ -2293,7 +2492,7 @@ function updateChatHeaderModelSelector() {
 
 File: 230_chat_app.js
 
-Version: 1.1 (Refactored)
+Version: 1.2 (Refactoring Complete)
 
 Description: Main controller for the Chat App, handling user interactions and initialization.
 
@@ -2307,21 +2506,25 @@ const chatApp = {
 
         this.attachEventListeners();
 
-        stateManager.subscribe(renderSidebarContent);
-
         stateManager.subscribe(() => {
+
+            renderSidebarContent();
 
             const { currentSessionId, localChatSessionsCache } = stateManager.getState();
 
             if (currentSessionId) {
 
-                 const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+                const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
 
-                 if (currentSessionData) {
+                if (!currentSessionData) {
+
+                    handleNewChat();
+
+                } else {
 
                     renderChatMessages(currentSessionData);
 
-                 }
+                }
 
             }
 
@@ -2399,167 +2602,332 @@ const chatApp = {
 
 };
 
+
+
 function getNewProjectDefaultName() {
+
+    const { localProjectsCache } = stateManager.getState();
+
     const baseName = "새 프로젝트";
+
     const existingNames = new Set(localProjectsCache.map(p => p.name));
+
     if (!existingNames.has(baseName)) {
+
         return baseName;
+
     }
+
     let i = 2;
+
     while (existingNames.has(`${baseName} ${i}`)) {
+
         i++;
+
     }
+
     return `${baseName} ${i}`;
+
 }
+
+
 
 function toggleProjectExpansion(projectId) {
-    const project = localProjectsCache.find(p => p.id === projectId);
-    const { localProjectsCache } = stateManager.getState(); const project = localProjectsCache.find(p => p.id === projectId); if (project) {
-        stateManager.setState({ localProjectsCache: stateManager.getState().localProjectsCache.map(p => p.id === projectId ? {...p, isExpanded: !p.isExpanded} : p) });
-        renderSidebarContent();
-    }
+
+    const { localProjectsCache } = stateManager.getState();
+
+    const updatedCache = localProjectsCache.map(p => 
+
+        p.id === projectId ? { ...p, isExpanded: !(p.isExpanded ?? true) } : p
+
+    );
+
+    stateManager.setState({ localProjectsCache: updatedCache });
+
 }
+
+
 
 function startProjectRename(projectId) {
+
     const projectContainer = document.querySelector(`.project-container[data-project-id="${projectId}"]`);
+
     if (!projectContainer) return;
+
     const titleSpan = projectContainer.querySelector('.project-title');
+
     if (!titleSpan) return;
 
+
+
     const originalTitle = titleSpan.textContent;
+
     const input = document.createElement('input');
+
     input.type = 'text';
+
     input.className = 'project-title-input';
+
     input.value = originalTitle;
 
+
+
     titleSpan.replaceWith(input);
+
     input.focus();
+
     input.select();
 
+
+
     const finishEditing = () => {
+
         const newName = input.value.trim();
+
         if (newName && newName !== originalTitle) {
+
              renameProject(projectId, newName);
+
         } else {
+
              renderSidebarContent();
+
         }
+
     };
 
+
+
     input.addEventListener('blur', finishEditing);
+
     input.addEventListener('keydown', (e) => {
+
         if (e.key === 'Enter') {
+
             input.blur();
+
         } else if (e.key === 'Escape') {
+
             input.value = originalTitle;
+
             input.blur();
+
         }
+
     });
+
 }
+
+
 
 function startSessionRename(sessionId) {
+
     const sessionItem = document.querySelector(`.session-item[data-session-id="${sessionId}"]`);
+
     if (!sessionItem) return;
+
     const titleSpan = sessionItem.querySelector('.session-item-title');
+
     if (!titleSpan) return;
+
     const originalTitle = titleSpan.textContent;
+
     const input = document.createElement('input');
+
     input.type = 'text';
+
     input.className = 'project-title-input';
+
     input.value = originalTitle;
+
     titleSpan.replaceWith(input);
+
     input.focus();
+
     input.select();
 
+
+
     const finishEditing = () => {
+
         const newTitle = input.value.trim();
+
         if (newTitle && newTitle !== originalTitle) {
+
             renameSession(sessionId, newTitle);
+
         } else {
+
             renderSidebarContent();
+
         }
+
     };
+
     input.addEventListener('blur', finishEditing);
+
     input.addEventListener('keydown', (e) => {
+
         if (e.key === 'Enter') {
+
             input.blur();
+
         } else if (e.key === 'Escape') {
+
             input.value = originalTitle;
+
             input.blur();
+
         }
+
     });
+
 }
+
+
 
 function selectSession(sessionId) {
+
     removeContextMenu();
+
     if (!sessionId) return;
-    const { localChatSessionsCache } = stateManager.getState(); const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
+
+    const { localChatSessionsCache } = stateManager.getState();
+
+    const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
+
     if (!sessionData) return;
 
-    stateManager.setState({ currentSessionId: sessionId });
-    const { activeTimers } = stateManager.getState(); Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
 
-    renderSidebarContent();
+
+    stateManager.setState({ currentSessionId: sessionId });
+
+
+
     if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
+
     if (chatMessages) chatMessages.style.display = 'flex';
-    renderChatMessages(sessionData);
+
+
 
     if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화';
+
     if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block';
+
     if (chatInput) {
+
         chatInput.disabled = false;
+
         chatInput.placeholder = "AI 러닝메이트에게 질문하기..."
+
     }
+
     if (chatSendBtn) chatSendBtn.disabled = false;
+
     chatInput.focus();
+
 }
+
+
 
 function handleNewChat() { 
+
     stateManager.setState({ currentSessionId: null }); 
+
+    const { activeTimers } = stateManager.getState();
+
     Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
-    renderSidebarContent();
+
+    stateManager.setState({ activeTimers: {} });
+
+
 
     if (chatMessages) {
-        chatMessages.querySelectorAll('.chat-message, .ai-response-container, .reasoning-block').forEach(el => el.remove());
-        chatMessages.style.display = 'flex';
+
+        chatMessages.innerHTML = '';
+
+        chatMessages.style.display = 'none';
+
     }
+
+
 
     if (chatWelcomeMessage) {
+
         chatWelcomeMessage.style.display = 'flex';
+
         const p = chatWelcomeMessage.querySelector('p');
+
         if (p) p.textContent = "아래 입력창에 질문을 입력하여 대화를 시작해보세요!";
+
     }
+
     
+
     if (chatSessionTitle) chatSessionTitle.textContent = 'AI 러닝메이트'; 
+
     if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; 
+
     if (chatInput) { 
+
         chatInput.disabled = false;
+
         chatInput.value = '';
+
         chatInput.placeholder = "AI 러닝메이트에게 질문하기..."
+
     } 
+
     if (chatSendBtn) chatSendBtn.disabled = false; 
+
 }
 
+
+
 function setupChatModeSelector() { 
+
     if (!chatModeSelector) return; 
+
     chatModeSelector.innerHTML = ''; 
+
     const modes = [
+
         { id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, 
+
         { id: 'deep_learning', t: '심화 학습', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,14A4,4 0 0,1 8,10H10A2,2 0 0,0 12,12A2,2 0 0,0 14,10H16A4,4 0 0,1 12,14M7.5,15.6C8.8,17.2 10.3,18 12,18C13.7,18 15.2,17.2 16.5,15.6C15.2,14.8 13.7,14 12,14C10.3,14 8.8,14.8 7.5,15.6Z" /></svg>' }, 
+
         { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }
+
     ]; 
+
+    const { selectedMode } = stateManager.getState();
+
     modes.forEach(m => { 
+
         const b = document.createElement('button'); 
+
         b.dataset.mode = m.id; 
+
         b.innerHTML = `${m.i}<span>${m.t}</span>`; 
-        const { selectedMode } = stateManager.getState(); if (m.id === selectedMode) b.classList.add('active'); 
+
+        if (m.id === selectedMode) b.classList.add('active'); 
+
         b.addEventListener('click', () => { 
+
             stateManager.setState({ selectedMode: m.id }); 
+
             chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); 
+
             b.classList.add('active'); 
+
             if (stateManager.getState().selectedMode === 'custom') openPromptModal();
+
         }); 
+
         chatModeSelector.appendChild(b); 
+
     }); 
+
 }
 
 /* --- Source: src\05_features_notes\300_notes_data.js --- */
