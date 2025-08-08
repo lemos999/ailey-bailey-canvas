@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T15:30:22.445Z */
+/* Auto-generated bundle from 2025-08-08T15:38:06.152Z */
 
 /* --- Source: src\00_shell\000_shell_template.js --- */
 /*
@@ -539,12 +539,28 @@ function renderQuiz(data) {
 /*
 --- Ailey & Bailey Canvas ---
 File: 100_core_firebase.js
-Version: 1.0 (Bundled)
-Description: Handles all Firebase-related initialization and sets up real-time listeners for all data collections.
+Version: 1.1 (Stable Loader)
+Description: Handles all Firebase-related initialization with a robust, safe loading mechanism.
 */
 
+// Waits for the global firebase object to be available, then initializes the app.
 async function initializeFirebase() {
     try {
+        // Wait for the Firebase SDK to load
+        await new Promise((resolve, reject) => {
+            let attempts = 0;
+            const maxAttempts = 200; // 10 seconds timeout
+            const interval = setInterval(() => {
+                if (typeof firebase !== 'undefined' && firebase.app) {
+                    clearInterval(interval);
+                    resolve();
+                } else if (attempts++ > maxAttempts) {
+                    clearInterval(interval);
+                    reject(new Error("Firebase SDK loading timed out after 10 seconds."));
+                }
+            }, 50);
+        });
+
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         if (!firebaseConfig) { throw new Error("Firebase config not found."); }
@@ -553,7 +569,9 @@ async function initializeFirebase() {
         const auth = firebase.auth();
         db = firebase.firestore();
         
-        if (initialAuthToken) {
+        if (auth.currentUser) {
+             console.log("User already signed in.");
+        } else if (initialAuthToken) {
             await auth.signInWithCustomToken(initialAuthToken).catch(async (err) => {
                console.warn("Custom token sign-in failed, trying anonymous.", err);
                await auth.signInAnonymously();
@@ -565,13 +583,14 @@ async function initializeFirebase() {
         currentUser = auth.currentUser;
 
         if (currentUser) {
+            console.log("Firebase Authenticated. User UID:", currentUser.uid);
             const userPath = `artifacts/${appId}/users/${currentUser.uid}`;
             
             // Note App refs
             notesCollectionRef = db.collection(`${userPath}/notes`);
             noteProjectsCollectionRef = db.collection(`${userPath}/noteProjects`);
-            tagsCollectionRef = db.collection(`${userPath}/noteTags`); // NEW
-            noteTemplatesCollectionRef = db.collection(`${userPath}/noteTemplates`); // NEW
+            tagsCollectionRef = db.collection(`${userPath}/noteTags`);
+            noteTemplatesCollectionRef = db.collection(`${userPath}/noteTemplates`);
 
             // Chat App refs
             const chatHistoryPath = `${userPath}/chatHistories/${canvasId}`;
@@ -581,8 +600,8 @@ async function initializeFirebase() {
             await Promise.all([
                 listenToNotes(),
                 listenToNoteProjects(),
-                listenToTags(), // NEW
-                listenToNoteTemplates(), // NEW
+                listenToTags(),
+                listenToNoteTemplates(),
                 listenToChatSessions(),
                 listenToProjects()
             ]);
