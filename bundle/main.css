@@ -1,6 +1,173 @@
-/* Auto-generated bundle from 2025-08-08T16:13:42.223Z */
+/* --- From: vendor_css/001_google-fonts.css --- */
+/*
+--- Ailey & Bailey Canvas ---
+File: vendor_css/001_google-fonts.css
+Description: Internalized Google Fonts definitions.
+*/
 
-/* --- Source: src_css\001_base.css --- */
+/* Gowun Batang - Regular (400) */
+@font-face {
+  font-family: 'Gowun Batang';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(../assets/fonts/GowunBatang-Regular.woff2) format('woff2');
+}
+
+/* Gowun Batang - Bold (700) */
+@font-face {
+  font-family: 'Gowun Batang';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(../assets/fonts/GowunBatang-Bold.woff2) format('woff2');
+}
+
+/* Noto Serif KR - Regular (400) */
+@font-face {
+  font-family: 'Noto Serif KR';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(../assets/fonts/NotoSerifKR-Regular.woff2) format('woff2');
+}
+
+/* Noto Serif KR - SemiBold (600) */
+@font-face {
+  font-family: 'Noto Serif KR';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(../assets/fonts/NotoSerifKR-SemiBold.woff2) format('woff2');
+}
+
+/* --- From: vendor_css/010_toastui-editor.min.css --- */
+/*!
+ * TOAST UI Editor : Code-Syntax-Highlight
+ * @version 3.0.0 | Fri Jun 25 2021
+ * @author NHN FE Development Lab. (https://nhn.com)
+ * @license MIT
+ */
+.toastui-editor-ww-code-block{background-color:#f3f3f3;border:1px solid #e5e5e5;box-sizing:border-box;font-family:Consolas,Courier,monospace;font-size:14px;padding:10px;white-space:pre-wrap;word-wrap:break-word}.toastui-editor-ww-code-block,.toastui-editor-ww-code-block-highlight{margin:0}
+.tui-editor-contents pre{position:relative}.tui-editor-contents .tui-editor-ww-code-block-highlight{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;white-space:pre;color:transparent;background-color:transparent;pointer-events:none}
+/*!
+ * TOAST UI Editor
+ * @version 3.0.2 | Thu Sep 16 2021
+ * @author NHN FE Development Lab. (https://nhn.com)
+ * @license MIT
+ */
+.tui-editor-contents, .toastui-editor-contents {
+    font-size: 16px;
+    line-height: 24px;
+    color: #333;
+    font-family: -apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif
+}
+.tui-editor-contents p, .toastui-editor-contents p {
+    margin: 0;
+    padding: 0;
+    line-height: inherit;
+}
+.tui-editor-contents blockquote, .toastui-editor-contents blockquote {
+    margin: 20px 0;
+    padding: 15px;
+    border-left: 4px solid #e5e5e5;
+    background-color: #f7f7f7;
+    color: #666
+}
+.tui-editor-contents blockquote p, .toastui-editor-contents blockquote p {
+    font-style: italic
+}
+.tui-editor-contents hr, .toastui-editor-contents hr {
+    margin: 20px 0;
+    border: 0;
+    border-top: 1px solid #e5e5e5
+}
+.tui-editor-contents ul, .tui-editor-contents ol, .toastui-editor-contents ul, .toastui-editor-contents ol {
+    margin: 10px 0 10px 20px;
+    padding: 0
+}
+.tui-editor-contents table, .toastui-editor-contents table {
+    margin: 20px 0;
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: auto;
+    border: 1px solid #e5e5e5
+}
+.tui-editor-contents table th, .tui-editor-contents table td, .toastui-editor-contents table th, .toastui-editor-contents table td {
+    padding: 8px 12px;
+    border: 1px solid #e5e5e5
+}
+.tui-editor-contents pre, .toastui-editor-contents pre {
+    margin: 20px 0;
+    background-color: #f7f7f7;
+    padding: 15px;
+    border-radius: 4px
+}
+.tui-editor-contents pre code, .toastui-editor-contents pre code {
+    font-family: Consolas,Courier,monospace;
+    background-color: transparent
+}
+.tui-editor-contents code, .toastui-editor-contents code {
+    font-family: Consolas,Courier,monospace;
+    color: #e82c2c;
+    background-color: #f7f7f7;
+    padding: 1px 4px;
+    border-radius: 4px;
+    letter-spacing: -.3px
+}
+.tui-editor-contents img, .toastui-editor-contents img {
+    max-width: 100%;
+    object-fit: contain
+}
+.tui-editor-contents .task-list-item, .toastui-editor-contents .task-list-item {
+    list-style-type: none
+}
+.tui-editor-contents .task-list-item.checked, .toastui-editor-contents .task-list-item.checked {
+    text-decoration: line-through
+}
+.tui-editor-contents .task-list-item input, .toastui-editor-contents .task-list-item input {
+    margin-right: 6px
+}
+.tui-editor-contents .task-list-item .task-list-item-checkbox, .toastui-editor-contents .task-list-item .task-list-item-checkbox {
+    vertical-align: middle
+}
+.tui-editor-contents .custom-block, .toastui-editor-contents .custom-block {
+    background-color: #f7f7f7;
+    border: 1px solid #e5e5e5;
+    padding: 15px;
+    margin: 20px 0
+}
+.tui-editor-contents-placeholder:before, .toastui-editor-contents-placeholder:before {
+    position: absolute;
+    color: #bbb;
+    pointer-events: none;
+    content: attr(data-placeholder);
+}
+body.dark-mode .toastui-editor-contents {
+  color: #E0E0E0; /* text-color-dark */
+}
+body.dark-mode .toastui-editor-contents blockquote {
+  border-left: 4px solid #333333; /* border-color-dark */
+  background-color: #2A2A2A; /* quote-bg-dark */
+  color: #9E9E9E; /* sub-text-color-dark */
+}
+body.dark-mode .toastui-editor-contents pre {
+  background-color: #2A2A2A; /* quote-bg-dark */
+}
+body.dark-mode .toastui-editor-contents code {
+  background-color: #2A2A2A; /* quote-bg-dark */
+  color: #ef5350; /* incorrect-color-dark */
+}
+body.dark-mode .toastui-editor-contents hr {
+  border-top: 1px solid #333333; /* border-color-dark */
+}
+body.dark-mode .toastui-editor-contents table,
+body.dark-mode .toastui-editor-contents table th,
+body.dark-mode .toastui-editor-contents table td {
+  border: 1px solid #333333; /* border-color-dark */
+}
+
+/* --- From: src_css/001_base.css --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: style_base.css
@@ -52,7 +219,7 @@ body.dark-mode .keyword-list { background-color: var(--quote-bg-dark); }
 body:not(.dark-mode) .keyword-list { background-color: var(--quote-bg-light); }
 .keyword-chip { background-color: #B97F74; color: #FAF7F2; padding: 5px 13px; border-radius: 15px; font-weight: 700; font-size: 1.0em; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-/* --- Source: src_css\002_widgets.css --- */
+/* --- From: src_css/002_widgets.css --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: style_widgets.css
@@ -253,7 +420,7 @@ body:not(:dark-mode) #quiz-submit-btn { background-color: var(--h2-color-light);
 #prompt-modal-overlay textarea { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
 body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }
 
-/* --- Source: src_css\003_navigation.css --- */
+/* --- From: src_css/003_navigation.css --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: style_navigation.css
@@ -285,7 +452,7 @@ body:not(.dark-mode) .scroll-nav li a.active { color: var(--h2-color-light); bac
 body.dark-mode .tool-button { background-color: #333; color: #fff; }
 body:not(.dark-mode) .tool-button { background-color: #fff; color: #4B4237; }
 
-/* --- Source: src_css\004_panels.css --- */
+/* --- From: src_css/004_panels.css --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: style_panels.css
@@ -305,7 +472,7 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 .panel-header .close-btn { cursor: pointer; background: none; border: none; padding: 0; line-height: 0; }
 .panel-header .close-btn svg { fill: currentColor; }
 
-/* --- Source: src_css\005_chat.css --- */
+/* --- From: src_css/005_chat.css --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: style_chat.css
@@ -575,7 +742,7 @@ body:dark-mode .send-to-note-btn { border-color: var(--sub-text-color-dark); col
 body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-light); color: var(--sub-text-color-light); }
 .send-to-note-btn:disabled { cursor: not-allowed; opacity: 0.5; border-color: gray; color: gray; }
 
-/* --- Source: src_css\006_notes.css --- */
+/* --- From: src_css/006_notes.css --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: style_notes.css
