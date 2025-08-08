@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T20:46:12.587Z */
+/* Auto-generated bundle from 2025-08-08T21:06:49.569Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -574,6 +574,35 @@ body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
 body:dark-mode .send-to-note-btn { border-color: var(--sub-text-color-dark); color: var(--sub-text-color-dark); }
 body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-light); color: var(--sub-text-color-light); }
 .send-to-note-btn:disabled { cursor: not-allowed; opacity: 0.5; border-color: gray; color: gray; }
+/* (Existing CSS content) */
+/* --- [NEW] Enhanced Prompt Modal Styles --- */
+.prompt-modal-enhanced { max-width: 800px; padding: 0; }
+.prompt-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) .prompt-modal-header { border-bottom-color: var(--border-color-light); }
+.prompt-modal-header h3 { margin: 0; display: flex; align-items: center; gap: 10px; }
+.modal-close-icon { font-size: 2em; cursor: pointer; color: var(--sub-text-color-dark); line-height: 1; padding: 0 5px; }
+body:not(.dark-mode) .modal-close-icon { color: var(--sub-text-color-light); }
+.prompt-modal-body { display: flex; padding: 20px; gap: 20px; }
+.prompt-presets-section { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-color-dark); padding-right: 20px; }
+body:not(.dark-mode) .prompt-presets-section { border-right-color: var(--border-color-light); }
+.prompt-presets-section h4 { margin-top: 0; margin-bottom: 10px; }
+#prompt-preset-list { flex-grow: 1; overflow-y: auto; max-height: 250px; margin-bottom: 15px; }
+.no-presets-message { color: var(--sub-text-color-dark); font-style: italic; }
+body:not(.dark-mode) .no-presets-message { color: var(--sub-text-color-light); }
+.prompt-preset-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; margin-bottom: 5px; }
+body.dark-mode .prompt-preset-item:hover { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .prompt-preset-item:hover { background-color: var(--quote-bg-light); }
+.preset-text { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
+.preset-delete-btn { background: none; border: none; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; padding: 0; line-height: 0; }
+.prompt-preset-item:hover .preset-delete-btn { opacity: 1; }
+#new-preset-form { display: flex; gap: 8px; }
+#new-preset-input { flex-grow: 1; padding: 8px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: inherit; border-radius: 6px; }
+body:not(.dark-mode) #new-preset-input { border-color: var(--border-color-light); background: white; }
+#new-preset-add-btn { padding: 8px 12px; border: none; background-color: var(--h2-color-dark); color: white; border-radius: 6px; cursor: pointer; }
+body:not(.dark-mode) #new-preset-add-btn { background-color: var(--h2-color-light); }
+.prompt-editor-section { flex: 2; display: flex; }
+#custom-prompt-input { width: 100%; height: 100%; min-height: 300px; resize: none; border-radius: 6px; padding: 10px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) #custom-prompt-input { border-color: var(--border-color-light); background: var(--bg-color-light); }
 
 /* --- Source: src_css\006_notes.css --- */
 /*
