@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T19:30:31.985Z */
+/* Auto-generated bundle from 2025-08-08T16:13:42.223Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -309,9 +309,9 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 /*
 --- Ailey & Bailey Canvas ---
 File: style_chat.css
-Version: 12.0 (Segmented Control UI)
+Version: 11.0 (Modular CSS Structure)
 Architect: [Username] & System Architect Ailey
-Description: Contains all styles related to the Ailey & Bailey Chat panel, now featuring a refined header and segmented control for mode selection.
+Description: Contains all styles related to the AI Chat panel, including the session/project sidebar, context menus, the main message view, user/AI message bubbles, the reasoning block, and the input form.
 */
 
 /* --- [REFINED] CHAT STYLES for PROJECT & SESSION MANAGEMENT --- */
@@ -489,167 +489,30 @@ body:not(.dark-mode) .context-submenu {
 .sessions-in-project.expanded { max-height: 500px; }
 
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
-
-/* === [HEADER REFINEMENT V2] === */
-.chat-header-content {
-    width: 100%;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-wrap: nowrap;
-    gap: 10px;
-}
-.chat-header-left, .chat-header-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.chat-header-left {
-    flex-grow: 1;
-    min-width: 150px;
-    overflow: hidden;
-}
-.chat-header-right {
-    flex-shrink: 0;
-}
-
-/* [NEW] Custom AI Model Selector */
-.custom-select-container {
-    position: relative;
-    display: inline-block;
-    font-family: 'Gowun Batang', serif;
-}
-.custom-select-display {
-    padding: 6px 30px 6px 12px;
-    font-size: 0.95em;
-    border-radius: 6px;
-    border: 1px solid;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: left;
-    width: 100%;
-    max-width: 200px;
-    box-sizing: border-box;
-    position: relative;
-}
-.custom-select-display::after {
-    content: '▼';
-    font-size: 0.7em;
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%) scale(1.2, 0.8);
-    transition: transform 0.2s;
-}
-.custom-select-container.open .custom-select-display::after {
-    transform: translateY(-50%) scale(1.2, 0.8) rotate(180deg);
-}
-body.dark-mode .custom-select-display {
-    background-color: var(--container-bg-dark);
-    border-color: var(--border-color-dark);
-    color: var(--text-color-dark);
-}
-body:not(.dark-mode) .custom-select-display {
-    background-color: var(--container-bg-light);
-    border-color: var(--border-color-light);
-    color: var(--text-color-light);
-}
-.custom-select-options {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background-color: var(--container-bg-dark);
-    border: 1px solid var(--border-color-dark);
-    border-top: none;
-    border-radius: 0 0 6px 6px;
-    z-index: 1200;
-    max-height: 200px;
-    overflow-y: auto;
-}
-.custom-select-container.open .custom-select-options {
-    display: block;
-}
-body:not(.dark-mode) .custom-select-options {
-    background-color: var(--container-bg-light);
-    border-color: var(--border-color-light);
-}
-.custom-select-option {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 0.9em;
-}
-body.dark-mode .custom-select-option:hover { background-color: var(--quote-bg-dark); }
-body:not(.dark-mode) .custom-select-option:hover { background-color: var(--quote-bg-light); }
-.custom-select-option.selected { font-weight: bold; }
-body.dark-mode .custom-select-option.selected { background-color: var(--h2-border-dark); }
-body:not(.dark-mode) .custom-select-option.selected { background-color: var(--h2-border-light); }
-
-#chat-session-title { display: none; } /* Replaced by model selector in header */
-.chat-header-right > span, .chat-header-right > button {
-    cursor:pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 5px;
-    border-radius: 50%;
-    transition: background-color 0.2s;
-}
-.chat-header-right > span:hover, .chat-header-right > button:hover {
-    background-color: rgba(128, 128, 128, 0.2);
-}
-.chat-header-right svg { width: 20px; height: 20px; fill: currentColor; }
+#chat-main-view .panel-header { }
+#chat-session-title { font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #delete-session-btn { display: none; background: none; border: none; line-height: 0; }
+#delete-session-btn svg { fill: currentColor; }
 
-/* === [SEGMENTED CONTROL UI V2] === */
-#chat-mode-selector {
-    width: 100%;
-    padding: 10px 0;
-    display: flex;
-    justify-content: center;
-}
-.segmented-control {
-    display: inline-flex;
-    border-radius: 8px;
-    padding: 4px;
-    position: relative;
-}
-body:not(.dark-mode) .segmented-control { background-color: #e0d8ca; }
-body.dark-mode .segmented-control { background-color: #2a2a2a; }
-.segmented-control button {
-    padding: 6px 15px;
-    font-size: 0.95em;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    transition: color 0.3s ease;
-    background-color: transparent;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 2;
-}
-.segmented-control button svg { fill: currentColor; }
-body:not(.dark-mode) .segmented-control button { color: var(--sub-text-color-light); }
-body.dark-mode .segmented-control button { color: var(--sub-text-color-dark); }
-.segmented-control button.active { font-weight: bold; }
-body:not(.dark-mode) .segmented-control button.active { color: var(--header-color-light); }
-body.dark-mode .segmented-control button.active { color: var(--header-color-dark); }
-.segmented-control-slider {
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: left 0.3s ease-in-out, width 0.3s ease-in-out;
-    z-index: 1;
-}
-body:not(.dark-mode) .segmented-control-slider { background-color: #F7F3E9; }
-body.dark-mode .segmented-control-slider { background-color: #3f3f3f; }
+#api-settings-btn { cursor: pointer; margin-left: 10px; line-height: 0; transition: transform 0.2s ease-in-out; }
+#api-settings-btn:hover { transform: scale(1.15) rotate(20deg); }
+#api-settings-btn svg { fill: currentColor; }
+
+#ai-model-selector { padding: 4px 8px; font-size: 0.9em; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+body:not(.dark-mode) #ai-model-selector { background-color: var(--quote-bg-light); border-color: var(--border-color-light); color: var(--text-color-light); }
+body.dark-mode #ai-model-selector { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
+
+#chat-mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; width: 100%; justify-content: center; padding: 8px 0; border-top: 1px solid transparent; }
+body:not(.dark-mode) #chat-mode-selector { border-top-color: var(--border-color-light); }
+body.dark-mode #chat-mode-selector { border-top-color: var(--border-color-dark); }
+#chat-mode-selector button { padding: 6px 12px; font-size: 0.9em; border-radius: 18px; border: 1px solid; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
+#chat-mode-selector button svg { fill: currentColor; }
+body:not(.dark-mode) #chat-mode-selector button { background-color: #e0d8ca; border-color: #d1c8bb; color: var(--text-color-light); }
+body:not(.dark-mode) #chat-mode-selector button:hover { background-color: #d1c8bb; }
+body:not(.dark-mode) #chat-mode-selector button.active { background-color: var(--h2-color-light); color: white; border-color: var(--h2-color-light); font-weight: bold; }
+body.dark-mode #chat-mode-selector button { background-color: #3f3f3f; border-color: #555; color: var(--text-color-dark); }
+body.dark-mode #chat-mode-selector button:hover { background-color: #555; }
+body.dark-mode #chat-mode-selector button.active { background-color: var(--h2-color-dark); color: var(--bg-color-dark); border-color: var(--h2-color-dark); font-weight: bold; }
 
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 #chat-welcome-message { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; color: var(--sub-text-color-dark); }
