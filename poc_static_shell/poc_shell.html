@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>정적 셸 PoC</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background-color: #f0f0f0; color: #333; }
+    h1, h2 { color: #1a1a1a; }
+    #content-container { border: 2px dashed #ccc; padding: 20px; margin: 20px 0; min-height: 100px; background-color: #fff; border-radius: 8px; }
+    #hydrate-button { padding: 10px 15px; font-size: 16px; cursor: pointer; border-radius: 5px; border: 1px solid #888; background-color: #ddd; }
+    #hydrate-button:disabled { cursor: not-allowed; opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <h1>정적 셸 아키텍처 기술 검증 (PoC)</h1>
+  <p>이것은 미리 로드된 <strong>정적 HTML 셸</strong>입니다. 아래 컨테이너는 현재 비어있습니다.</p>
+  <div id="content-container"></div>
+  <button id="hydrate-button">여기를 클릭하여 동적 콘텐츠 주입</button>
+  <p><i>(버튼 클릭 시 `poc_hydrator.js`가 이 페이지의 DOM을 조작합니다.)</i></p>
+  <script src="./poc_hydrator.js"></script>
+</body>
+</html>
