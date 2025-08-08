@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T06:55:58.483Z */
+/* Auto-generated bundle from 2025-08-08T07:06:02.528Z */
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
 /*
@@ -728,7 +728,7 @@ function getRelativeDateGroup(timestamp, isPinned = false) {
 
 File: 110_core_api_settings.js
 
-Version: 1.1 (Refactored)
+Version: 1.2 (Refactored & Fixed)
 
 Description: Manages all logic for the API Settings (BYOK) modal.
 
@@ -738,62 +738,127 @@ Description: Manages all logic for the API Settings (BYOK) modal.
 
 function createApiSettingsModal() {
 
-    function createApiSettingsModal() {
     const modal = document.createElement('div');
+
     modal.id = 'api-settings-modal-overlay';
+
     modal.className = 'custom-modal-overlay';
+
     modal.innerHTML = `
+
         <div class="custom-modal api-settings-modal">
+
             <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg> 개인 API 설정 (BYOK)</h3>
+
             <p class="api-modal-desc">기본 제공되는 모델 외에, 개인 API 키를 사용하여 더 다양하고 강력한 모델을 이용할 수 있습니다.</p>
+
             <div class="api-form-section">
+
                 <label for="api-key-input">API 키</label>
+
                 <div class="api-key-wrapper">
+
                     <input type="password" id="api-key-input" placeholder="sk-..., sk-ant-..., 또는 Google API 키를 입력하세요">
+
                     <button id="verify-api-key-btn">키 검증 & 모델 로드</button>
+
                 </div>
+
                 <div id="api-key-status"></div>
+
             </div>
+
             <div class="api-form-section">
+
                 <label for="api-model-select">사용 모델</label>
+
                 <select id="api-model-select" disabled>
+
                     <option value="">API 키를 먼저 검증해주세요</option>
+
                 </select>
+
             </div>
+
             <div class="api-form-section">
+
                 <label>토큰 한도 설정</label>
+
                 <div class="token-limit-wrapper">
+
                     <input type="number" id="max-output-tokens-input" placeholder="최대 출력 (예: 2048)">
+
                 </div>
+
                 <small>모델이 생성할 응답의 최대 길이를 제한합니다. (입력값 없을 시 모델 기본값 사용)</small>
+
             </div>
+
             <div class="api-form-section token-usage-section">
+
                 <label>누적 토큰 사용량 (개인 키)</label>
+
                 <div id="token-usage-display">
+
                     <span>입력: 0</span> | <span>출력: 0</span> | <strong>총합: 0</strong>
+
                 </div>
+
                 <button id="reset-token-usage-btn">사용량 초기화</button>
+
                 <small>Google 유료 모델은 응답에 토큰 정보를 포함하지 않아 집계되지 않습니다.</small>
+
             </div>
+
             <div class="custom-modal-actions">
+
                 <button id="api-settings-cancel-btn" class="modal-btn">취소</button>
+
                 <button id="api-settings-save-btn" class="modal-btn">저장</button>
+
             </div>
+
         </div>
+
     `;
+
     document.body.appendChild(modal);
 
+
+
     apiSettingsModalOverlay = document.getElementById('api-settings-modal-overlay');
+
     apiKeyInput = document.getElementById('api-key-input');
+
     verifyApiKeyBtn = document.getElementById('verify-api-key-btn');
+
     apiKeyStatus = document.getElementById('api-key-status');
+
     apiModelSelect = document.getElementById('api-model-select');
+
     maxOutputTokensInput = document.getElementById('max-output-tokens-input');
+
     tokenUsageDisplay = document.getElementById('token-usage-display');
+
     resetTokenUsageBtn = document.getElementById('reset-token-usage-btn');
+
     apiSettingsSaveBtn = document.getElementById('api-settings-save-btn');
+
     apiSettingsCancelBtn = document.getElementById('api-settings-cancel-btn');
-}
+
+
+
+    // Attach event listeners for the modal
+
+    verifyApiKeyBtn.addEventListener('click', handleVerifyApiKey);
+
+    apiSettingsSaveBtn.addEventListener('click', () => saveApiSettings(true));
+
+    apiSettingsCancelBtn.addEventListener('click', closeApiSettingsModal);
+
+    resetTokenUsageBtn.addEventListener('click', resetTokenUsage);
+
+    apiSettingsModalOverlay.addEventListener('click', (e) => { if(e.target === apiSettingsModalOverlay) closeApiSettingsModal(); });
 
 }
 
@@ -811,7 +876,7 @@ function openApiSettingsModal() {
 
     populateModelSelector(userApiSettings.availableModels, userApiSettings.provider, userApiSettings.selectedModel);
 
-    if (userApiSettings.apiKey) {
+    if (userApiSettings.apiKey && userApiSettings.provider) {
 
          apiKeyStatus.textContent = `✅ [${userApiSettings.provider}] 키가 활성화되어 있습니다.`;
 
@@ -827,7 +892,7 @@ function openApiSettingsModal() {
 
     renderTokenUsage();
 
-    apiSettingsModalOverlay.style.display = 'flex';
+    if (apiSettingsModalOverlay) apiSettingsModalOverlay.style.display = 'flex';
 
 }
 
@@ -835,7 +900,7 @@ function openApiSettingsModal() {
 
 function closeApiSettingsModal() {
 
-    apiSettingsModalOverlay.style.display = 'none';
+    if (apiSettingsModalOverlay) apiSettingsModalOverlay.style.display = 'none';
 
     loadApiSettings(); 
 
@@ -869,7 +934,7 @@ function saveApiSettings(closeModal = true) {
 
     const { userApiSettings } = stateManager.getState();
 
-    let newSettings = { ...userApiSettings };
+    let newSettings = JSON.parse(JSON.stringify(userApiSettings)); // Deep copy
 
     const key = apiKeyInput.value.trim();
 
@@ -878,6 +943,8 @@ function saveApiSettings(closeModal = true) {
     if (key) {
 
         newSettings.apiKey = key;
+
+        newSettings.provider = detectProvider(key);
 
         newSettings.selectedModel = apiModelSelect.value;
 
@@ -908,61 +975,18 @@ function saveApiSettings(closeModal = true) {
 
 
 function detectProvider(key) {
+
     if (key.startsWith('sk-ant-api')) return 'anthropic';
+
     if (key.startsWith('sk-')) return 'openai';
+
     if (key.length > 35 && key.startsWith('AIza')) return 'google_paid';
+
     return null;
+
 }
 
-async function handleVerifyApiKey() {
-    const key = apiKeyInput.value.trim();
-    if (!key) { apiKeyStatus.textContent = 'API 키를 입력해주세요.'; apiKeyStatus.className = 'status-error'; return; }
-    const provider = detectProvider(key);
-    if (!provider) { apiKeyStatus.textContent = '알 수 없는 형식의 API 키입니다. (OpenAI, Anthropic, Google 지원)'; apiKeyStatus.className = 'status-error'; return; }
-    userApiSettings.provider = provider;
-    apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`; apiKeyStatus.className = 'status-loading'; verifyApiKeyBtn.disabled = true;
-    try {
-        const models = await fetchAvailableModels(provider, key);
-        populateModelSelector(models, provider);
-        apiKeyStatus.textContent = `✅ [${provider}] 키 검증 완료! 모델을 선택하고 저장하세요.`; apiKeyStatus.className = 'status-success'; apiModelSelect.disabled = false;
-    } catch (error) {
-        console.error("API Key Verification Error:", error);
-        apiKeyStatus.textContent = `❌ [${provider}] 키 검증 실패: ${error.message}`; apiKeyStatus.className = 'status-error'; apiModelSelect.innerHTML = '<option>키 검증에 실패했습니다</option>'; apiModelSelect.disabled = true;
-    } finally { verifyApiKeyBtn.disabled = false; }
-}
 
-async function fetchAvailableModels(provider, key) {
-    if (provider === 'openai') {
-        const response = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': `Bearer ${key}` } });
-        if (!response.ok) throw new Error('OpenAI 서버에서 모델 목록을 가져올 수 없습니다.');
-        const data = await response.json();
-        return data.data.filter(m => m.id.includes('gpt')).map(m => m.id).sort().reverse();
-    } else if (provider === 'anthropic') {
-        return ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-2.1'];
-    } else if (provider === 'google_paid') {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-        if (!response.ok) throw new Error('Google 서버에서 모델 목록을 가져올 수 없습니다.');
-        const data = await response.json();
-        return data.models.map(m => m.name.replace('models/', '')).filter(m => m.includes('gemini'));
-    }
-    return [];
-}
-
-function populateModelSelector(models, provider, selectedModel = null) {
-    apiModelSelect.innerHTML = '';
-    const effectiveModels = models || [];
-    if (provider && effectiveModels.length === 0) { if (provider === 'anthropic') { effectiveModels.push('claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'); } }
-    if (effectiveModels.length > 0) { effectiveModels.forEach(modelId => { const option = document.createElement('option'); option.value = modelId; option.textContent = modelId; if (modelId === selectedModel) { option.selected = true; } apiModelSelect.appendChild(option); }); apiModelSelect.disabled = false; }
-    else { apiModelSelect.innerHTML = '<option>사용 가능한 모델 없음</option>'; apiModelSelect.disabled = true; }
-}
-
-function renderTokenUsage() {
-    const { prompt, completion } = userApiSettings.tokenUsage;
-    const total = prompt + completion;
-    tokenUsageDisplay.innerHTML = `<span>입력: ${prompt.toLocaleString()}</span> | <span>출력: ${completion.toLocaleString()}</span> | <strong>총합: ${total.toLocaleString()}</strong>`;
-}
-
-function resetTokenUsage() { showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; saveApiSettings(false); renderTokenUsage(); }); }
 
 async function handleVerifyApiKey() {
 
@@ -976,8 +1000,6 @@ async function handleVerifyApiKey() {
 
     
 
-    stateManager.setState({ userApiSettings: { ...stateManager.getState().userApiSettings, provider } });
-
     apiKeyStatus.textContent = `[${provider}] 키 검증 및 모델 목록 로딩 중...`; apiKeyStatus.className = 'status-loading'; verifyApiKeyBtn.disabled = true;
 
     try {
@@ -1000,11 +1022,61 @@ async function handleVerifyApiKey() {
 
 
 
+async function fetchAvailableModels(provider, key) {
+
+    if (provider === 'openai') {
+
+        const response = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': `Bearer ${key}` } });
+
+        if (!response.ok) throw new Error('OpenAI 서버에서 모델 목록을 가져올 수 없습니다.');
+
+        const data = await response.json();
+
+        return data.data.filter(m => m.id.includes('gpt')).map(m => m.id).sort().reverse();
+
+    } else if (provider === 'anthropic') {
+
+        return ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-2.1'];
+
+    } else if (provider === 'google_paid') {
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+
+        if (!response.ok) throw new Error('Google 서버에서 모델 목록을 가져올 수 없습니다.');
+
+        const data = await response.json();
+
+        return data.models.map(m => m.name.replace('models/', '')).filter(m => m.includes('gemini'));
+
+    }
+
+    return [];
+
+}
+
+
+
+function populateModelSelector(models, provider, selectedModel = null) {
+
+    apiModelSelect.innerHTML = '';
+
+    const effectiveModels = models || [];
+
+    if (provider && effectiveModels.length === 0) { if (provider === 'anthropic') { effectiveModels.push('claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'); } }
+
+    if (effectiveModels.length > 0) { effectiveModels.forEach(modelId => { const option = document.createElement('option'); option.value = modelId; option.textContent = modelId; if (modelId === selectedModel) { option.selected = true; } apiModelSelect.appendChild(option); }); apiModelSelect.disabled = false; } 
+
+    else { apiModelSelect.innerHTML = '<option>사용 가능한 모델 없음</option>'; apiModelSelect.disabled = true; }
+
+}
+
+
+
 function renderTokenUsage() {
 
-    const { tokenUsage } = stateManager.getState().userApiSettings;
+    const { userApiSettings } = stateManager.getState();
 
-    const { prompt, completion } = tokenUsage;
+    const { prompt, completion } = userApiSettings.tokenUsage;
 
     const total = prompt + completion;
 
@@ -1361,173 +1433,359 @@ function handleDeleteSession(sessionId) {
 
 /* --- Source: src\04_features_chat\210_chat_engine.js --- */
 /*
+
 --- Ailey & Bailey Canvas ---
+
 File: 210_chat_engine.js
-Version: 1.0 (Bundled)
+
+Version: 1.1 (Refactored & Fixed)
+
 Description: The core engine for chat functionality, including API requests and response parsing.
+
 */
 
+
+
 async function handleChatSend() {
+
     if (!chatInput || chatInput.disabled) return;
+
     const query = chatInput.value.trim();
+
     if (!query) return;
 
+
+
     chatInput.value = '';
+
     chatInput.style.height = 'auto';
+
     chatInput.disabled = true;
+
     chatInput.placeholder = "AI가 응답하는 중..."
+
     chatSendBtn.disabled = true;
 
+
+
+    const { chatSessionsCollectionRef, localChatSessionsCache, selectedMode } = stateManager.getState();
+
+    let { currentSessionId } = stateManager.getState();
+
+
+
     const userMessage = { role: 'user', content: query, timestamp: new Date() };
+
     const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
+
     let sessionRef;
-    let currentMessages = [];
+
     let isNewSession = false;
 
+
+
     if (!currentSessionId) {
+
         isNewSession = true;
+
         const activeProject = document.querySelector('.project-header.active-drop-target');
+
         const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
 
+
+
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
+
         if (chatMessages) chatMessages.style.display = 'flex';
+
         
-        currentMessages = [userMessage, loadingMessage];
-        renderChatMessages({ messages: currentMessages });
+
+        renderChatMessages({ messages: [userMessage, loadingMessage] });
+
         
+
         const newSessionData = {
+
             title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
+
             messages: [userMessage],
+
             mode: selectedMode,
+
             projectId: newSessionProjectId,
+
             isPinned: false,
+
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
         };
+
         sessionRef = await chatSessionsCollectionRef.add(newSessionData);
-        currentSessionId = sessionRef.id;
+
+        stateManager.setState({ currentSessionId: sessionRef.id });
+
+
 
     } else {
+
         sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
+
         const currentSessionData = localChatSessionsCache.find(s => s.id === currentSessionId);
+
         
-        currentMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
-        renderChatMessages({ messages: currentMessages });
+
+        renderChatMessages({ messages: [...(currentSessionData.messages || []), userMessage, loadingMessage] });
+
         
+
         await sessionRef.update({
+
             messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
+
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
         });
+
     }
+
     
+
     const startTime = performance.now();
+
     try {
+
         let aiRes, usageData;
-        const historyForApi = isNewSession ? [userMessage] : (localChatSessionsCache.find(s => s.id === currentSessionId)?.messages.slice(-20) || [userMessage]);
+
+        const { userApiSettings, defaultModel } = stateManager.getState();
+
+        currentSessionId = stateManager.getState().currentSessionId; // Re-fetch in case it was just set
+
+        const historyForApi = isNewSession ? [userMessage] : (stateManager.getState().localChatSessionsCache.find(s => s.id === currentSessionId)?.messages.slice(-20) || [userMessage]);
+
+
 
         if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
+
             const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
+
             const res = await fetch(requestDetails.url, requestDetails.options);
+
             if (!res.ok) { 
+
                 const errorBody = await res.text(); 
+
                 throw new Error(`API Error ${res.status}: ${errorBody}`); 
+
             }
+
             const result = await res.json();
+
             const parsed = parseApiResponse(userApiSettings.provider, result);
+
             aiRes = parsed.content;
+
             usageData = parsed.usage;
+
             if (usageData) { 
-                userApiSettings.tokenUsage.prompt += usageData.prompt; 
-                userApiSettings.tokenUsage.completion += usageData.completion; 
-                saveApiSettings(false); 
+
+                const newUsage = {
+
+                    prompt: userApiSettings.tokenUsage.prompt + usageData.prompt,
+
+                    completion: userApiSettings.tokenUsage.completion + usageData.completion
+
+                }
+
+                saveApiSettings(false); // This will save the latest settings from the modal inputs, which is not ideal.
+
+                // A better approach is to just update the state and local storage directly.
+
+                const updatedSettings = { ...userApiSettings, tokenUsage: newUsage };
+
+                stateManager.setState({ userApiSettings: updatedSettings });
+
+                localStorage.setItem('userApiSettings', JSON.stringify(updatedSettings));
+
                 renderTokenUsage(); 
+
             }
+
         } else {
+
             let promptWithReasoning;
+
             const lastUserMessage = historyForApi[historyForApi.length - 1].content;
+
             promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
+
             
+
             const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
+
             const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
+
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
+
                 method: 'POST',
+
                 headers: { 'Content-Type': 'application/json' },
+
                 body: JSON.stringify({ contents: apiMessages })
+
             });
+
             if (!res.ok) throw new Error(`Google API Error ${res.status}`);
+
             const result = await res.json();
+
             aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
+
         }
+
         
+
         const endTime = performance.now();
+
         const duration = ((endTime - startTime) / 1000).toFixed(2);
+
         const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
+
         
+
         await sessionRef.update({
+
             messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
+
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+
         });
+
+
 
     } catch (e) {
+
         console.error("Chat send error:", e);
+
         const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
+
         await sessionRef.update({ 
+
             messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
+
         });
+
     } finally {
+
         chatInput.disabled = false;
+
         chatInput.placeholder = "AI 러닝메이트에게 질문하기..."
+
         chatSendBtn.disabled = false;
+
         chatInput.focus();
+
         if (isNewSession) {
-            selectSession(currentSessionId);
+
+            selectSession(stateManager.getState().currentSessionId);
+
         }
+
     }
+
 }
+
+
 
 function buildApiRequest(provider, model, messages, maxTokens) {
+
+    const { userApiSettings } = stateManager.getState();
+
     const history = messages.map(msg => ({
+
         role: msg.role === 'ai' ? 'assistant' : 'user',
+
         content: msg.content
+
     }));
 
+
+
     if (provider === 'openai') {
+
         return {
+
             url: 'https://api.openai.com/v1/chat/completions',
+
             options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userApiSettings.apiKey}` }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
+
         };
+
     } else if (provider === 'anthropic') {
+
          return {
+
             url: 'https://api.anthropic.com/v1/messages',
+
             options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': userApiSettings.apiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
+
         };
+
     } else if (provider === 'google_paid') {
+
         const googleHistory = messages.map(msg => ({
+
             role: msg.role === 'ai' ? 'model' : 'user',
+
             parts: [{ text: msg.content }]
+
         }));
+
         return {
+
             url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userApiSettings.apiKey}`,
+
             options: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: googleHistory, generationConfig: { maxOutputTokens: Number(maxTokens) || 2048 } }) }
+
         };
+
     }
+
     throw new Error(`Unsupported provider: ${provider}`);
+
 }
 
+
+
 function parseApiResponse(provider, result) {
+
     try {
+
         if (provider === 'openai') {
+
             return { content: result.choices[0].message.content, usage: { prompt: result.usage.prompt_tokens, completion: result.usage.completion_tokens } };
+
         } else if (provider === 'anthropic') {
+
             return { content: result.content[0].text, usage: { prompt: result.usage.input_tokens, completion: result.usage.output_tokens } };
+
         } else if (provider === 'google_paid') {
+
             return { content: result.candidates[0].content.parts[0].text, usage: null };
+
         }
+
     } catch (error) {
+
         console.error(`Error parsing ${provider} response:`, error, result);
+
         return { content: 'API 응답을 파싱하는 중 오류가 발생했습니다.', usage: null };
+
     }
+
     return { content: '알 수 없는 제공사입니다.', usage: null };
+
 }
 
 /* --- Source: src\04_features_chat\220_chat_ui.js --- */
@@ -1770,6 +2028,7 @@ function renderSidebarContent() {
     sessionListContainer.innerHTML = ''; 
     const fragment = document.createDocumentFragment();
 
+    const { localProjectsCache, localChatSessionsCache } = stateManager.getState();
     const projectsToDisplay = localProjectsCache
         .filter(p => searchTerm ? p.name?.toLowerCase().includes(searchTerm) || localChatSessionsCache.some(s => s.projectId === p.id && (s.title || '').toLowerCase().includes(searchTerm)) : true)
         .sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
@@ -1998,6 +2257,7 @@ function updateChatHeaderModelSelector() {
     ];
     aiModelSelector.innerHTML = '';
 
+    const { userApiSettings, defaultModel } = stateManager.getState();
     if (userApiSettings.provider && userApiSettings.apiKey) {
         const models_to_show = userApiSettings.availableModels || [];
         if(models_to_show.length === 0 && userApiSettings.selectedModel) {
