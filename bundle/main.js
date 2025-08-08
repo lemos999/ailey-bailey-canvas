@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T07:06:02.528Z */
+/* Auto-generated bundle from 2025-08-08T07:15:12.305Z */
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
 /*
@@ -303,7 +303,7 @@ function updateClock() {
 }
 
 function setupSystemInfoWidget() { 
-    if (!systemInfoWidget || !currentUser) return; 
+    const { currentUser } = stateManager.getState(); if (!systemInfoWidget || !currentUser) return; 
     const canvasIdDisplay = document.getElementById('canvas-id-display'); 
     if (canvasIdDisplay) { 
         canvasIdDisplay.textContent = canvasId.substring(0, 8) + '...'; 
@@ -463,7 +463,7 @@ function handlePopoverAddNote() {
 }
 
 function openPromptModal() { 
-    if (customPromptInput) customPromptInput.value = customPrompt; 
+    if (customPromptInput) customPromptInput.value = stateManager.getState().customPrompt; 
     if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; 
 }
 
@@ -473,8 +473,8 @@ function closePromptModal() {
 
 function saveCustomPrompt() { 
     if (customPromptInput) { 
-        customPrompt = customPromptInput.value; 
-        localStorage.setItem('customTutorPrompt', customPrompt); 
+        stateManager.setState({ customPrompt: customPromptInput.value }); 
+        localStorage.setItem('customTutorPrompt', stateManager.getState().customPrompt); 
         closePromptModal(); 
     } 
 }
@@ -519,8 +519,8 @@ async function startQuiz() {
     quizModalOverlay.style.display = 'flex'; 
     try { 
         const res = await new Promise(r => setTimeout(() => r(JSON.stringify({ "questions": [{"q":"(e.g)...","o":["..."],"a":"..."}]})), 500)); 
-        currentQuizData = JSON.parse(res); 
-        renderQuiz(currentQuizData); 
+        stateManager.setState({ currentQuizData: JSON.parse(res) }); 
+        renderQuiz(stateManager.getState().currentQuizData); 
     } catch (e) { 
         if(quizContainer) quizContainer.innerHTML = '퀴즈 생성 실패.'; 
     } 
@@ -1943,8 +1943,8 @@ function renderMathInElement(element) {
 
 function startSummaryAnimation(blockElement, reasoningSteps) {
     const blockId = blockElement.id;
-    clearTimers(blockId);
-    activeTimers[blockId] = [];
+    const { activeTimers } = stateManager.getState(); clearTimers(blockId, activeTimers);
+    const newActiveTimers = { ...stateManager.getState().activeTimers }; newActiveTimers[blockId] = []; stateManager.setState({ activeTimers: newActiveTimers });
 
     const summaryElement = blockElement.querySelector('.reasoning-summary');
     if (!summaryElement || !reasoningSteps || reasoningSteps.length === 0) return;
@@ -1965,18 +1965,18 @@ function startSummaryAnimation(blockElement, reasoningSteps) {
                     stepIndex = (stepIndex + 1) % reasoningSteps.length;
                     summaryElement.style.opacity = '1';
                 }, 500);
-                if (!activeTimers[blockId]) activeTimers[blockId] = [];
-                activeTimers[blockId].push(fadeTimer);
+                
+                stateManager.getState().activeTimers[blockId].push(fadeTimer);
             }, 2000);
-            if (!activeTimers[blockId]) activeTimers[blockId] = [];
-            activeTimers[blockId].push(waitTimer);
+            
+            stateManager.getState().activeTimers[blockId].push(waitTimer);
         });
     };
     
     cycleSummary();
     const summaryInterval = setInterval(cycleSummary, 4500);
-    if (!activeTimers[blockId]) activeTimers[blockId] = [];
-    activeTimers[blockId].push(summaryInterval);
+    
+    stateManager.getState().activeTimers[blockId].push(summaryInterval);
     
     blockElement.addEventListener('toggle', () => { isCycling = false; }, { once: true });
 }
@@ -2011,11 +2011,11 @@ function typewriterEffect(element, text, onComplete) {
     element.typingInterval = typingInterval;
 
     if (blockId && activeTimers[blockId]) {
-        activeTimers[blockId].push(typingInterval);
+        stateManager.getState().activeTimers[blockId].push(typingInterval);
     }
 }
 
-function clearTimers(blockId) {
+function clearTimers(blockId, activeTimers) {
     if (activeTimers[blockId]) {
         activeTimers[blockId].forEach(clearInterval);
         delete activeTimers[blockId];
@@ -2029,7 +2029,7 @@ function renderSidebarContent() {
     const fragment = document.createDocumentFragment();
 
     const { localProjectsCache, localChatSessionsCache } = stateManager.getState();
-    const projectsToDisplay = localProjectsCache
+    const { localProjectsCache, localChatSessionsCache } = stateManager.getState(); const projectsToDisplay = localProjectsCache
         .filter(p => searchTerm ? p.name?.toLowerCase().includes(searchTerm) || localChatSessionsCache.some(s => s.projectId === p.id && (s.title || '').toLowerCase().includes(searchTerm)) : true)
         .sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
 
@@ -2123,7 +2123,7 @@ function createSessionItem(session) {
     item.className = 'session-item';
     item.dataset.sessionId = session.id;
     item.draggable = true;
-    if (session.id === currentSessionId) item.classList.add('active');
+    if (session.id === stateManager.getState().currentSessionId) item.classList.add('active');
     
     const createdAt = session.createdAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || '정보 없음';
     const updatedAt = session.updatedAt?.toDate()?.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) || createdAt;
@@ -2414,8 +2414,8 @@ function getNewProjectDefaultName() {
 
 function toggleProjectExpansion(projectId) {
     const project = localProjectsCache.find(p => p.id === projectId);
-    if (project) {
-        project.isExpanded = !project.isExpanded;
+    const { localProjectsCache } = stateManager.getState(); const project = localProjectsCache.find(p => p.id === projectId); if (project) {
+        stateManager.setState({ localProjectsCache: stateManager.getState().localProjectsCache.map(p => p.id === projectId ? {...p, isExpanded: !p.isExpanded} : p) });
         renderSidebarContent();
     }
 }
@@ -2492,11 +2492,11 @@ function startSessionRename(sessionId) {
 function selectSession(sessionId) {
     removeContextMenu();
     if (!sessionId) return;
-    const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
+    const { localChatSessionsCache } = stateManager.getState(); const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
     if (!sessionData) return;
 
-    currentSessionId = sessionId;
-    Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
+    stateManager.setState({ currentSessionId: sessionId });
+    const { activeTimers } = stateManager.getState(); Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
 
     renderSidebarContent();
     if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
@@ -2514,7 +2514,7 @@ function selectSession(sessionId) {
 }
 
 function handleNewChat() { 
-    currentSessionId = null; 
+    stateManager.setState({ currentSessionId: null }); 
     Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
     renderSidebarContent();
 
@@ -2551,12 +2551,12 @@ function setupChatModeSelector() {
         const b = document.createElement('button'); 
         b.dataset.mode = m.id; 
         b.innerHTML = `${m.i}<span>${m.t}</span>`; 
-        if (m.id === selectedMode) b.classList.add('active'); 
+        const { selectedMode } = stateManager.getState(); if (m.id === selectedMode) b.classList.add('active'); 
         b.addEventListener('click', () => { 
-            selectedMode = m.id; 
+            stateManager.setState({ selectedMode: m.id }); 
             chatModeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); 
             b.classList.add('active'); 
-            if (selectedMode === 'custom') openPromptModal();
+            if (stateManager.getState().selectedMode === 'custom') openPromptModal();
         }); 
         chatModeSelector.appendChild(b); 
     }); 
@@ -2573,11 +2573,11 @@ Description: Handles all data layer interactions with Firebase Firestore for the
 // --- Notes Data Listeners (moved from firebase.js) ---
 function listenToNotes() { 
     return new Promise(resolve => { 
-        if (!notesCollectionRef) return resolve(); 
-        if (unsubscribeFromNotes) unsubscribeFromNotes(); 
+        const { notesCollectionRef } = stateManager.getState(); if (!notesCollectionRef) return resolve(); 
+        let { unsubscribeFromNotes } = stateManager.getState(); if (unsubscribeFromNotes) unsubscribeFromNotes(); 
         unsubscribeFromNotes = notesCollectionRef.onSnapshot(s => { 
-            localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); 
-            if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList(); 
+            const localNotesCache = s.docs.map(d => ({ id: d.id, ...d.data() })); 
+            stateManager.setState({ localNotesCache });('notes-app-panel')?.style.display === 'flex') renderNoteList(); 
             resolve(); 
         }, e => { console.error("노트 수신 오류:", e); resolve(); }); 
     }); 
@@ -2593,7 +2593,7 @@ function listenToNoteProjects() {
                 id: doc.id,
                 isExpanded: oldCache.find(p => p.id === doc.id)?.isExpanded ?? true, ...doc.data()
             }));
-            if (document.getElementById('notes-app-panel')?.style.display === 'flex') renderNoteList();
+            stateManager.setState({ localNotesCache }); // No direct UI update here('notes-app-panel')?.style.display === 'flex') renderNoteList();
             if (newlyCreatedNoteProjectId) {
                 const newProjectElement = document.querySelector(`.note-project-container[data-project-id="${newlyCreatedNoteProjectId}"]`);
                 if (newProjectElement) { startNoteProjectRename(newlyCreatedNoteProjectId); newlyCreatedNoteProjectId = null; }
@@ -2627,7 +2627,7 @@ function listenToNoteTemplates() {
 
 // --- Notes Data Management Functions ---
 async function addNote(content = '') {
-    if (!notesCollectionRef) return null;
+    const { notesCollectionRef } = stateManager.getState(); if (!notesCollectionRef) return null;
     try {
         const activeProject = document.querySelector('.note-project-header.active-drop-target');
         const projectId = activeProject ? activeProject.closest('.note-project-container').dataset.projectId : null;
@@ -2655,7 +2655,7 @@ function deleteNote(noteId) {
                 console.error("메모 삭제 실패:", e);
                 alert("메모 삭제에 실패했습니다.");
             });
-            if (currentNoteId === noteId) {
+            if (stateManager.getState().currentNoteId === noteId) {
                 switchView('list');
             }
         }
@@ -2676,7 +2676,7 @@ async function renameNote(noteId, newTitle) {
 }
 
 async function togglePin(noteId) {
-    if (!notesCollectionRef) return;
+    const { notesCollectionRef } = stateManager.getState(); if (!notesCollectionRef) return;
     const note = localNotesCache.find(n => n.id === noteId);
     if (note) {
         try {
