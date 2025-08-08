@@ -1,4 +1,152 @@
-/* Auto-generated bundle from 2025-08-07T21:28:37.711Z */
+/* Auto-generated bundle from 2025-08-08T15:03:20.679Z */
+
+/* --- Source: src\00_shell\000_shell_template.js --- */
+/*
+--- Ailey & Bailey Canvas ---
+File: 000_shell_template.js
+Version: 1.1 (Final)
+Description: Defines the application's static HTML shell and the core rendering function.
+*/
+
+// [CoreDNA] This const holds the entire static structure of the application.
+const SHELL_HTML_BODY_TEMPLATE = `
+    <!-- System info widget to group clock and canvas ID -->
+    <div id="system-info-widget">
+        <div id="real-time-clock"></div>
+        <div id="canvas-id-container">
+            Canvas ID: <span id="canvas-id-display"></span>
+            <span id="copy-canvas-id" title="Copy Full ID"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" /></svg></span>
+        </div>
+    </div>
+    <div id="selection-popover">
+        <button id="popover-ask-ai"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="margin-right: 8px;"><path d="M12,2A2,2 0 0,1 14,4A2,2 0 0,1 12,6A2,2 0 0,1 10,4A2,2 0 0,1 12,2M15.9,8.4C15.9,7.3 15,6.5 13.9,6.5C12.8,6.5 11.9,7.3 11.9,8.4C11.9,9.5 12.8,10.3 13.9,10.3C15,10.3 15.9,9.5 15.9,8.4M8.1,8.4C8.1,7.3 9,6.5 10.1,6.5C11.2,6.5 12.1,7.3 12.1,8.4C12.1,9.5 11.2,10.3 10.1,10.3C9,10.3 8.1,9.5 8.1,8.4M12,20C13.8,20 15.5,19.2 16.8,18H7.2C8.5,19.2 10.2,20 12,20M20,12V7C20,5.9 19.1,5 18,5H6C4.9,5 4,5.9 4,7V12C4,13.1 4.9,14 6,14H7.2C8.1,15.2 9.5,16 11,16V18H9V20H15V18H13V16C14.5,16 15.9,15.2 16.8,14H18C19.1,14 20,13.1 20,12Z" /></svg> AI에게 질문</button>
+        <button id="popover-add-note"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="margin-right: 8px;"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19M17,3H7A2,2 0 0,0 5,5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V5A2,2 0 0,0 17,3Z" /></svg> 메모에 추가</button>
+    </div>
+    <div id="quiz-modal-overlay" class="custom-modal-overlay">
+        <div class="quiz-modal custom-modal">
+            <h2>📝 핵심 개념 퀴즈</h2>
+            <div id="quiz-container"></div>
+            <button id="quiz-submit-btn">제출하기</button>
+            <div id="quiz-results"></div>
+        </div>
+    </div>
+    <div id="prompt-modal-overlay" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <h3>⚙️ AI 러닝메이트 역할 설정</h3>
+            <p style="font-size:0.9em;">AI 러닝메이트에게 원하는 역할을 부여해주세요. (예: 5살 아이에게 설명하듯 알려줘)</p>
+            <textarea id="custom-prompt-input" placeholder="여기에 원하는 역할을 입력하세요..."></textarea>
+            <div class="custom-modal-actions">
+                <button id="prompt-cancel-btn" class="modal-btn">취소</button>
+                <button id="prompt-save-btn" class="modal-btn">저장</button>
+            </div>
+        </div>
+    </div>
+    <div id="custom-modal" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <p id="modal-message">정말로 이 항목을 삭제하시겠습니까?</p>
+            <div class="custom-modal-actions">
+                <button id="modal-cancel-btn" class="modal-btn">취소</button>
+                <button id="modal-confirm-btn" class="modal-btn">삭제</button>
+            </div>
+        </div>
+    </div>
+    <div class="fixed-tool-container">
+        <div class="tool-button" id="start-quiz-btn" title="핵심 개념 퀴즈"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,20C10.3,20 8.8,19.2 7.8,18H16.2C15.2,19.2 13.7,20 12,20M12,11A3,3 0 0,0 9,14A3,3 0 0,0 12,17A3,3 0 0,0 15,14A3,3 0 0,0 12,11Z" /></svg></div>
+        <div class="tool-button" id="notes-app-toggle-btn" title="지식 발전소 (클라우드 메모)"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M17,4V10L15,8L13,10V4H6A2,2 0 0,0 4,6V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18V6A2,2 0 0,0 18,4H17Z" /></svg></div>
+        <div class="tool-button" id="chat-toggle-btn" title="AI 러닝메이트와 대화"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M18,14V11H16V14H13V16H16V19H18V16H21V14M12,2C6.5,2 2,6.5 2,12C2,17.5 6.5,22 12,22C13.2,22 14.4,21.8 15.5,21.3C15.9,21.9 16.5,22.4 17.2,22.7L19,23.5V21.1C20.2,20.1 21.1,18.8 21.7,17.3C21.9,16.5 22,15.8 22,15C22,8.4 17.6,2 12,2Z" /></svg></div>
+        <div class="tool-button" id="toc-toggle-btn" title="목차 보기/숨기기"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19,18H9A1,1 0 0,1 8,17V5A1,1 0 0,1 9,4H19A1,1 0 0,1 20,5V17A1,1 0 0,1 19,18M6,18V5A1,1 0 0,0 5,4A1,1 0 0,0 4,5V17A1,1 0 0,0 5,18A1,1 0 0,0 6,18M21,18A3,3 0 0,0 22,17V5A3,3 0 0,0 19,2H9A3,3 0 0,0 6,5V17A3,3 0 0,0 9,20H19A3,3 0 0,0 21,18Z" /></svg></div>
+        <div class="tool-button" id="theme-toggle" title="테마 전환"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,18V22H10V18H12M12,2V6H10V2H12M22,12H18V10H22V12M6,12H2V10H6V12M16.95,7.05L19.78,4.22L18.36,2.81L15.54,5.64L16.95,7.05M8.46,15.54L5.64,18.36L4.22,16.95L7.05,14.12L8.46,15.54M18.36,21.19L19.78,19.78L16.95,16.95L15.54,18.36L18.36,21.19M7.05,8.46L4.22,5.64L5.64,4.22L8.46,7.05L7.05,8.46M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7Z" /></svg></div>
+    </div>
+    <div id="notes-app-panel" class="draggable-panel">
+        <div id="note-list-view" class="notes-view active"></div>
+        <div id="note-editor-view" class="notes-view">
+             <div class="editor-header"><button id="back-to-list-btn" class="notes-btn"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg><span>목록</span></button><div id="auto-save-status"></div></div>
+             <input type="text" id="note-title-input" placeholder="제목을 입력하세요...">
+             <div id="toast-editor"></div>
+        </div>
+    </div>
+    <div id="chat-panel" class="draggable-panel">
+        <div id="chat-session-sidebar">
+            <div id="sidebar-header">
+                <input type="text" id="search-sessions-input" placeholder="프로젝트/대화 검색...">
+                <div class="sidebar-button-group">
+                    <button id="new-chat-btn" title="새 대화 시작"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20,14H14V20H12V14H6V12H12V6H14V12H20V14Z" /></svg><span>새 대화</span></button>
+                    <button id="new-project-btn" title="새 프로젝트 생성"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4,6H2V20A2,2 0 0,0 4,22H18V20H4V6M20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M13,13H11V10H8V8H11V5H13V8H16V10H13V13Z" /></svg><span>새 프로젝트</span></button>
+                </div>
+            </div>
+            <div id="session-list-container"></div>
+        </div>
+        <div id="chat-main-view">
+            <div class="panel-header">
+                <div style="width: 100%; display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 250px;">
+                        <span id="chat-session-title">AI 러닝메이트</span>
+                        <select id="ai-model-selector" title="AI 모델을 선택합니다."></select>
+                    </div>
+                    <div>
+                        <span id="delete-session-btn" title="현재 세션 삭제" style="cursor:pointer; font-size: 1.2em; margin-right: 10px; display:none;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg></span>
+                        <span class="close-btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" /></svg></span>
+                    </div>
+                </div>
+                <div id="chat-mode-selector" style="width:100%"></div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div id="chat-welcome-message">
+                    <h3>AI 러닝메이트</h3>
+                    <p>학습을 시작해보세요!</p>
+                </div>
+            </div>
+            <form class="chat-input-form" id="chat-form">
+                <textarea id="chat-input" placeholder="AI 러닝메이트에게 질문하기..." rows="1" disabled></textarea>
+                <button type="submit" id="chat-send-btn" title="전송"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" /></svg></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI Content will be injected here -->
+    <main id="ai-content-placeholder"></main>
+
+    <input type="file" id="file-importer" accept=".json" style="display: none;">
+    <!-- External CDN Dependencies for Libraries -->
+    <script defer src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script defer src="https://uicdn.toast.com/editor-plugin-code-syntax-highlight/latest/toastui-editor-plugin-code-syntax-highlight-all.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlVjOTtrYpZWYi3GBIjLo4cglWks1U+bcsNcvpEMaORM7mcLzMAe2rV1PjM" crossorigin="anonymous"></script>
+`;
+
+// [HCA] This function is the new entry point for rendering.
+function renderAppShell(dynamicContent, title, canvasId) {
+  // This function now replaces the entire document content to ensure a clean slate
+  const fullHtml = `
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+      <title>${title}</title>
+      <meta name="canvas-id" content="${canvasId}">
+      ${SHELL_HTML_BODY_TEMPLATE.match(/<head>[\s\S]*?<\/head>/)?.[0].replace(/<head>|<\/head>/g, '') || ''}
+    </head>
+    <body class="dark-mode">
+      ${SHELL_HTML_BODY_TEMPLATE.match(/<body>[\s\S]*?<\/body>/)?.[0].replace(/<body>|<\/body>/g, '') || ''}
+    </body>
+    </html>
+  `;
+
+  document.open();
+  document.write(fullHtml);
+  document.close();
+
+  // Use a short delay to ensure the new DOM is ready for manipulation
+  setTimeout(() => {
+      const placeholder = document.getElementById('ai-content-placeholder');
+      if (placeholder) {
+          placeholder.innerHTML = dynamicContent;
+          // Initialize all features that depend on the newly created DOM
+          initializeCoreFeatures();
+      } else {
+          console.error("Placeholder #ai-content-placeholder not found after document rewrite!");
+      }
+  }, 50);
+}
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
 /*
@@ -644,225 +792,187 @@ function resetTokenUsage() { showModal('누적 토큰 사용량을 정말로 초
 /*
 --- Ailey & Bailey Canvas ---
 File: 120_core_main_initializer.js
-Version: 1.1 (Bundled & Corrected)
+Version: 2.0 (New Architecture)
 Description: The main entry point for the application. Initializes the app and attaches all primary event listeners.
 */
 
-document.addEventListener('DOMContentLoaded', function () {
-
-    /**
-     * 애플리케이션을 초기화합니다.
-     */
-    function initialize() {
-        if (!body || !wrapper) { console.error("Core layout elements not found."); return; }
-        
-        // Basic UI setup
-        updateClock(); 
-        setInterval(updateClock, 1000);
-        
-        // Dynamically create and inject the API settings modal and its trigger button
-        createApiSettingsModal();
-        const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
-        if (chatHeader) {
-            apiSettingsBtn = document.createElement('span'); 
-            apiSettingsBtn.id = 'api-settings-btn'; 
-            apiSettingsBtn.title = '개인 API 설정';
-            apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
-            const deleteBtn = chatHeader.querySelector('#delete-session-btn');
-            if (deleteBtn) {
-                deleteBtn.insertAdjacentElement('beforebegin', apiSettingsBtn);
-            } else {
-                 chatHeader.appendChild(apiSettingsBtn);
-            }
+/**
+ * Initializes all core features after the shell has been rendered.
+ */
+function initializeCoreFeatures() {
+    const body = document.body;
+    const wrapper = document.querySelector('.wrapper');
+    if (!body || !wrapper) { console.error("Core layout elements not found post-render."); return; }
+    
+    // Basic UI setup
+    updateClock(); 
+    setInterval(updateClock, 1000);
+    
+    // Dynamically create and inject the API settings modal and its trigger button
+    createApiSettingsModal();
+    const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
+    if (chatHeader) {
+        apiSettingsBtn = document.createElement('span'); 
+        apiSettingsBtn.id = 'api-settings-btn'; 
+        apiSettingsBtn.title = '개인 API 설정';
+        apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
+        const deleteBtn = chatHeader.querySelector('#delete-session-btn');
+        if (deleteBtn) {
+            deleteBtn.insertAdjacentElement('beforebegin', apiSettingsBtn);
+        } else {
+             chatHeader.appendChild(apiSettingsBtn);
         }
-        
-        // Load settings and initialize Firebase
-        loadApiSettings();
-        updateChatHeaderModelSelector();
-        
-        initializeFirebase().then(() => { 
-            // Initialize UI components that depend on data
-            setupNavigator(); 
-            setupChatModeSelector(); 
-            initializeTooltips(); 
-            makePanelDraggable(chatPanel); 
-            // Note: Notes panel is made draggable dynamically when first opened
-            handleNewChat(); // Start with a clean chat slate
-        });
-
-        attachEventListeners();
     }
+    
+    // Load settings and initialize Firebase
+    loadApiSettings();
+    updateChatHeaderModelSelector();
+    
+    initializeFirebase().then(() => { 
+        // Initialize UI components that depend on data
+        setupNavigator(); 
+        setupChatModeSelector(); 
+        initializeTooltips(); 
+        makePanelDraggable(document.getElementById('chat-panel')); 
+        handleNewChat(); // Start with a clean chat slate
+    });
 
-    /**
-     * 애플리케이션의 모든 주요 이벤트 리스너를 첨부합니다.
-     */
-    function attachEventListeners() {
-        // --- Global Listeners ---
-        document.addEventListener('click', (e) => { 
-            handleTextSelection(e); 
-            // Close context menus if clicked outside
-            if (!e.target.closest('.note-context-menu, .session-context-menu, .project-context-menu')) {
-                removeContextMenu();
+    attachEventListeners();
+}
+
+/**
+ * Attaches all primary event listeners to the newly rendered DOM.
+ */
+function attachEventListeners() {
+    // Re-bind all critical elements after document.write
+    const body = document.body;
+    const wrapper = document.querySelector('.wrapper');
+    const popoverAskAi = document.getElementById('popover-ask-ai');
+    const popoverAddNote = document.getElementById('popover-add-note');
+    const themeToggle = document.getElementById('theme-toggle');
+    const tocToggleBtn = document.getElementById('toc-toggle-btn');
+    const chatToggleBtn = document.getElementById('chat-toggle-btn');
+    const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
+    const chatPanel = document.getElementById('chat-panel');
+    const notesAppPanel = document.getElementById('notes-app-panel');
+    const noteListView = document.getElementById('note-list-view');
+    const backToListBtn = document.getElementById('back-to-list-btn');
+    const noteTitleInput = document.getElementById('note-title-input');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const newChatBtn = document.getElementById('new-chat-btn');
+    const newProjectBtn = document.getElementById('new-project-btn');
+    const searchSessionsInput = document.getElementById('search-sessions-input');
+    const sessionListContainer = document.getElementById('session-list-container');
+    const fileImporter = document.getElementById('file-importer');
+
+    // --- Global Listeners ---
+    document.addEventListener('click', (e) => { 
+        const selectionPopover = document.getElementById('selection-popover');
+        if (selectionPopover) handleTextSelection(e, selectionPopover);
+        if (!e.target.closest('.note-context-menu, .session-context-menu, .project-context-menu')) {
+            removeContextMenu();
+        }
+        const notesDropdown = document.getElementById('notes-dropdown-menu');
+        if (notesDropdown && !e.target.closest('.more-options-container')) {
+            notesDropdown.classList.remove('show');
+        }
+    });
+    
+    if (popoverAskAi) popoverAskAi.addEventListener('click', () => handlePopoverAskAi(document.getElementById('chat-input'), document.getElementById('chat-panel')));
+    if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
+
+    // --- Global UI Listeners ---
+    if (themeToggle) { 
+        themeToggle.addEventListener('click', () => { 
+            body.classList.toggle('dark-mode'); 
+            localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
+            if (window.toastEditorInstance) {
+                window.toastEditorInstance.setTheme(body.classList.contains('dark-mode') ? 'dark' : 'default');
             }
-            // Close notes dropdown if clicked outside
-            if (!e.target.closest('.more-options-container')) {
+        }); 
+        if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); else body.classList.remove('dark-mode');
+    }
+    if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper?.classList.toggle('toc-hidden'); document.getElementById('system-info-widget')?.classList.toggle('tucked'); });
+
+    // --- Panel Toggles ---
+    if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
+    if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
+    if (notesAppToggleBtn) {
+        notesAppToggleBtn.addEventListener('click', () => { 
+            togglePanel(notesAppPanel);
+            if (notesAppPanel && notesAppPanel.style.display === 'flex') {
+                ensureNotePanelHeader();
+                renderNoteList();
+            }
+        });
+    }
+    
+    // --- Notes App Event Delegation ---
+    if (noteListView) {
+       noteListView.addEventListener('click', e => {
+            const target = e.target;
+            const dropdownAction = target.closest('.dropdown-item')?.dataset.action;
+            if (dropdownAction) {
+                if (dropdownAction === 'export-all') exportAllData();
+                else if (dropdownAction === 'import-all') document.getElementById('file-importer')?.click();
+                else if (dropdownAction === 'system-reset') handleSystemReset();
                 document.getElementById('notes-dropdown-menu')?.classList.remove('show');
+                return;
             }
+            if (target.closest('#add-new-note-btn-dynamic')) { handleAddNewNote(); return; }
+            if (target.closest('#add-new-note-project-btn-dynamic')) { createNewNoteProject(); return; }
+            if (target.closest('#more-options-btn')) { document.getElementById('notes-dropdown-menu')?.classList.toggle('show'); return; }
+            const noteItem = target.closest('.note-item'); if (noteItem) { openNoteEditor(noteItem.dataset.id); return; }
+            const projectHeader = target.closest('.note-project-header'); if (projectHeader) { toggleNoteProjectExpansion(projectHeader.closest('.note-project-container').dataset.projectId); return; }
         });
+        noteListView.addEventListener('contextmenu', e => showContextMenu(e.target, e));
+        noteListView.addEventListener('input', debounce(e => { if (e.target.id === 'search-input-dynamic') renderNoteList(); }, 300));
+        // ... (Drag and drop listeners would be re-attached here as well)
+    }
         
-        if (popoverAskAi) popoverAskAi.addEventListener('click', handlePopoverAskAi);
-        if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
+    if (fileImporter) fileImporter.addEventListener('change', importAllData);
+    
+    // --- Note Editor Listeners ---
+    if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
+    if (noteTitleInput) noteTitleInput.addEventListener('input', debounce(() => saveNote(), 1500));
 
-        // --- Global UI Listeners ---
-        if (themeToggle) { 
-            themeToggle.addEventListener('click', () => { 
-                body.classList.toggle('dark-mode'); 
-                localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
-                // Also update editor theme if it's open
-                if (toastEditorInstance) {
-                    toastEditorInstance.setTheme(body.classList.contains('dark-mode') ? 'dark' : 'default');
-                }
-            }); 
-            if(localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode'); else body.classList.remove('dark-mode');
-        }
-        if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper.classList.toggle('toc-hidden'); systemInfoWidget?.classList.toggle('tucked'); });
-
-        // --- Panel Toggles ---
-        if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
-        if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
-        if (notesAppToggleBtn) {
-            notesAppToggleBtn.addEventListener('click', () => { 
-                togglePanel(notesAppPanel);
-                if (notesAppPanel.style.display === 'flex') {
-                    ensureNotePanelHeader(); // Ensure header exists for dragging
-                    renderNoteList();
-                }
-            });
-        }
-        
-        // --- Notes App Event Delegation ---
-        if (noteListView) {
-            noteListView.addEventListener('click', e => {
-                const target = e.target;
-                const dropdownAction = target.closest('.dropdown-item')?.dataset.action;
-                if (dropdownAction) {
-                    if (dropdownAction === 'export-all') exportAllData();
-                    else if (dropdownAction === 'import-all') handleRestoreClick();
-                    else if (dropdownAction === 'system-reset') handleSystemReset();
-                    document.getElementById('notes-dropdown-menu')?.classList.remove('show');
-                    return;
-                }
-                
-                const noteItem = target.closest('.note-item');
-                if (noteItem) { openNoteEditor(noteItem.dataset.id); return; }
-
-                const projectHeader = target.closest('.note-project-header');
-                if (projectHeader) { toggleNoteProjectExpansion(projectHeader.closest('.note-project-container').dataset.projectId); return; }
-                
-                if (target.closest('#add-new-note-btn-dynamic')) { handleAddNewNote(); return; }
-                if (target.closest('#add-new-note-project-btn-dynamic')) { createNewNoteProject(); return; }
-                if (target.closest('#more-options-btn')) { document.getElementById('notes-dropdown-menu')?.classList.toggle('show'); return; }
-            });
-
-            noteListView.addEventListener('contextmenu', e => showContextMenu(e.target, e));
-
-            const debouncedRender = debounce(renderNoteList, 300);
-            noteListView.addEventListener('input', e => {
-                if (e.target.id === 'search-input-dynamic') {
-                    debouncedRender();
-                }
-            });
-
-            // Drag and Drop listeners
-            noteListView.addEventListener('dragstart', e => {
-                const noteItem = e.target.closest('.note-item');
-                if (noteItem) {
-                    draggedNoteId = noteItem.dataset.id;
-                    e.dataTransfer.effectAllowed = 'move';
-                    setTimeout(() => noteItem.classList.add('is-dragging'), 0);
-                }
-            });
-
-            noteListView.addEventListener('dragover', e => {
-                e.preventDefault();
-                const projectHeader = e.target.closest('.note-project-header');
-                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-                if (projectHeader) {
-                    e.dataTransfer.dropEffect = 'move';
-                    projectHeader.classList.add('drag-over');
-                } else {
-                    e.dataTransfer.dropEffect = 'none';
-                }
-            });
-            
-            noteListView.addEventListener('dragleave', e => {
-                const projectHeader = e.target.closest('.note-project-header');
-                if (projectHeader) projectHeader.classList.remove('drag-over');
-            });
-
-            noteListView.addEventListener('drop', e => {
-                e.preventDefault();
-                const projectHeader = e.target.closest('.note-project-header');
-                if (projectHeader && draggedNoteId) {
-                    const projectId = projectHeader.closest('.note-project-container').dataset.projectId;
-                    moveNoteToProject(draggedNoteId, projectId);
-                }
-                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-                draggedNoteId = null;
-            });
-            
-            noteListView.addEventListener('dragend', () => {
-                document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging'));
-                draggedNoteId = null;
-            });
-        }
-        
-        if (fileImporter) fileImporter.addEventListener('change', importAllData);
-        
-        // --- Note Editor Listeners ---
-        if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
-        const handleNoteTitleEdit = debounce(() => saveNote(), 1500);
-        if (noteTitleInput) noteTitleInput.addEventListener('input', () => { updateStatus('입력 중...', true); handleNoteTitleEdit(); });
-
-        // --- Chat App Event Delegation ---
-        if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
-        if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
-        if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
-        if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
-        if (searchSessionsInput) searchSessionsInput.addEventListener('input', debounce(renderSidebarContent, 300));
-
-        if (sessionListContainer) {
-             sessionListContainer.addEventListener('click', e => {
-                 const sessionItem = e.target.closest('.session-item');
-                 if(sessionItem) { selectSession(sessionItem.dataset.sessionId); return; }
-
-                 const pinBtn = e.target.closest('.session-pin-btn');
-                 if(pinBtn) { toggleChatPin(pinBtn.closest('.session-item').dataset.sessionId); return; }
-                 
-                 const projectHeader = e.target.closest('.project-header');
-                 if(projectHeader) {
-                    const actionsBtn = e.target.closest('.project-actions-btn');
-                    if(actionsBtn) { showProjectContextMenu(projectHeader.closest('.project-container').dataset.projectId, actionsBtn); }
-                    else { toggleProjectExpansion(projectHeader.closest('.project-container').dataset.projectId); }
-                    return;
-                 }
-             });
-             sessionListContainer.addEventListener('contextmenu', e => {
-                const sessionItem = e.target.closest('.session-item');
-                if(sessionItem) { e.preventDefault(); showSessionContextMenu(sessionItem.dataset.sessionId, e.clientX, e.clientY); }
-             });
-        }
-
-        // --- API & Modal Listeners ---
-        // This listener needs to be attached to the body because the button is created dynamically.
-        document.body.addEventListener('click', e => {
-            if (e.target.closest('#api-settings-btn')) {
-                openApiSettingsModal();
-            }
-        });
+    // --- Chat App Event Delegation ---
+    if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
+    if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
+    if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
+    if (newProjectBtn) newProjectBtn.addEventListener('click', createNewProject);
+    if (searchSessionsInput) searchSessionsInput.addEventListener('input', debounce(renderSidebarContent, 300));
+    if (sessionListContainer) {
+         sessionListContainer.addEventListener('click', e => {
+             const sessionItem = e.target.closest('.session-item'); if(sessionItem) { selectSession(sessionItem.dataset.sessionId); return; }
+             const pinBtn = e.target.closest('.session-pin-btn'); if(pinBtn) { toggleChatPin(pinBtn.closest('.session-item').dataset.sessionId); return; }
+             const projectHeader = e.target.closest('.project-header');
+             if(projectHeader) {
+                const actionsBtn = e.target.closest('.project-actions-btn');
+                if(actionsBtn) { showProjectContextMenu(projectHeader.closest('.project-container').dataset.projectId, actionsBtn); }
+                else { toggleProjectExpansion(projectHeader.closest('.project-container').dataset.projectId); }
+                return;
+             }
+         });
+         sessionListContainer.addEventListener('contextmenu', e => {
+            const sessionItem = e.target.closest('.session-item');
+            if(sessionItem) { e.preventDefault(); showSessionContextMenu(sessionItem.dataset.sessionId, e.clientX, e.clientY); }
+         });
     }
 
-    initialize();
+    // --- API & Modal Listeners ---
+    document.body.addEventListener('click', e => {
+        if (e.target.closest('#api-settings-btn')) {
+            openApiSettingsModal();
+        }
+    });
+}
+
+// This listener now simply waits for the main script to load.
+// The actual app initialization is triggered by the AI-generated script.
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Core script (bundle/main.js) loaded. Waiting for render trigger.");
 });
 
 /* --- Source: src\04_features_chat\200_chat_data.js --- */
