@@ -1,14 +1,14 @@
-/* Auto-generated bundle from 2025-08-08T15:03:20.679Z */
+/* Auto-generated bundle from 2025-08-08T15:19:18.366Z */
 
 /* --- Source: src\00_shell\000_shell_template.js --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: 000_shell_template.js
-Version: 1.1 (Final)
-Description: Defines the application's static HTML shell and the core rendering function.
+Version: 1.2 (Hotfix)
+Description: Defines the application's static HTML shell and the core rendering function. (Corrected Logic)
 */
 
-// [CoreDNA] This const holds the entire static structure of the application.
+// [CoreDNA] This const holds the entire static structure of the application's BODY.
 const SHELL_HTML_BODY_TEMPLATE = `
     <!-- System info widget to group clock and canvas ID -->
     <div id="system-info-widget">
@@ -107,45 +107,32 @@ const SHELL_HTML_BODY_TEMPLATE = `
     <main id="ai-content-placeholder"></main>
 
     <input type="file" id="file-importer" accept=".json" style="display: none;">
-    <!-- External CDN Dependencies for Libraries -->
-    <script defer src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script defer src="https://uicdn.toast.com/editor-plugin-code-syntax-highlight/latest/toastui-editor-plugin-code-syntax-highlight-all.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlVjOTtrYpZWYi3GBIjLo4cglWks1U+bcsNcvpEMaORM7mcLzMAe2rV1PjM" crossorigin="anonymous"></script>
+    <!-- External CDN Dependencies are loaded by the loader HTML -->
 `;
 
-// [HCA] This function is the new entry point for rendering.
+// [HCA] This function is the new, corrected entry point for rendering.
 function renderAppShell(dynamicContent, title, canvasId) {
-  // This function now replaces the entire document content to ensure a clean slate
-  const fullHtml = `
-    <!DOCTYPE html>
-    <html lang="ko">
-    <head>
-      <title>${title}</title>
-      <meta name="canvas-id" content="${canvasId}">
-      ${SHELL_HTML_BODY_TEMPLATE.match(/<head>[\s\S]*?<\/head>/)?.[0].replace(/<head>|<\/head>/g, '') || ''}
-    </head>
-    <body class="dark-mode">
-      ${SHELL_HTML_BODY_TEMPLATE.match(/<body>[\s\S]*?<\/body>/)?.[0].replace(/<body>|<\/body>/g, '') || ''}
-    </body>
-    </html>
-  `;
+  // 1. Clear the initial loader message
+  document.body.innerHTML = '';
+  document.body.className = 'dark-mode'; // Ensure theme is consistent
+  if(localStorage.getItem('theme') === 'light') document.body.classList.remove('dark-mode');
 
-  document.open();
-  document.write(fullHtml);
-  document.close();
+  // 2. Set meta information
+  document.title = title;
+  let meta = document.createElement('meta');
+  meta.name = 'canvas-id';
+  meta.content = canvasId;
+  document.head.appendChild(meta);
 
-  // Use a short delay to ensure the new DOM is ready for manipulation
-  setTimeout(() => {
-      const placeholder = document.getElementById('ai-content-placeholder');
-      if (placeholder) {
-          placeholder.innerHTML = dynamicContent;
-          // Initialize all features that depend on the newly created DOM
-          initializeCoreFeatures();
-      } else {
-          console.error("Placeholder #ai-content-placeholder not found after document rewrite!");
-      }
-  }, 50);
+  // 3. Inject the shell and the dynamic content
+  const fullContent = SHELL_HTML_BODY_TEMPLATE.replace(
+      '<main id="ai-content-placeholder"></main>',
+      `<main id="ai-content-placeholder">${dynamicContent}</main>`
+  );
+  document.body.innerHTML = fullContent;
+
+  // 4. Initialize all features on the newly created DOM
+  initializeCoreFeatures();
 }
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
