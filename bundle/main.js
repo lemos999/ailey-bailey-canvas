@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-07T23:33:07.528Z */
+/* Auto-generated bundle from 2025-08-08T06:44:30.344Z */
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
 /*
@@ -360,7 +360,7 @@ Version: 1.0 (Bundled)
 Description: Provides a generic debounce utility function.
 */
 
-export function debounce(func, delay) {
+function debounce(func, delay) {
     let timeout;
     return function(...args) {
         const context = this;
@@ -768,7 +768,7 @@ async function initializeFirebase() {
 
 
 
-export function getRelativeDateGroup(timestamp, isPinned = false) {
+function getRelativeDateGroup(timestamp, isPinned = false) {
 
     if (isPinned) return { key: 0, label: '📌 고정됨' };
 
