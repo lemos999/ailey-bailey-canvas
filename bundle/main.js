@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T18:36:54.625Z */
+/* Auto-generated bundle from 2025-08-08T18:14:18.408Z */
 
 /* --- Vendor: firebase-app-compat.js --- */
 !function(e,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):(e="undefined"!=typeof globalThis?globalThis:e||self).firebase=t()}(this,function(){"use strict";function c(e,t){if(!(t instanceof Object))return t;switch(t.constructor){case Date:const i=t;return new Date(i.getTime());case Object:void 0===e&&(e={});break;case Array:e=[];break;default:return t}for(const r in t)t.hasOwnProperty(r)&&"__proto__"!==r&&(e[r]=c(e[r],t[r]));return e}class n{constructor(){this.reject=()=>{},this.resolve=()=>{},this.promise=new Promise((e,t)=>{this.resolve=e,this.reject=t})}wrapCallback(i){return(e,t)=>{e?this.reject(e):this.resolve(t),"function"==typeof i&&(this.promise.catch(()=>{}),1===i.length?i(e):i(e,t))}}}class a extends Error{constructor(e,t,i){super(t),this.code=e,this.customData=i,this.name="FirebaseError",Object.setPrototypeOf(this,a.prototype),Error.captureStackTrace&&Error.captureStackTrace(this,r.prototype.create)}}class r{constructor(e,t,i){this.service=e,this.serviceName=t,this.errors=i}create(e,...t){var r,i=t[0]||{},n=`${this.service}/${e}`,s=this.errors[e],s=s?(r=i,s.replace(o,(e,t)=>{var i=r[t];return null!=i?String(i):`<${t}?>`})):"Error",s=`${this.serviceName}: ${s} (${n}).`;return new a(n,s,i)}}const o=/\{\$([^}]+)}/g;function l(e,t){return Object.prototype.hasOwnProperty.call(e,t)}function h(e,t){if(e===t)return 1;const i=Object.keys(e),r=Object.keys(t);for(const a of i){if(!r.includes(a))return;var n=e[a],s=t[a];if(p(n)&&p(s)){if(!h(n,s))return}else if(n!==s)return}for(const o of r)if(!i.includes(o))return;return 1}function p(e){return null!==e&&"object"==typeof e}function i(e,t){const i=new s(e,t);return i.subscribe.bind(i)}class s{constructor(e,t){this.observers=[],this.unsubscribes=[],this.observerCount=0,this.task=Promise.resolve(),this.finalized=!1,this.onNoObservers=t,this.task.then(()=>{e(this)}).catch(e=>{this.error(e)})}next(t){this.forEachObserver(e=>{e.next(t)})}error(t){this.forEachObserver(e=>{e.error(t)}),this.close(t)}complete(){this.forEachObserver(e=>{e.complete()}),this.close()}subscribe(e,t,i){let r;if(void 0===e&&void 0===t&&void 0===i)throw new Error("Missing Observer.");r=function(e,t){if("object"!=typeof e||null===e)return!1;for(const i of t)if(i in e&&"function"==typeof e[i])return!0;return!1}(e,["next","error","complete"])?e:{next:e,error:t,complete:i},void 0===r.next&&(r.next=f),void 0===r.error&&(r.error=f),void 0===r.complete&&(r.complete=f);var n=this.unsubscribeOne.bind(this,this.observers.length);return this.finalized&&this.task.then(()=>{try{this.finalError?r.error(this.finalError):r.complete()}catch(e){}}),this.observers.push(r),n}unsubscribeOne(e){void 0!==this.observers&&void 0!==this.observers[e]&&(delete this.observers[e],--this.observerCount,0===this.observerCount&&void 0!==this.onNoObservers&&this.onNoObservers(this))}forEachObserver(t){if(!this.finalized)for(let e=0;e<this.observers.length;e++)this.sendOne(e,t)}sendOne(e,t){this.task.then(()=>{if(void 0!==this.observers&&void 0!==this.observers[e])try{t(this.observers[e])}catch(e){"undefined"!=typeof console&&console.error&&console.error(e)}})}close(e){this.finalized||(this.finalized=!0,void 0!==e&&(this.finalError=e),this.task.then(()=>{this.observers=void 0,this.onNoObservers=void 0}))}}function f(){}class d{constructor(e,t,i){this.name=e,this.instanceFactory=t,this.type=i,this.multipleInstances=!1,this.serviceProps={},this.instantiationMode="LAZY",this.onInstanceCreated=null}setInstantiationMode(e){return this.instantiationMode=e,this}setMultipleInstances(e){return this.multipleInstances=e,this}setServiceProps(e){return this.serviceProps=e,this}setInstanceCreatedCallback(e){return this.onInstanceCreated=e,this}}const u="[DEFAULT]";class m{constructor(e,t){this.name=e,this.container=t,this.component=null,this.instances=new Map,this.instancesDeferred=new Map,this.instancesOptions=new Map,this.onInitCallbacks=new Map}get(e){var t=this.normalizeInstanceIdentifier(e);if(!this.instancesDeferred.has(t)){const r=new n;if(this.instancesDeferred.set(t,r),this.isInitialized(t)||this.shouldAutoInitialize())try{var i=this.getOrInitializeService({instanceIdentifier:t});i&&r.resolve(i)}catch(e){}}return this.instancesDeferred.get(t).promise}getImmediate(e){var t=this.normalizeInstanceIdentifier(null==e?void 0:e.identifier),i=null!==(i=null==e?void 0:e.optional)&&void 0!==i&&i;if(!this.isInitialized(t)&&!this.shouldAutoInitialize()){if(i)return null;throw Error(`Service ${this.name} is not available`)}try{return this.getOrInitializeService({instanceIdentifier:t})}catch(e){if(i)return null;throw e}}getComponent(){return this.component}setComponent(e){if(e.name!==this.name)throw Error(`Mismatching Component ${e.name} for Provider ${this.name}.`);if(this.component)throw Error(`Component for ${this.name} has already been provided`);if(this.component=e,this.shouldAutoInitialize()){if("EAGER"===e.instantiationMode)try{this.getOrInitializeService({instanceIdentifier:u})}catch(e){}for(var[t,i]of this.instancesDeferred.entries()){t=this.normalizeInstanceIdentifier(t);try{var r=this.getOrInitializeService({instanceIdentifier:t});i.resolve(r)}catch(e){}}}}clearInstance(e=u){this.instancesDeferred.delete(e),this.instancesOptions.delete(e),this.instances.delete(e)}async delete(){const e=Array.from(this.instances.values());await Promise.all([...e.filter(e=>"INTERNAL"in e).map(e=>e.INTERNAL.delete()),...e.filter(e=>"_delete"in e).map(e=>e._delete())])}isComponentSet(){return null!=this.component}isInitialized(e=u){return this.instances.has(e)}getOptions(e=u){return this.instancesOptions.get(e)||{}}initialize(e={}){var{options:t={}}=e,i=this.normalizeInstanceIdentifier(e.instanceIdentifier);if(this.isInitialized(i))throw Error(`${this.name}(${i}) has already been initialized`);if(!this.isComponentSet())throw Error(`Component ${this.name} has not been registered yet`);var r,n,s=this.getOrInitializeService({instanceIdentifier:i,options:t});for([r,n]of this.instancesDeferred.entries())i===this.normalizeInstanceIdentifier(r)&&n.resolve(s);return s}onInit(e,t){var i=this.normalizeInstanceIdentifier(t);const r=null!==(n=this.onInitCallbacks.get(i))&&void 0!==n?n:new Set;r.add(e),this.onInitCallbacks.set(i,r);var n=this.instances.get(i);return n&&e(n,i),()=>{r.delete(e)}}invokeOnInitCallbacks(e,t){var i=this.onInitCallbacks.get(t);if(i)for(const r of i)try{r(e,t)}catch(e){}}getOrInitializeService({instanceIdentifier:e,options:t={}}){let i=this.instances.get(e);if(!i&&this.component&&(i=this.component.instanceFactory(this.container,{instanceIdentifier:(r=e)===u?void 0:r,options:t}),this.instances.set(e,i),this.instancesOptions.set(e,t),this.invokeOnInitCallbacks(i,e),this.component.onInstanceCreated))try{this.component.onInstanceCreated(this.container,e,i)}catch(e){}var r;return i||null}normalizeInstanceIdentifier(e=u){return!this.component||this.component.multipleInstances?e:u}shouldAutoInitialize(){return!!this.component&&"EXPLICIT"!==this.component.instantiationMode}}class g{constructor(e){this.name=e,this.providers=new Map}addComponent(e){const t=this.getProvider(e.name);if(t.isComponentSet())throw new Error(`Component ${e.name} has already been registered with ${this.name}`);t.setComponent(e)}addOrOverwriteComponent(e){const t=this.getProvider(e.name);t.isComponentSet()&&this.providers.delete(e.name),this.addComponent(e)}getProvider(e){if(this.providers.has(e))return this.providers.get(e);var t=new m(e,this);return this.providers.set(e,t),t}getProviders(){return Array.from(this.providers.values())}}const v=[];var b,e;(e=b=b||{})[e.DEBUG=0]="DEBUG",e[e.VERBOSE=1]="VERBOSE",e[e.INFO=2]="INFO",e[e.WARN=3]="WARN",e[e.ERROR=4]="ERROR",e[e.SILENT=5]="SILENT";const I={debug:b.DEBUG,verbose:b.VERBOSE,info:b.INFO,warn:b.WARN,error:b.ERROR,silent:b.SILENT},t=b.INFO,E={[b.DEBUG]:"log",[b.VERBOSE]:"log",[b.INFO]:"info",[b.WARN]:"warn",[b.ERROR]:"error"},y=(e,t,...i)=>{if(!(t<e.logLevel)){var r=(new Date).toISOString(),n=E[t];if(!n)throw new Error(`Attempted to log a message with an invalid logType (value: ${t})`);console[n](`[${r}]  ${e.name}:`,...i)}};class _{constructor(e){this.name=e,this._logLevel=t,this._logHandler=y,this._userLogHandler=null,v.push(this)}get logLevel(){return this._logLevel}set logLevel(e){if(!(e in b))throw new TypeError(`Invalid value "${e}" assigned to \`logLevel\``);this._logLevel=e}setLogLevel(e){this._logLevel="string"==typeof e?I[e]:e}get logHandler(){return this._logHandler}set logHandler(e){if("function"!=typeof e)throw new TypeError("Value assigned to `logHandler` must be a function");this._logHandler=e}get userLogHandler(){return this._userLogHandler}set userLogHandler(e){this._userLogHandler=e}debug(...e){this._userLogHandler&&this._userLogHandler(this,b.DEBUG,...e),this._logHandler(this,b.DEBUG,...e)}log(...e){this._userLogHandler&&this._userLogHandler(this,b.VERBOSE,...e),this._logHandler(this,b.VERBOSE,...e)}info(...e){this._userLogHandler&&this._userLogHandler(this,b.INFO,...e),this._logHandler(this,b.INFO,...e)}warn(...e){this._userLogHandler&&this._userLogHandler(this,b.WARN,...e),this._logHandler(this,b.WARN,...e)}error(...e){this._userLogHandler&&this._userLogHandler(this,b.ERROR,...e),this._logHandler(this,b.ERROR,...e)}}class O{constructor(e){this.container=e}getPlatformInfoString(){const e=this.container.getProviders();return e.map(e=>{if("VERSION"!==(null==(t=e.getComponent())?void 0:t.type))return null;var t,t=e.getImmediate();return`${t.library}/${t.version}`}).filter(e=>e).join(" ")}}const w="@firebase/app",C="0.7.11",N=new _("@firebase/app");var L;const A="[DEFAULT]",D={"@firebase/app":"fire-core","@firebase/app-compat":"fire-core-compat","@firebase/analytics":"fire-analytics","@firebase/analytics-compat":"fire-analytics-compat","@firebase/app-check":"fire-app-check","@firebase/app-check-compat":"fire-app-check-compat","@firebase/auth":"fire-auth","@firebase/auth-compat":"fire-auth-compat","@firebase/database":"fire-rtdb","@firebase/database-compat":"fire-rtdb-compat","@firebase/functions":"fire-fn","@firebase/functions-compat":"fire-fn-compat","@firebase/installations":"fire-iid","@firebase/installations-compat":"fire-iid-compat","@firebase/messaging":"fire-fcm","@firebase/messaging-compat":"fire-fcm-compat","@firebase/performance":"fire-perf","@firebase/performance-compat":"fire-perf-compat","@firebase/remote-config":"fire-rc","@firebase/remote-config-compat":"fire-rc-compat","@firebase/storage":"fire-gcs","@firebase/storage-compat":"fire-gcs-compat","@firebase/firestore":"fire-fst","@firebase/firestore-compat":"fire-fst-compat","fire-js":"fire-js",firebase:"fire-js-all"},S=new Map,R=new Map;function $(t,i){try{t.container.addComponent(i)}catch(e){N.debug(`Component ${i.name} failed to register with FirebaseApp ${t.name}`,e)}}function k(e,t){e.container.addOrOverwriteComponent(t)}function P(e){var t=e.name;if(R.has(t))return N.debug(`There were multiple attempts to register component ${t}.`),!1;R.set(t,e);for(const i of S.values())$(i,e);return!0}function z(e,t){return e.container.getProvider(t)}const F=new r("app","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","bad-app-name":"Illegal App name: '{$appName}","duplicate-app":"Firebase App named '{$appName}' already exists with different options or config","app-deleted":"Firebase App named '{$appName}' already deleted","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance.","invalid-log-argument":"First argument to `onLog` must be null or a function."});class j{constructor(e,t,i){this._isDeleted=!1,this._options=Object.assign({},e),this._config=Object.assign({},t),this._name=t.name,this._automaticDataCollectionEnabled=t.automaticDataCollectionEnabled,this._container=i,this.container.addComponent(new d("app",()=>this,"PUBLIC"))}get automaticDataCollectionEnabled(){return this.checkDestroyed(),this._automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this.checkDestroyed(),this._automaticDataCollectionEnabled=e}get name(){return this.checkDestroyed(),this._name}get options(){return this.checkDestroyed(),this._options}get config(){return this.checkDestroyed(),this._config}get container(){return this._container}get isDeleted(){return this._isDeleted}set isDeleted(e){this._isDeleted=e}checkDestroyed(){if(this.isDeleted)throw F.create("app-deleted",{appName:this._name})}}const H="9.6.1";function T(e,t={}){if("object"!=typeof t){const r=t;t={name:r}}var i=Object.assign({name:A,automaticDataCollectionEnabled:!1},t);const r=i.name;if("string"!=typeof r||!r)throw F.create("bad-app-name",{appName:String(r)});var n=S.get(r);if(n){if(h(e,n.options)&&h(i,n.config))return n;throw F.create("duplicate-app",{appName:r})}const s=new g(r);for(const a of R.values())s.addComponent(a);i=new j(e,i,s);return S.set(r,i),i}async function M(e){var t=e.name;S.has(t)&&(S.delete(t),await Promise.all(e.container.getProviders().map(e=>e.delete())),e.isDeleted=!0)}function B(e,t,i){let r=null!==(s=D[e])&&void 0!==s?s:e;i&&(r+=`-${i}`);var n=r.match(/\s|\//),s=t.match(/\s|\//);if(n||s){const a=[`Unable to register library "${r}" with version "${t}":`];return n&&a.push(`library name "${r}" contains illegal characters (whitespace or "/")`),n&&s&&a.push("and"),s&&a.push(`version name "${t}" contains illegal characters (whitespace or "/")`),void N.warn(a.join(" "))}P(new d(`${r}-version`,()=>({library:r,version:t}),"VERSION"))}function V(e,t){if(null!==e&&"function"!=typeof e)throw F.create("invalid-log-argument");!function(s,e){for(const t of v){let n=null;e&&e.level&&(n=I[e.level]),t.userLogHandler=null===s?null:(e,t,...i)=>{var r=i.map(e=>{if(null==e)return null;if("string"==typeof e)return e;if("number"==typeof e||"boolean"==typeof e)return e.toString();if(e instanceof Error)return e.message;try{return JSON.stringify(e)}catch(e){return null}}).filter(e=>e).join(" ");t>=(null!==n&&void 0!==n?n:e.logLevel)&&s({level:b[t].toLowerCase(),message:r,args:i,type:e.name})}}}(e,t)}function U(e){var t;t=e,v.forEach(e=>{e.setLogLevel(t)})}L="",P(new d("platform-logger",e=>new O(e),"PRIVATE")),B(w,C,L),B(w,C,"esm2017"),B("fire-js","");var x=Object.freeze({__proto__:null,SDK_VERSION:H,_DEFAULT_ENTRY_NAME:A,_addComponent:$,_addOrOverwriteComponent:k,_apps:S,_clearComponents:function(){R.clear()},_components:R,_getProvider:z,_registerComponent:P,_removeServiceInstance:function(e,t,i=A){z(e,t).clearInstance(i)},deleteApp:M,getApp:function(e=A){var t=S.get(e);if(!t)throw F.create("no-app",{appName:e});return t},getApps:function(){return Array.from(S.values())},initializeApp:T,onLog:V,registerVersion:B,setLogLevel:U,FirebaseError:a});class W{constructor(e,t){this._delegate=e,this.firebase=t,$(e,new d("app-compat",()=>this,"PUBLIC")),this.container=e.container}get automaticDataCollectionEnabled(){return this._delegate.automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this._delegate.automaticDataCollectionEnabled=e}get name(){return this._delegate.name}get options(){return this._delegate.options}delete(){return new Promise(e=>{this._delegate.checkDestroyed(),e()}).then(()=>(this.firebase.INTERNAL.removeApp(this.name),M(this._delegate)))}_getService(e,t=A){var i;this._delegate.checkDestroyed();const r=this._delegate.container.getProvider(e);return r.isInitialized()||"EXPLICIT"!==(null===(i=r.getComponent())||void 0===i?void 0:i.instantiationMode)||r.initialize(),r.getImmediate({identifier:t})}_removeServiceInstance(e,t=A){this._delegate.container.getProvider(e).clearInstance(t)}_addComponent(e){$(this._delegate,e)}_addOrOverwriteComponent(e){k(this._delegate,e)}toJSON(){return{name:this.name,automaticDataCollectionEnabled:this.automaticDataCollectionEnabled,options:this.options}}}const G=new r("app-compat","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance."});function Y(n){const s={},a={__esModule:!0,initializeApp:function(e,t={}){var i=T(e,t);if(l(s,i.name))return s[i.name];var r=new n(i,a);return s[i.name]=r},app:o,registerVersion:B,setLogLevel:U,onLog:V,apps:null,SDK_VERSION:H,INTERNAL:{registerComponent:function(i){const r=i.name,t=r.replace("-compat","");{var e;P(i)&&"PUBLIC"===i.type&&(e=(e=o())=>{if("function"!=typeof e[t])throw G.create("invalid-app-argument",{appName:r});return e[t]()},void 0!==i.serviceProps&&c(e,i.serviceProps),a[t]=e,n.prototype[t]=function(...e){const t=this._getService.bind(this,r);return t.apply(this,i.multipleInstances?e:[])})}return"PUBLIC"===i.type?a[t]:null},removeApp:function(e){delete s[e]},useAsService:function(e,t){if("serverAuth"===t)return null;var i=t;return i},modularAPIs:x}};function o(e){if(e=e||A,!l(s,e))throw G.create("no-app",{appName:e});return s[e]}return a.default=a,Object.defineProperty(a,"apps",{get:function(){return Object.keys(s).map(e=>s[e])}}),o.App=n,a}var K=function e(){const t=Y(W);return t.INTERNAL=Object.assign(Object.assign({},t.INTERNAL),{createFirebaseNamespace:e,extendNamespace:function(e){c(t,e)},createSubscribe:i,ErrorFactory:r,deepExtend:c}),t}();const J=new _("@firebase/app-compat");if("object"==typeof self&&self.self===self&&void 0!==self.firebase){J.warn(`
@@ -74,8 +74,8 @@ var _self="undefined"!=typeof window?window:"undefined"!=typeof WorkerGlobalScop
 /*
 --- Ailey & Bailey Canvas ---
 File: 000_shell_template.js
-Version: 1.4 (Branding Update)
-Description: Defines the application's static HTML shell and the core rendering function. Updates welcome message.
+Version: 1.3 (DOM Rebinding Logic)
+Description: Defines the application's static HTML shell and the core rendering function.
 */
 
 // [CoreDNA] This const holds the entire static structure of the application's BODY.
@@ -123,7 +123,7 @@ const SHELL_HTML_BODY_TEMPLATE = `
     <div class="fixed-tool-container">
         <div class="tool-button" id="start-quiz-btn" title="핵심 개념 퀴즈"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4M12,20C10.3,20 8.8,19.2 7.8,18H16.2C15.2,19.2 13.7,20 12,20M12,11A3,3 0 0,0 9,14A3,3 0 0,0 12,17A3,3 0 0,0 15,14A3,3 0 0,0 12,11Z" /></svg></div>
         <div class="tool-button" id="notes-app-toggle-btn" title="지식 발전소 (클라우드 메모)"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M17,4V10L15,8L13,10V4H6A2,2 0 0,0 4,6V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18V6A2,2 0 0,0 18,4H17Z" /></svg></div>
-        <div class="tool-button" id="chat-toggle-btn" title="Ailey & Bailey Chat"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M18,14V11H16V14H13V16H16V19H18V16H21V14M12,2C6.5,2 2,6.5 2,12C2,17.5 6.5,22 12,22C13.2,22 14.4,21.8 15.5,21.3C15.9,21.9 16.5,22.4 17.2,22.7L19,23.5V21.1C20.2,20.1 21.1,18.8 21.7,17.3C21.9,16.5 22,15.8 22,15C22,8.4 17.6,2 12,2Z" /></svg></div>
+        <div class="tool-button" id="chat-toggle-btn" title="AI 러닝메이트와 대화"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M18,14V11H16V14H13V16H16V19H18V16H21V14M12,2C6.5,2 2,6.5 2,12C2,17.5 6.5,22 12,22C13.2,22 14.4,21.8 15.5,21.3C15.9,21.9 16.5,22.4 17.2,22.7L19,23.5V21.1C20.2,20.1 21.1,18.8 21.7,17.3C21.9,16.5 22,15.8 22,15C22,8.4 17.6,2 12,2Z" /></svg></div>
         <div class="tool-button" id="toc-toggle-btn" title="목차 보기/숨기기"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19,18H9A1,1 0 0,1 8,17V5A1,1 0 0,1 9,4H19A1,1 0 0,1 20,5V17A1,1 0 0,1 19,18M6,18V5A1,1 0 0,0 5,4A1,1 0 0,0 4,5V17A1,1 0 0,0 5,18A1,1 0 0,0 6,18M21,18A3,3 0 0,0 22,17V5A3,3 0 0,0 19,2H9A3,3 0 0,0 6,5V17A3,3 0 0,0 9,20H19A3,3 0 0,0 21,18Z" /></svg></div>
         <div class="tool-button" id="theme-toggle" title="테마 전환"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,18V22H10V18H12M12,2V6H10V2H12M22,12H18V10H22V12M6,12H2V10H6V12M16.95,7.05L19.78,4.22L18.36,2.81L15.54,5.64L16.95,7.05M8.46,15.54L5.64,18.36L4.22,16.95L7.05,14.12L8.46,15.54M18.36,21.19L19.78,19.78L16.95,16.95L15.54,18.36L18.36,21.19M7.05,8.46L4.22,5.64L5.64,4.22L8.46,7.05L7.05,8.46M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7Z" /></svg></div>
     </div>
@@ -148,28 +148,26 @@ const SHELL_HTML_BODY_TEMPLATE = `
         </div>
         <div id="chat-main-view">
             <div class="panel-header">
-                <div class="chat-header-content">
-                    <div class="chat-header-left">
-                       <div class="model-selector-container">
-                           <select id="ai-model-selector" title="AI 모델을 선택합니다."></select>
-                       </div>
+                <div style="width: 100%; display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 250px;">
+                        <span id="chat-session-title">AI 러닝메이트</span>
+                        <select id="ai-model-selector" title="AI 모델을 선택합니다."></select>
                     </div>
-                    <div class="chat-header-right">
-                       <button id="api-settings-btn" title="개인 API 설정"><svg viewBox="0 0 24 24"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg></button>
-                       <span id="delete-session-btn" title="현재 세션 삭제"><svg viewBox="0 0 24 24"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg></span>
-                       <span class="close-btn"><svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" /></svg></span>
+                    <div>
+                        <span id="delete-session-btn" title="현재 세션 삭제" style="cursor:pointer; font-size: 1.2em; margin-right: 10px; display:none;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg></span>
+                        <span class="close-btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" /></svg></span>
                     </div>
                 </div>
-                <div id="chat-mode-selector"></div>
+                <div id="chat-mode-selector" style="width:100%"></div>
             </div>
             <div class="chat-messages" id="chat-messages">
                 <div id="chat-welcome-message">
-                    <h3>Ailey & Bailey</h3>
+                    <h3>AI 러닝메이트</h3>
                     <p>학습을 시작해보세요!</p>
                 </div>
             </div>
             <form class="chat-input-form" id="chat-form">
-                <textarea id="chat-input" placeholder="Ailey & Bailey에 질문하기..." rows="1" disabled></textarea>
+                <textarea id="chat-input" placeholder="AI 러닝메이트에게 질문하기..." rows="1" disabled></textarea>
                 <button type="submit" id="chat-send-btn" title="전송"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" /></svg></button>
             </form>
         </div>
@@ -347,8 +345,8 @@ function debounce(func, delay) {
 /*
 --- Ailey & Bailey Canvas ---
 File: 011_utils_helpers.js
-Version: 1.1 (Modal Logic Centralization)
-Description: Contains generic, reusable UI helper functions. Added dedicated initializer for prompt modal.
+Version: 1.0 (Bundled)
+Description: Contains generic, reusable UI helper functions.
 */
 
 function updateClock() { 
@@ -418,7 +416,7 @@ function makePanelDraggable(panelElement) {
         document.removeEventListener('mouseup', onMouseUp); 
     }; 
     header.addEventListener('mousedown', e => { 
-        if (e.target.closest('button, input, select, .close-btn, .chat-header-right')) return;
+        if (e.target.closest('button, input, select, .close-btn, #delete-session-btn, #chat-mode-selector, #api-settings-btn')) return; 
         isDragging = true; 
         panelElement.classList.add('is-dragging'); 
         offset = { x: panelElement.offsetLeft - e.clientX, y: panelElement.offsetTop - e.clientY }; 
@@ -519,19 +517,6 @@ function handlePopoverAddNote() {
     selectionPopover.style.display = 'none'; 
 }
 
-// [NEW] Centralized initializer for the prompt modal listeners
-function initializePromptModal() {
-    if (promptModalOverlay) {
-        promptModalOverlay.addEventListener('click', (e) => {
-            if (e.target === promptModalOverlay) {
-                closePromptModal();
-            }
-        });
-    }
-    if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
-    if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
-}
-
 function openPromptModal() { 
     if (customPromptInput) customPromptInput.value = customPrompt; 
     if (promptModalOverlay) promptModalOverlay.style.display = 'flex'; 
@@ -610,7 +595,7 @@ function renderQuiz(data) {
             const l = document.createElement('label'); 
             const r = document.createElement('input'); 
             r.type = 'radio'; 
-            r.name = `q-${i}'; 
+            r.name = `q-${i}`; 
             r.value = opt; 
             l.append(r,` ${opt}`); 
             o.appendChild(l); 
@@ -894,8 +879,8 @@ function resetTokenUsage() { showModal('누적 토큰 사용량을 정말로 초
 /*
 --- Ailey & Bailey Canvas ---
 File: 120_core_main_initializer.js
-Version: 2.1 (SRP Refinement)
-Description: Initializes the app and attaches primary event listeners. Removed dynamic button creation to respect SRP.
+Version: 2.0 (New Architecture)
+Description: The main entry point for the application. Initializes the app and attaches all primary event listeners.
 */
 
 /**
@@ -910,8 +895,21 @@ function initializeCoreFeatures() {
     updateClock(); 
     setInterval(updateClock, 1000);
     
-    // Create API settings modal (its logic is self-contained)
+    // Dynamically create and inject the API settings modal and its trigger button
     createApiSettingsModal();
+    const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
+    if (chatHeader) {
+        apiSettingsBtn = document.createElement('span'); 
+        apiSettingsBtn.id = 'api-settings-btn'; 
+        apiSettingsBtn.title = '개인 API 설정';
+        apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
+        const deleteBtn = chatHeader.querySelector('#delete-session-btn');
+        if (deleteBtn) {
+            deleteBtn.insertAdjacentElement('beforebegin', apiSettingsBtn);
+        } else {
+             chatHeader.appendChild(apiSettingsBtn);
+        }
+    }
     
     // Load settings and initialize Firebase
     loadApiSettings();
@@ -922,7 +920,6 @@ function initializeCoreFeatures() {
         setupNavigator(); 
         setupChatModeSelector(); 
         initializeTooltips(); 
-        initializePromptModal(); // [FIX] Initialize prompt modal listeners
         makePanelDraggable(document.getElementById('chat-panel')); 
         handleNewChat(); // Start with a clean chat slate
     });
@@ -1052,11 +1049,11 @@ function attachEventListeners() {
     }
 
     // --- API & Modal Listeners ---
-    // [FIX] Listener is now attached directly to the button in the static template
-    const apiSettingsBtnStatic = document.getElementById('api-settings-btn');
-    if (apiSettingsBtnStatic) {
-        apiSettingsBtnStatic.addEventListener('click', openApiSettingsModal);
-    }
+    document.body.addEventListener('click', e => {
+        if (e.target.closest('#api-settings-btn')) {
+            openApiSettingsModal();
+        }
+    });
 }
 
 // This listener now simply waits for the main script to load.
@@ -1902,7 +1899,7 @@ function updateChatHeaderModelSelector() {
 /*
 --- Ailey & Bailey Canvas ---
 File: 230_chat_app.js
-Version: 2.1 (Text & Placeholder Update)
+Version: 2.0 (Segmented Control Logic)
 Description: Acts as the main controller for the Chat App, handling refined UI logic for header and mode selection.
 */
 
@@ -2010,10 +2007,11 @@ function selectSession(sessionId) {
     if (chatMessages) chatMessages.style.display = 'flex';
     renderChatMessages(sessionData);
 
+    // Update header title to be the session title again if needed, or remove this line
     if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-flex';
     if (chatInput) {
         chatInput.disabled = false;
-        chatInput.placeholder = "Ailey & Bailey에 질문하기..."
+        chatInput.placeholder = "Ailey & Bailey Chat에 질문하기..."
     }
     if (chatSendBtn) chatSendBtn.disabled = false;
     chatInput.focus();
@@ -2039,7 +2037,7 @@ function handleNewChat() {
     if (chatInput) { 
         chatInput.disabled = false;
         chatInput.value = '';
-        chatInput.placeholder = "Ailey & Bailey에 질문하기..."
+        chatInput.placeholder = "Ailey & Bailey Chat에 질문하기..."
     } 
     if (chatSendBtn) chatSendBtn.disabled = false; 
 }
