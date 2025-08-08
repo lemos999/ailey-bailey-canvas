@@ -1,0 +1,697 @@
+/* Auto-generated bundle from 2025-08-07T21:28:37.723Z */
+
+/* --- Source: src_css\001_base.css --- */
+/*
+--- Ailey & Bailey Canvas ---
+File: style_base.css
+Version: 11.0 (Modular CSS Structure)
+Architect: [Username] & System Architect Ailey
+Description: Contains fundamental styles for the entire document, including root variables (themes), body defaults, main layout containers (wrapper, container), headers, and basic content typography.
+*/
+
+:root {
+    --bg-color-light: #FDF8F0; --text-color-light: #4B4237; --container-bg-light: #F7F3E9; --border-color-light: #EAE0D3; --header-color-light: #6D5D4B; --h2-color-light: #8C6D46; --h2-border-light: #B99C7A; --sub-text-color-light: #8C7B6A; --quote-bg-light: #F2EEE5; --strong-bg-light: #EADCB5; --highlight-color: #ffe875; --chat-ai-bg-light: #E9E4DB; --pin-color: #e58a8a; --correct-color: #3e8e41; --incorrect-color: #d9534f;
+    --bg-color-dark: #121212; --text-color-dark: #E0E0E0; --container-bg-dark: #1E1E1E; --border-color-dark: #333333; --header-color-dark: #D4B28C; --h2-color-dark: #B99C7A; --h2-border-dark: #8C6D46; --sub-text-color-dark: #9E9E9E; --quote-bg-dark: #2A2A2A; --strong-bg-dark: #5a4a3a; --chat-ai-bg-dark: #2C2C2C; --correct-color-dark: #66bb6a; --incorrect-color-dark: #ef5350;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: 'Gowun Batang', serif; line-height: 1.8; margin: 0; padding: 20px; box-sizing: border-box; transition: background-color 0.3s, color 0.3s; }
+body.dark-mode { background-color: var(--bg-color-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) { background-color: var(--bg-color-light); color: var(--text-color-light); }
+.wrapper { display: flex; max-width: 1100px; margin: 20px auto; gap: 20px; transition: max-width 0.4s ease; }
+.wrapper.toc-hidden { max-width: 880px; }
+.container { max-width: 800px; flex-grow: 1; padding: 30px 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.07); transition: background-color 0.3s, border-color 0.3s, max-width 0.4s ease; }
+.wrapper.toc-hidden .container { max-width: 100%; }
+.header { text-align: center; padding-bottom: 20px; margin-bottom: 30px; transition: border-color 0.3s; }
+body.dark-mode .header { border-bottom: 2px solid var(--border-color-dark); }
+body:not(.dark-mode) .header { border-bottom: 2px solid var(--border-color-light); }
+.header h1 { font-family: 'Noto Serif KR', serif; font-size: 2.8em; font-weight: 600; margin: 0; transition: color 0.3s; }
+body.dark-mode .header h1 { color: var(--header-color-dark); }
+body:not(.dark-mode) .header h1 { color: var(--header-color-light); }
+.header .subtitle { font-size: 1.1em; transition: color 0.3s; }
+body.dark-mode .header .subtitle { color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .header .subtitle { color: var(--sub-text-color-light); }
+.content-section { margin-bottom: 35px; padding-top: 20px; }
+.content-section h2 { font-family: 'Noto Serif KR', serif; font-size: 1.8em; padding-left: 15px; margin-bottom: 20px; transition: color 0.3s, border-color 0.3s; }
+body.dark-mode .content-section h2 { color: var(--h2-color-dark); border-left: 4px solid var(--h2-border-dark); }
+body:not(.dark-mode) .content-section h2 { color: var(--h2-color-light); border-left: 4px solid var(--h2-border-light); }
+.content-section h3 strong { padding: 5px 12px; border-radius: 6px; display: inline-block; margin-bottom: 10px; transition: background-color 0.3s, color 0.3s; }
+body.dark-mode .content-section h3 strong { background-color: var(--strong-bg-dark); color: var(--header-color-dark); }
+body:not(.dark-mode) .content-section h3 strong { background-color: var(--strong-bg-light); color: var(--header-color-light); }
+.content-section p { font-size: 1.1em; text-align: justify; margin-bottom: 15px; }
+.content-section ul { list-style-position: inside; padding-left: 5px; }
+.content-section li { margin-bottom: 8px; }
+.content-section p strong { padding: 0px 6px; border-radius: 4px; font-weight: 700; transition: background-color 0.3s, color 0.3s; }
+body.dark-mode .content-section p strong { background-color: var(--strong-bg-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) .content-section p strong { background-color: var(--strong-bg-light); color: var(--header-color-light); }
+blockquote { margin: 25px 0; padding: 15px 25px; font-style: italic; transition: background-color 0.3s, border-color 0.3s; }
+body.dark-mode blockquote { background-color: var(--quote-bg-dark); border-left: 3px solid var(--border-color-dark); color: var(--sub-text-color-dark); }
+body:not(.dark-mode) blockquote { background-color: var(--quote-bg-light); border-left: 3px solid var(--border-color-light); color: var(--sub-text-color-light); }
+.keyword-list { padding: 20px; margin: 10px 0; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; transition: background-color 0.3s; }
+body.dark-mode .keyword-list { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .keyword-list { background-color: var(--quote-bg-light); }
+.keyword-chip { background-color: #B97F74; color: #FAF7F2; padding: 5px 13px; border-radius: 15px; font-weight: 700; font-size: 1.0em; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+/* --- Source: src_css\002_widgets.css --- */
+/*
+--- Ailey & Bailey Canvas ---
+File: style_widgets.css
+Version: 11.0 (Modular CSS Structure)
+Architect: [Username] & System Architect Ailey
+Description: Contains styles for various UI widgets and overlays, including tooltips, the system info widget, selection popovers, and all modal dialogs (confirmation, API settings, quiz, prompt).
+*/
+
+.has-tooltip { position: relative; cursor: help; }
+.tooltip { visibility: hidden; width: 250px; text-align: left; border-radius: 6px; padding: 10px 12px; position: absolute; z-index: 10; bottom: 130%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; font-family: 'Gowun Batang', serif; font-size: 0.95em; line-height: 1.6; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid; }
+body.dark-mode .tooltip { background-color: #2c2c2c; color: var(--text-color-dark); border-color: #444; }
+body:not(.dark-mode) .tooltip { background-color: #FFFFF0; color: var(--text-color-light); border-color: var(--border-color-light); }
+.tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; transition: border-color 0.3s; }
+body.dark-mode .tooltip::after { border-color: #2c2c2c transparent transparent transparent; }
+body:not(.dark-mode) .tooltip::after { border-color: #FFFFF0 transparent transparent transparent; }
+.has-tooltip:hover .tooltip { visibility: visible; opacity: 1; }
+
+#system-info-widget { position: fixed; top: 15px; left: 20px; background-color: rgba(0,0,0,0.6); color: white; padding: 8px 18px; border-radius: 10px; z-index: 2000; font-family: 'Gowun Batang', serif; backdrop-filter: blur(5px); box-shadow: 0 2px 10px rgba(0,0,0,0.3); transition: all 0.4s ease; text-align: left; }
+#system-info-widget.tucked { left: -250px; opacity: 0; }
+#real-time-clock { font-size: 1em; }
+#canvas-id-container { font-size: 0.8em; opacity: 0.7; margin-top: 5px; position: relative; cursor: help; display: flex; align-items: center; gap: 8px; }
+#copy-canvas-id { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+#copy-canvas-id svg { fill: currentColor; }
+#copy-canvas-id:hover { transform: scale(1.2); }
+.system-tooltip { visibility: hidden; opacity: 0; position: absolute; top: 100%; left: 0; margin-top: 8px; background-color: #2c2c2c; color: #E0E0E0; padding: 12px 15px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid #444; white-space: nowrap; z-index: 2100; transition: opacity 0.3s, visibility 0.3s; font-size: 0.9em; line-height: 1.6; pointer-events: none; }
+#system-info-widget:hover .system-tooltip { visibility: visible; opacity: 1; }
+.system-tooltip div { margin-bottom: 5px; }
+.system-tooltip div:last-child { margin-bottom: 0; }
+.system-tooltip strong { color: #D4B28C; margin-right: 5px; }
+
+#selection-popover { position: absolute; display: none; background-color: #333; color: white; border-radius: 8px; padding: 5px; gap: 5px; z-index: 1050; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+#selection-popover button { background-color: #4a4a4a; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+#selection-popover button:hover { background-color: #5f5f5f; }
+#selection-popover button svg { fill: currentColor; }
+
+.custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; }
+.custom-modal { padding: 30px; border-radius: 10px; width: 90%; max-width: 450px; text-align: center; }
+body:not(.dark-mode) .custom-modal { background-color: var(--bg-color-light); }
+body.dark-mode .custom-modal { background-color: var(--container-bg-dark); }
+.custom-modal-actions { margin-top: 20px; display: flex; justify-content: center; gap: 15px; }
+.modal-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; }
+#modal-confirm-btn, #prompt-save-btn, #api-settings-save-btn { background-color: #8C6D46; color: white; }
+#modal-cancel-btn, #prompt-cancel-btn, #api-settings-cancel-btn { background-color: #888; color: white; }
+
+/* [NEW] API Settings Modal Styles */
+.api-settings-modal {
+    max-width: 650px;
+    text-align: left;
+}
+.api-settings-modal h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+.api-modal-desc {
+    font-size: 0.9em;
+    text-align: center;
+    margin-bottom: 30px;
+    opacity: 0.8;
+}
+.api-form-section {
+    margin-bottom: 25px;
+}
+.api-form-section label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 1em;
+}
+.api-form-section small {
+    font-size: 0.8em;
+    opacity: 0.7;
+    display: block;
+    margin-top: 5px;
+}
+.api-key-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.api-settings-modal input[type="text"],
+.api-settings-modal input[type="password"],
+.api-settings-modal input[type="number"],
+.api-settings-modal select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color-dark);
+    background-color: var(--bg-color-dark);
+    color: var(--text-color-dark);
+    font-family: 'Gowun Batang', serif;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+body:not(.dark-mode) .api-settings-modal input,
+body:not(.dark-mode) .api-settings-modal select {
+    border-color: var(--border-color-light);
+    background-color: white;
+    color: var(--text-color-light);
+}
+.api-key-wrapper input {
+    flex-grow: 1;
+}
+#verify-api-key-btn {
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background-color: var(--h2-color-dark);
+    color: white;
+    white-space: nowrap;
+    font-family: 'Gowun Batang', serif;
+}
+body:not(.dark-mode) #verify-api-key-btn {
+    background-color: var(--h2-color-light);
+}
+#verify-api-key-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+#api-key-status {
+    font-size: 0.85em;
+    margin-top: 8px;
+    min-height: 1.2em;
+    font-weight: bold;
+}
+.status-loading { color: var(--h2-color-dark); }
+body:not(.dark-mode) .status-loading { color: var(--h2-color-light); }
+.status-success { color: var(--correct-color-dark); }
+body:not(.dark-mode) .status-success { color: var(--correct-color); }
+.status-error { color: var(--incorrect-color-dark); }
+body:not(.dark-mode) .status-error { color: var(--incorrect-color); }
+
+.token-limit-wrapper {
+    max-width: 250px;
+}
+
+.token-usage-section {
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+body:not(.dark-mode) .token-usage-section {
+    background-color: var(--quote-bg-light);
+}
+body.dark-mode .token-usage-section {
+    background-color: var(--quote-bg-dark);
+}
+#token-usage-display {
+    font-size: 1.1em;
+    margin-bottom: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+#token-usage-display strong {
+    color: var(--header-color-dark);
+}
+body:not(.dark-mode) #token-usage-display strong {
+    color: var(--header-color-light);
+}
+#reset-token-usage-btn {
+    background: none;
+    border: 1px solid;
+    color: inherit;
+    font-size: 0.8em;
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+#reset-token-usage-btn:hover {
+    opacity: 1;
+}
+
+/* Quiz Modal Styles */
+#quiz-modal-overlay { background: rgba(0,0,0,0.7); }
+.quiz-modal { width: 90%; max-width: 600px; }
+body:not(.dark-mode) .quiz-modal { background-color: var(--bg-color-light); }
+body.dark-mode .quiz-modal { background-color: var(--container-bg-dark); }
+#quiz-container { margin-bottom: 20px; }
+.quiz-question-block { margin-bottom: 25px; border-left: 3px solid var(--h2-border-light); padding-left: 15px; }
+body:dark-mode .quiz-question-block { border-left-color: var(--h2-border-dark); }
+.quiz-question-block p { font-weight: bold; font-size: 1.1em; }
+.quiz-options label { display: block; margin: 8px 0; padding: 10px; border-radius: 5px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
+body:not(.dark-mode) .quiz-options label:hover { background-color: var(--quote-bg-light); }
+body.dark-mode .quiz-options label:hover { background-color: var(--quote-bg-dark); }
+.quiz-options input[type="radio"] { margin-right: 10px; }
+#quiz-submit-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; font-weight: bold; }
+body:not(:dark-mode) #quiz-submit-btn { background-color: var(--h2-color-light); }
+#quiz-results { margin-top: 20px; font-weight: bold; font-size: 1.2em; }
+
+/* Prompt Modal */
+#prompt-modal-overlay textarea { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }
+
+/* --- Source: src_css\003_navigation.css --- */
+/*
+--- Ailey & Bailey Canvas ---
+File: style_navigation.css
+Version: 11.0 (Modular CSS Structure)
+Architect: [Username] & System Architect Ailey
+Description: Contains styles for all primary navigation elements, including the sticky scroll-activated table of contents (scroll-nav) and the fixed tool container at the bottom-left of the screen.
+*/
+
+.scroll-nav { width: 220px; position: sticky; top: 80px; align-self: flex-start; height: calc(100vh - 120px); overflow-y: auto; transition: opacity 0.4s, width 0.4s, padding 0.4s, margin 0.4s ease; z-index: 900; }
+.wrapper.toc-hidden .scroll-nav { opacity: 0; width: 0; padding: 0; margin: 0; pointer-events: none; }
+.scroll-nav h3 { font-family: 'Noto Serif KR', serif; padding-bottom: 10px; transition: color 0.3s, border-color 0.3s; }
+body.dark-mode .scroll-nav h3 { color: var(--header-color-dark); border-bottom: 2px solid var(--border-color-dark); }
+body:not(.dark-mode) .scroll-nav h3 { color: var(--header-color-light); border-bottom: 2px solid var(--border-color-light); }
+.scroll-nav ul { list-style: none; padding: 0; margin: 0; }
+.scroll-nav li a { display: block; padding: 8px 12px; text-decoration: none; border-left: 3px solid transparent; font-size: 1.05em; transition: all 0.2s ease-in-out; }
+body.dark-mode .scroll-nav li a { color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .scroll-nav li a { color: var(--sub-text-color-light); }
+.scroll-nav li a:hover { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .scroll-nav li a:hover { background-color: var(--quote-bg-light); }
+.scroll-nav li a.active { font-weight: 700; }
+body.dark-mode .scroll-nav li a.active { color: var(--header-color-dark); background-color: var(--strong-bg-dark); border-left-color: var(--h2-border-dark); }
+body:not(.dark-mode) .scroll-nav li a.active { color: var(--h2-color-light); background-color: var(--strong-bg-light); border-left-color: var(--h2-border-light); }
+
+.fixed-tool-container { position: fixed; bottom: 30px; left: 20px; z-index: 1000; display: flex; flex-direction: column-reverse; gap: 10px; align-items: flex-start; opacity: 0.3; transition: opacity 0.3s ease; }
+.fixed-tool-container:hover { opacity: 1; }
+.tool-button { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; user-select: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: all 0.3s; }
+.tool-button svg { fill: currentColor; transition: transform 0.2s; }
+.tool-button:hover svg { transform: scale(1.1); }
+body.dark-mode .tool-button { background-color: #333; color: #fff; }
+body:not(.dark-mode) .tool-button { background-color: #fff; color: #4B4237; }
+
+/* --- Source: src_css\004_panels.css --- */
+/*
+--- Ailey & Bailey Canvas ---
+File: style_panels.css
+Version: 11.0 (Modular CSS Structure)
+Architect: [Username] & System Architect Ailey
+Description: Defines the common styles for all draggable panels used in the application, such as the Chat and Notes panels. This includes the main panel container, header, and close buttons.
+*/
+
+.draggable-panel { position: fixed; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: none; flex-direction: column; resize: both; overflow: auto; transition: background-color 0.3s; z-index: 1100; }
+.draggable-panel.is-dragging { z-index: 1200; }
+body.dark-mode .draggable-panel { background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) .draggable-panel { background-color: var(--container-bg-light); border: 1px solid var(--border-color-light); }
+
+.panel-header { padding: 10px; cursor: move; font-family: 'Noto Serif KR', serif; font-weight: bold; user-select: none; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; transition: background-color 0.3s, border-color 0.3s; position: sticky; top: 0; z-index: 1; }
+body.dark-mode .panel-header { background-color: #2a2a2a; border-bottom: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1px solid var(--border-color-light); }
+.panel-header .close-btn { cursor: pointer; background: none; border: none; padding: 0; line-height: 0; }
+.panel-header .close-btn svg { fill: currentColor; }
+
+/* --- Source: src_css\005_chat.css --- */
+/*
+--- Ailey & Bailey Canvas ---
+File: style_chat.css
+Version: 11.0 (Modular CSS Structure)
+Architect: [Username] & System Architect Ailey
+Description: Contains all styles related to the AI Chat panel, including the session/project sidebar, context menus, the main message view, user/AI message bubbles, the reasoning block, and the input form.
+*/
+
+/* --- [REFINED] CHAT STYLES for PROJECT & SESSION MANAGEMENT --- */
+#chat-panel { bottom: 100px; right: 100px; height: 600px; width: 700px; flex-direction: row; overflow: hidden; }
+
+#chat-session-sidebar { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; transition: border-color 0.3s; }
+body.dark-mode #chat-session-sidebar { border-right: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) #chat-session-sidebar { border-right: 1px solid var(--border-color-light); }
+
+#sidebar-header { padding: 10px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+
+#search-sessions-input { width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 20px; border: 1px solid; outline: none; font-family: 'Gowun Batang', serif; }
+body.dark-mode #search-sessions-input { border-color: var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) #search-sessions-input { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
+
+.sidebar-button-group { display: flex; gap: 8px; }
+.sidebar-button-group button { flex-grow: 1; padding: 8px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95em; font-family: 'Gowun Batang', serif; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.sidebar-button-group button svg { fill: currentColor; }
+
+#new-chat-btn, #new-project-btn { }
+body.dark-mode .sidebar-button-group button { background-color: var(--h2-color-dark); color: var(--bg-color-dark); }
+body:not(.dark-mode) .sidebar-button-group button { background-color: var(--h2-color-light); color: white; }
+body.dark-mode .sidebar-button-group button:hover { background-color: #D4B28C; }
+body:not(.dark-mode) .sidebar-button-group button:hover { background-color: #A88A68; }
+
+#session-list-container { flex-grow: 1; overflow-y: auto; padding: 0 10px 10px 10px; }
+#session-list-container.drag-target-area {
+    background-color: rgba(135, 116, 92, 0.1);
+    border: 2px dashed var(--h2-border-light);
+    border-radius: 8px;
+}
+body.dark-mode #session-list-container.drag-target-area {
+    border-color: var(--h2-border-dark);
+}
+
+.date-group-header, .session-group-header { 
+    font-size: 0.8em;
+    font-weight: bold;
+    padding: 15px 5px 5px 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+body.dark-mode .date-group-header,
+body.dark-mode .session-group-header {
+    color: var(--sub-text-color-dark);
+}
+body:not(.dark-mode) .date-group-header,
+body:not(.dark-mode) .session-group-header {
+    color: var(--sub-text-color-light);
+}
+.session-group-header {
+    font-size: 0.9em;
+}
+
+.session-item { padding: 12px 10px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; transition: background-color 0.2s; font-size: 0.95em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: space-between; align-items: center; position: relative; }
+.session-item.is-dragging { opacity: 0.5; background-color: var(--h2-border-dark); }
+body.dark-mode .session-item:hover { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .session-item:hover { background-color: var(--quote-bg-light); }
+.session-item.active { font-weight: bold; }
+body.dark-mode .session-item.active { background-color: var(--strong-bg-dark); color: var(--header-color-dark); }
+body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-light); color: var(--h2-color-light); }
+
+.session-item-title { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; padding-right: 25px; }
+.session-pin-btn { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1em; padding: 5px; border-radius: 50%; opacity: 0; transition: opacity 0.2s, color 0.2s; line-height: 0; }
+.session-item:hover .session-pin-btn, .session-pin-btn.pinned-active { opacity: 1; }
+body.dark-mode .session-pin-btn { color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .session-pin-btn { color: var(--sub-text-color-light); }
+.session-pin-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
+.session-pin-btn.pinned-active { color: var(--pin-color); }
+.session-pin-btn svg { fill: currentColor; }
+
+/* --- [NEW & REFINED] PROJECT & CONTEXT MENU STYLES --- */
+.project-container { margin-bottom: 5px; }
+.project-header { display: flex; align-items: center; padding: 10px 5px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s, border 0.2s; position: relative; }
+body.dark-mode .project-header:hover { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .project-header:hover { background-color: var(--quote-bg-light); }
+.project-header.drag-over { background-color: var(--h2-border-dark); border: 2px dashed var(--header-color-dark); }
+body:not(.dark-mode) .project-header.drag-over { background-color: var(--h2-border-light); border-color: var(--header-color-light); }
+
+.project-toggle-icon { transition: transform 0.2s ease-in-out; margin-right: 5px; line-height: 0; }
+.project-toggle-icon.expanded { transform: rotate(90deg); }
+.project-icon { margin-right: 8px; line-height: 0; }
+.project-header svg { fill: currentColor; }
+
+.project-title { font-weight: bold; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1em; }
+.project-title-input { font-weight: bold; flex-grow: 1; border: none; background-color: transparent; color: inherit; padding: 2px 4px; border-radius: 4px; outline: 1px solid; font-family: 'Gowun Batang', serif; font-size: 1em; box-sizing: border-box; }
+body.dark-mode .project-title-input { outline-color: var(--header-color-dark); }
+body:not(.dark-mode) .project-title-input { outline-color: var(--header-color-light); }
+
+
+.project-actions-btn { background: none; border: none; cursor: pointer; padding: 5px; border-radius: 50%; line-height: 0; opacity: 0; transition: opacity 0.2s; }
+.project-header:hover .project-actions-btn, .project-actions-btn.active { opacity: 1; }
+.project-actions-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
+
+.project-context-menu, .session-context-menu {
+    position: absolute;
+    background-color: var(--container-bg-dark);
+    border: 1px solid var(--border-color-dark);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 1500;
+    padding: 5px;
+    display: none;
+    min-width: 180px;
+    font-size: 0.95em;
+}
+body:not(.dark-mode) .project-context-menu,
+body:not(.dark-mode) .session-context-menu {
+    background-color: var(--container-bg-light);
+    border-color: var(--border-color-light);
+}
+
+.context-menu-item {
+    background: none;
+    border: none;
+    color: inherit;
+    padding: 8px 12px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: 'Gowun Batang', serif;
+    font-size: 1em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+body:not(.dark-mode) .context-menu-item:not([disabled]):hover {
+    background-color: var(--quote-bg-light);
+}
+body.dark-mode .context-menu-item:not([disabled]):hover {
+    background-color: var(--quote-bg-dark);
+}
+.context-menu-item[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.context-menu-separator {
+    height: 1px;
+    background-color: var(--border-color-dark);
+    margin: 4px 8px;
+}
+body:not(.dark-mode) .context-menu-separator {
+    background-color: var(--border-color-light);
+}
+
+.context-submenu-container {
+    position: relative;
+}
+.context-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: -6px; 
+    background-color: var(--container-bg-dark);
+    border: 1px solid var(--border-color-dark);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    padding: 5px;
+    min-width: 150px;
+}
+body:not(.dark-mode) .context-submenu {
+    background-color: var(--container-bg-light);
+    border-color: var(--border-color-light);
+}
+.context-submenu-container:hover > .context-submenu {
+    display: block;
+}
+.submenu-arrow {
+    font-size: 0.8em;
+}
+
+
+.sessions-in-project { padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
+.sessions-in-project.expanded { max-height: 500px; }
+
+#chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
+#chat-main-view .panel-header { }
+#chat-session-title { font-size: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#delete-session-btn { display: none; background: none; border: none; line-height: 0; }
+#delete-session-btn svg { fill: currentColor; }
+
+#api-settings-btn { cursor: pointer; margin-left: 10px; line-height: 0; transition: transform 0.2s ease-in-out; }
+#api-settings-btn:hover { transform: scale(1.15) rotate(20deg); }
+#api-settings-btn svg { fill: currentColor; }
+
+#ai-model-selector { padding: 4px 8px; font-size: 0.9em; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+body:not(.dark-mode) #ai-model-selector { background-color: var(--quote-bg-light); border-color: var(--border-color-light); color: var(--text-color-light); }
+body.dark-mode #ai-model-selector { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
+
+#chat-mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; width: 100%; justify-content: center; padding: 8px 0; border-top: 1px solid transparent; }
+body:not(.dark-mode) #chat-mode-selector { border-top-color: var(--border-color-light); }
+body.dark-mode #chat-mode-selector { border-top-color: var(--border-color-dark); }
+#chat-mode-selector button { padding: 6px 12px; font-size: 0.9em; border-radius: 18px; border: 1px solid; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
+#chat-mode-selector button svg { fill: currentColor; }
+body:not(.dark-mode) #chat-mode-selector button { background-color: #e0d8ca; border-color: #d1c8bb; color: var(--text-color-light); }
+body:not(.dark-mode) #chat-mode-selector button:hover { background-color: #d1c8bb; }
+body:not(.dark-mode) #chat-mode-selector button.active { background-color: var(--h2-color-light); color: white; border-color: var(--h2-color-light); font-weight: bold; }
+body.dark-mode #chat-mode-selector button { background-color: #3f3f3f; border-color: #555; color: var(--text-color-dark); }
+body.dark-mode #chat-mode-selector button:hover { background-color: #555; }
+body.dark-mode #chat-mode-selector button.active { background-color: var(--h2-color-dark); color: var(--bg-color-dark); border-color: var(--h2-color-dark); font-weight: bold; }
+
+.chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+#chat-welcome-message { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; color: var(--sub-text-color-dark); }
+body:not(.dark-mode) #chat-welcome-message { color: var(--sub-text-color-light); }
+#chat-welcome-message h3 { font-family: 'Noto Serif KR', serif; font-size: 1.5em; margin-bottom: 10px; color: var(--h2-color-dark); }
+body:not(.dark-mode) #chat-welcome-message h3 { color: var(--h2-color-light); }
+
+/* [MODIFIED] Chat Message & AI Response Container Styles */
+.chat-message { max-width: 85%; padding: 10px 15px; border-radius: 18px; line-height: 1.6; word-wrap: break-word; position: relative; }
+.chat-message.user { background-color: #8C6D46; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.ai-response-container { max-width: 85%; align-self: flex-start; display: flex; flex-direction: column; gap: 8px; }
+.chat-message.ai { background-color: var(--chat-ai-bg-dark); border-bottom-left-radius: 4px; width: fit-content; }
+body:not(.dark-mode) .chat-message.ai { background-color: var(--chat-ai-bg-light); }
+
+.chat-timestamp { font-size: 0.75em; color: var(--sub-text-color-dark); margin-top: 5px; text-align: right; }
+body:not(.dark-mode) .chat-timestamp { color: var(--sub-text-color-light); }
+.chat-message.user .chat-timestamp { text-align: left; }
+
+/* [NEW] AI Response Meta (Timer) Styles */
+.ai-response-meta { display: flex; align-items: center; gap: 6px; font-size: 0.8em; color: var(--sub-text-color-dark); padding: 0 10px; }
+body:not(.dark-mode) .ai-response-meta { color: var(--sub-text-color-light); }
+.ai-response-meta svg { fill: currentColor; }
+
+/* [REMOVED] Old Loading Indicator Styles as it's now part of the reasoning block */
+.loading-container { display: none; } /* Kept for legacy, but should not be used */
+
+/* [MODIFIED] Reasoning Block Styles with Loading State */
+.reasoning-block { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; align-self: flex-start; }
+body:not(.dark-mode) .reasoning-block { background-color: var(--quote-bg-light); border: 1px solid var(--border-color-light); }
+body.dark-mode .reasoning-block { background-color: var(--quote-bg-dark); border: 1px solid var(--border-color-dark); }
+.reasoning-header { padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; user-select: none; }
+.reasoning-header .toggle-icon { transition: transform 0.3s ease; }
+.reasoning-block.expanded .toggle-icon { transform: rotate(90deg); }
+.reasoning-summary { font-style: italic; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.5s; }
+.reasoning-summary.blinking-cursor::after { content: '|'; animation: blink-caret 0.75s step-end infinite; }
+@keyframes blink-caret { from, to { opacity: 1; } 50% { opacity: 0; } }
+.reasoning-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, padding 0.4s ease-out; padding: 0 15px; line-height: 1.7; font-size: 0.95em; }
+.reasoning-content.expanded { max-height: 1000px; padding: 15px; border-top: 1px solid; }
+body:not(.dark-mode) .reasoning-content.expanded { border-top-color: var(--border-color-light); }
+body.dark-mode .reasoning-content.expanded { border-top-color: var(--border-color-dark); }
+
+/* [NEW] Loading state for the reasoning block itself */
+.reasoning-block.loading .reasoning-header { cursor: default; }
+.reasoning-block.loading .reasoning-summary { opacity: 0.7; }
+
+
+.chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; align-items: center; }
+body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
+body:not(.dark-mode) .chat-input-form { border-top-color: var(--border-color-light); }
+#chat-input { flex-grow: 1; border: 1px solid; border-radius: 20px; padding: 10px 15px; resize: none; outline: none; font-family: 'Gowun Batang', serif; font-size: 1em; transition: all 0.3s; }
+body.dark-mode #chat-input { background-color: #2a2a2a; color: var(--text-color-dark); border-color: var(--border-color-dark); }
+body:not(.dark-mode) #chat-input { background-color: #fff; color: var(--text-color-light); border-color: var(--border-color-light); }
+#chat-send-btn { background: none; border: none; cursor: pointer; padding: 0 10px; transition: color 0.3s; display: flex; align-items: center; justify-content: center; }
+#chat-send-btn svg { fill: currentColor; }
+body.dark-mode #chat-send-btn { color: var(--header-color-dark); }
+body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
+#chat-input:disabled, #chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.send-to-note-btn { background: none; border: 1px solid; border-radius: 10px; padding: 3px 8px; font-size: 0.8em; cursor: pointer; margin-top: 8px; display: block; }
+body:dark-mode .send-to-note-btn { border-color: var(--sub-text-color-dark); color: var(--sub-text-color-dark); }
+body:not(:dark-mode) .send-to-note-btn { border-color: var(--sub-text-color-light); color: var(--sub-text-color-light); }
+.send-to-note-btn:disabled { cursor: not-allowed; opacity: 0.5; border-color: gray; color: gray; }
+
+/* --- Source: src_css\006_notes.css --- */
+/*
+--- Ailey & Bailey Canvas ---
+File: style_notes.css
+Version: 14.0 (Toast UI Editor Integration)
+Architect: [Username] & System Architect Ailey
+Description: Styles for the enhanced Notes App panel, now integrating Toast UI Editor.
+*/
+
+/* Notes App Panel General */
+#notes-app-panel { bottom: 100px; left: 100px; width: 600px; /* Increased default width */ height: 700px; /* Increased default height */ padding: 0; overflow: hidden; /* Prevent internal scrollbar */ }
+.notes-view { display: none; flex-direction: column; height: 100%; }
+.notes-view.active { display: flex; }
+#notes-app-panel .panel-header { width: 100%; box-sizing: border-box; }
+
+/* Action Bar (Replaces .list-header) */
+.action-bar { padding: 10px 15px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border-color-dark); justify-content: space-between; flex-wrap: wrap; }
+body:not(.dark-mode) .action-bar { border-bottom-color: var(--border-color-light); }
+.action-bar-group { display: flex; gap: 10px; align-items: center; }
+.action-bar-group.left { justify-content: flex-start; }
+.action-bar-group.center { flex-grow: 1; justify-content: center; min-width: 120px; }
+.action-bar-group.right { justify-content: flex-end; }
+.search-input-notes { flex-grow: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) .search-input-notes { border-color: var(--border-color-light); background-color: var(--quote-bg-light); color: var(--text-color-light); }
+.notes-btn { padding: 8px 15px; border-radius: 20px; border: none; cursor: pointer; background-color: var(--h2-color-dark); color: white; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+body:not(.dark-mode) .notes-btn { background-color: var(--h2-color-light); }
+.notes-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+/* More Options Dropdown */
+.more-options-container { position: relative; }
+.more-options-btn { background: none; border: none; padding: 5px; cursor: pointer; line-height: 0; border-radius: 50%; }
+.more-options-btn:hover { background-color: rgba(128, 128, 128, 0.2); }
+.dropdown-menu { display: none; position: absolute; top: 100%; right: 0; background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1550; padding: 5px; min-width: 180px; }
+body:not(.dark-mode) .dropdown-menu { background-color: var(--container-bg-light); border-color: var(--border-color-light); }
+.dropdown-menu.show { display: block; }
+.dropdown-item { background: none; border: none; color: inherit; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer; border-radius: 4px; font-family: 'Gowun Batang', serif; font-size: 1em; display: flex; align-items: center; gap: 8px; }
+body:not(.dark-mode) .dropdown-item:hover { background-color: var(--quote-bg-light); }
+body.dark-mode .dropdown-item:hover { background-color: var(--quote-bg-dark); }
+.dropdown-separator { height: 1px; background-color: var(--border-color-dark); margin: 4px 8px; }
+body:not(.dark-mode) .dropdown-separator { background-color: var(--border-color-light); }
+
+/* Note List & Project Styles */
+#notes-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
+.note-group-header { font-size: 0.9em; font-weight: bold; padding: 15px 5px 5px 5px; color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .note-group-header { color: var(--sub-text-color-light); }
+.note-project-container { margin-bottom: 5px; }
+.note-project-header { display: flex; align-items: center; padding: 10px 5px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s, border 0.2s; position: relative; }
+body:not(.dark-mode) .note-project-header:hover { background-color: var(--quote-bg-light); }
+body.dark-mode .note-project-header:hover { background-color: var(--quote-bg-dark); }
+
+.note-project-header.drag-over { background-color: var(--h2-border-light) !important; border: 1px dashed var(--h2-color-light); }
+body.dark-mode .note-project-header.drag-over { background-color: var(--h2-border-dark) !important; border-color: var(--h2-color-dark); }
+
+.note-project-toggle-icon { transition: transform 0.2s ease-in-out; margin-right: 5px; line-height: 0; }
+.note-project-toggle-icon.expanded { transform: rotate(90deg); }
+.note-project-icon { margin-right: 8px; line-height: 0; }
+.note-project-header svg { fill: currentColor; }
+.note-project-title { font-weight: bold; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-count { font-size: 0.8em; color: var(--sub-text-color-dark); margin-left: 8px; font-weight: normal; }
+body:not(.dark-mode) .note-count { color: var(--sub-text-color-light); }
+
+.note-project-title-input, .note-item-title-input { font-weight: bold; flex-grow: 1; border: none; background: transparent; color: inherit; padding: 2px 4px; border-radius: 4px; outline: 1px solid; font-family: 'Gowun Batang', serif; font-size: 1em; box-sizing: border-box; }
+body.dark-mode .note-project-title-input, body.dark-mode .note-item-title-input { outline-color: var(--header-color-dark); }
+body:not(.dark-mode) .note-project-title-input, body:not(.dark-mode) .note-item-title-input { outline-color: var(--header-color-light); }
+
+.notes-in-project { padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
+.notes-in-project.expanded { max-height: 1000px; }
+
+.note-context-menu { position: absolute; background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1550; padding: 5px; display: none; min-width: 200px; font-size: 0.95em; }
+body:not(.dark-mode) .note-context-menu { background-color: var(--container-bg-light); border-color: var(--border-color-light); }
+.note-context-menu .context-menu-item { background: none; border: none; color: inherit; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer; border-radius: 4px; font-family: 'Gowun Batang', serif; font-size: 1em; display: flex; justify-content: space-between; align-items: center; }
+body:not(.dark-mode) .note-context-menu .context-menu-item:not([disabled]):hover { background-color: var(--quote-bg-light); }
+body.dark-mode .note-context-menu .context-menu-item:not([disabled]):hover { background-color: var(--quote-bg-dark); }
+.note-context-menu .context-menu-item span { flex-grow: 1; }
+.note-context-menu .context-menu-item .icon { margin-right: 10px; opacity: 0.8; }
+.note-context-menu .context-menu-item .submenu-arrow { font-size: 0.8em; }
+.note-context-menu .context-menu-item[disabled] { opacity: 0.5; cursor: not-allowed; }
+.note-context-menu .context-menu-separator { height: 1px; background-color: var(--border-color-dark); margin: 4px 8px; }
+body:not(.dark-mode) .note-context-menu .context-menu-separator { background-color: var(--border-color-light); }
+.note-context-menu .context-submenu-container { position: relative; }
+.note-context-menu .context-submenu { display: none; position: absolute; left: 100%; top: -6px; background-color: inherit; border: 1px solid var(--border-color-dark); border-radius: 6px; box-shadow: inherit; padding: 5px; min-width: 150px; }
+body:not(.dark-mode) .note-context-menu .context-submenu { border-color: var(--border-color-light); }
+.note-context-menu .context-submenu-container:hover > .context-submenu { display: block; }
+.note-context-menu .context-meta-info { font-size: 0.8em; opacity: 0.6; padding: 6px 12px; }
+
+/* Note Item */
+.note-item { padding: 12px 15px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: background-color 0.2s; position: relative; }
+.note-item.is-dragging { opacity: 0.5; background-color: var(--h2-border-dark); cursor: grabbing; }
+.note-item.pinned { /* You can add a specific style for pinned notes if needed */ }
+.note-item:hover { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .note-item:hover { background-color: var(--quote-bg-light); }
+.note-item-title { font-weight: bold; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-item-date { font-size: 0.8em; opacity: 0.7; }
+.note-item-actions { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; gap: 5px; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.note-item:hover .note-item-actions { opacity: 1; pointer-events: auto; }
+
+/* --- [NEW] Editor View Styles for Toast UI Editor --- */
+#note-editor-view {
+    display: flex; /* Changed from 'none' to 'flex' within '.notes-view.active' */
+    flex-direction: column;
+    height: 100%;
+}
+#note-editor-view .editor-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) #note-editor-view .editor-header { border-bottom-color: var(--border-color-light); }
+#note-title-input { font-size: 1.2em; font-weight: bold; width: 100%; border: none; background: transparent; padding: 10px 15px; color: inherit; }
+
+/* [NEW] Toast UI Editor Container */
+#toast-editor {
+    flex-grow: 1; /* Makes the editor fill the available space */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#auto-save-status { font-size: 0.8em; padding: 5px 15px; text-align: right; opacity: 0.7; }
+
+/* Placeholder Styles for Intelligent Features */
+.tag-container { padding: 5px 15px 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.note-tag { background-color: var(--h2-border-dark); color: var(--text-color-dark); padding: 3px 10px; border-radius: 15px; font-size: 0.85em; cursor: pointer; }
+body:not(.dark-mode) .note-tag { background-color: var(--h2-border-light); color: var(--text-color-light); }
+
