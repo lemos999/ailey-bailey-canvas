@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T18:14:19.077Z */
+/* Auto-generated bundle from 2025-08-08T19:30:31.985Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -512,17 +512,83 @@ body:not(.dark-mode) .context-submenu {
 .chat-header-right {
     flex-shrink: 0;
 }
-#ai-model-selector { 
-    padding: 6px 10px;
+
+/* [NEW] Custom AI Model Selector */
+.custom-select-container {
+    position: relative;
+    display: inline-block;
+    font-family: 'Gowun Batang', serif;
+}
+.custom-select-display {
+    padding: 6px 30px 6px 12px;
     font-size: 0.95em;
     border-radius: 6px;
     border: 1px solid;
-    font-family: 'Gowun Batang', serif;
     cursor: pointer;
     transition: all 0.2s;
-    flex-shrink: 1;
-    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    width: 100%;
+    max-width: 200px;
+    box-sizing: border-box;
+    position: relative;
 }
+.custom-select-display::after {
+    content: '▼';
+    font-size: 0.7em;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%) scale(1.2, 0.8);
+    transition: transform 0.2s;
+}
+.custom-select-container.open .custom-select-display::after {
+    transform: translateY(-50%) scale(1.2, 0.8) rotate(180deg);
+}
+body.dark-mode .custom-select-display {
+    background-color: var(--container-bg-dark);
+    border-color: var(--border-color-dark);
+    color: var(--text-color-dark);
+}
+body:not(.dark-mode) .custom-select-display {
+    background-color: var(--container-bg-light);
+    border-color: var(--border-color-light);
+    color: var(--text-color-light);
+}
+.custom-select-options {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--container-bg-dark);
+    border: 1px solid var(--border-color-dark);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    z-index: 1200;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.custom-select-container.open .custom-select-options {
+    display: block;
+}
+body:not(.dark-mode) .custom-select-options {
+    background-color: var(--container-bg-light);
+    border-color: var(--border-color-light);
+}
+.custom-select-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+body.dark-mode .custom-select-option:hover { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .custom-select-option:hover { background-color: var(--quote-bg-light); }
+.custom-select-option.selected { font-weight: bold; }
+body.dark-mode .custom-select-option.selected { background-color: var(--h2-border-dark); }
+body:not(.dark-mode) .custom-select-option.selected { background-color: var(--h2-border-light); }
+
 #chat-session-title { display: none; } /* Replaced by model selector in header */
 .chat-header-right > span, .chat-header-right > button {
     cursor:pointer;

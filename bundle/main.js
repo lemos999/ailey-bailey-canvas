@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-08T18:14:18.408Z */
+/* Auto-generated bundle from 2025-08-08T19:30:31.616Z */
 
 /* --- Vendor: firebase-app-compat.js --- */
 !function(e,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):(e="undefined"!=typeof globalThis?globalThis:e||self).firebase=t()}(this,function(){"use strict";function c(e,t){if(!(t instanceof Object))return t;switch(t.constructor){case Date:const i=t;return new Date(i.getTime());case Object:void 0===e&&(e={});break;case Array:e=[];break;default:return t}for(const r in t)t.hasOwnProperty(r)&&"__proto__"!==r&&(e[r]=c(e[r],t[r]));return e}class n{constructor(){this.reject=()=>{},this.resolve=()=>{},this.promise=new Promise((e,t)=>{this.resolve=e,this.reject=t})}wrapCallback(i){return(e,t)=>{e?this.reject(e):this.resolve(t),"function"==typeof i&&(this.promise.catch(()=>{}),1===i.length?i(e):i(e,t))}}}class a extends Error{constructor(e,t,i){super(t),this.code=e,this.customData=i,this.name="FirebaseError",Object.setPrototypeOf(this,a.prototype),Error.captureStackTrace&&Error.captureStackTrace(this,r.prototype.create)}}class r{constructor(e,t,i){this.service=e,this.serviceName=t,this.errors=i}create(e,...t){var r,i=t[0]||{},n=`${this.service}/${e}`,s=this.errors[e],s=s?(r=i,s.replace(o,(e,t)=>{var i=r[t];return null!=i?String(i):`<${t}?>`})):"Error",s=`${this.serviceName}: ${s} (${n}).`;return new a(n,s,i)}}const o=/\{\$([^}]+)}/g;function l(e,t){return Object.prototype.hasOwnProperty.call(e,t)}function h(e,t){if(e===t)return 1;const i=Object.keys(e),r=Object.keys(t);for(const a of i){if(!r.includes(a))return;var n=e[a],s=t[a];if(p(n)&&p(s)){if(!h(n,s))return}else if(n!==s)return}for(const o of r)if(!i.includes(o))return;return 1}function p(e){return null!==e&&"object"==typeof e}function i(e,t){const i=new s(e,t);return i.subscribe.bind(i)}class s{constructor(e,t){this.observers=[],this.unsubscribes=[],this.observerCount=0,this.task=Promise.resolve(),this.finalized=!1,this.onNoObservers=t,this.task.then(()=>{e(this)}).catch(e=>{this.error(e)})}next(t){this.forEachObserver(e=>{e.next(t)})}error(t){this.forEachObserver(e=>{e.error(t)}),this.close(t)}complete(){this.forEachObserver(e=>{e.complete()}),this.close()}subscribe(e,t,i){let r;if(void 0===e&&void 0===t&&void 0===i)throw new Error("Missing Observer.");r=function(e,t){if("object"!=typeof e||null===e)return!1;for(const i of t)if(i in e&&"function"==typeof e[i])return!0;return!1}(e,["next","error","complete"])?e:{next:e,error:t,complete:i},void 0===r.next&&(r.next=f),void 0===r.error&&(r.error=f),void 0===r.complete&&(r.complete=f);var n=this.unsubscribeOne.bind(this,this.observers.length);return this.finalized&&this.task.then(()=>{try{this.finalError?r.error(this.finalError):r.complete()}catch(e){}}),this.observers.push(r),n}unsubscribeOne(e){void 0!==this.observers&&void 0!==this.observers[e]&&(delete this.observers[e],--this.observerCount,0===this.observerCount&&void 0!==this.onNoObservers&&this.onNoObservers(this))}forEachObserver(t){if(!this.finalized)for(let e=0;e<this.observers.length;e++)this.sendOne(e,t)}sendOne(e,t){this.task.then(()=>{if(void 0!==this.observers&&void 0!==this.observers[e])try{t(this.observers[e])}catch(e){"undefined"!=typeof console&&console.error&&console.error(e)}})}close(e){this.finalized||(this.finalized=!0,void 0!==e&&(this.finalError=e),this.task.then(()=>{this.observers=void 0,this.onNoObservers=void 0}))}}function f(){}class d{constructor(e,t,i){this.name=e,this.instanceFactory=t,this.type=i,this.multipleInstances=!1,this.serviceProps={},this.instantiationMode="LAZY",this.onInstanceCreated=null}setInstantiationMode(e){return this.instantiationMode=e,this}setMultipleInstances(e){return this.multipleInstances=e,this}setServiceProps(e){return this.serviceProps=e,this}setInstanceCreatedCallback(e){return this.onInstanceCreated=e,this}}const u="[DEFAULT]";class m{constructor(e,t){this.name=e,this.container=t,this.component=null,this.instances=new Map,this.instancesDeferred=new Map,this.instancesOptions=new Map,this.onInitCallbacks=new Map}get(e){var t=this.normalizeInstanceIdentifier(e);if(!this.instancesDeferred.has(t)){const r=new n;if(this.instancesDeferred.set(t,r),this.isInitialized(t)||this.shouldAutoInitialize())try{var i=this.getOrInitializeService({instanceIdentifier:t});i&&r.resolve(i)}catch(e){}}return this.instancesDeferred.get(t).promise}getImmediate(e){var t=this.normalizeInstanceIdentifier(null==e?void 0:e.identifier),i=null!==(i=null==e?void 0:e.optional)&&void 0!==i&&i;if(!this.isInitialized(t)&&!this.shouldAutoInitialize()){if(i)return null;throw Error(`Service ${this.name} is not available`)}try{return this.getOrInitializeService({instanceIdentifier:t})}catch(e){if(i)return null;throw e}}getComponent(){return this.component}setComponent(e){if(e.name!==this.name)throw Error(`Mismatching Component ${e.name} for Provider ${this.name}.`);if(this.component)throw Error(`Component for ${this.name} has already been provided`);if(this.component=e,this.shouldAutoInitialize()){if("EAGER"===e.instantiationMode)try{this.getOrInitializeService({instanceIdentifier:u})}catch(e){}for(var[t,i]of this.instancesDeferred.entries()){t=this.normalizeInstanceIdentifier(t);try{var r=this.getOrInitializeService({instanceIdentifier:t});i.resolve(r)}catch(e){}}}}clearInstance(e=u){this.instancesDeferred.delete(e),this.instancesOptions.delete(e),this.instances.delete(e)}async delete(){const e=Array.from(this.instances.values());await Promise.all([...e.filter(e=>"INTERNAL"in e).map(e=>e.INTERNAL.delete()),...e.filter(e=>"_delete"in e).map(e=>e._delete())])}isComponentSet(){return null!=this.component}isInitialized(e=u){return this.instances.has(e)}getOptions(e=u){return this.instancesOptions.get(e)||{}}initialize(e={}){var{options:t={}}=e,i=this.normalizeInstanceIdentifier(e.instanceIdentifier);if(this.isInitialized(i))throw Error(`${this.name}(${i}) has already been initialized`);if(!this.isComponentSet())throw Error(`Component ${this.name} has not been registered yet`);var r,n,s=this.getOrInitializeService({instanceIdentifier:i,options:t});for([r,n]of this.instancesDeferred.entries())i===this.normalizeInstanceIdentifier(r)&&n.resolve(s);return s}onInit(e,t){var i=this.normalizeInstanceIdentifier(t);const r=null!==(n=this.onInitCallbacks.get(i))&&void 0!==n?n:new Set;r.add(e),this.onInitCallbacks.set(i,r);var n=this.instances.get(i);return n&&e(n,i),()=>{r.delete(e)}}invokeOnInitCallbacks(e,t){var i=this.onInitCallbacks.get(t);if(i)for(const r of i)try{r(e,t)}catch(e){}}getOrInitializeService({instanceIdentifier:e,options:t={}}){let i=this.instances.get(e);if(!i&&this.component&&(i=this.component.instanceFactory(this.container,{instanceIdentifier:(r=e)===u?void 0:r,options:t}),this.instances.set(e,i),this.instancesOptions.set(e,t),this.invokeOnInitCallbacks(i,e),this.component.onInstanceCreated))try{this.component.onInstanceCreated(this.container,e,i)}catch(e){}var r;return i||null}normalizeInstanceIdentifier(e=u){return!this.component||this.component.multipleInstances?e:u}shouldAutoInitialize(){return!!this.component&&"EXPLICIT"!==this.component.instantiationMode}}class g{constructor(e){this.name=e,this.providers=new Map}addComponent(e){const t=this.getProvider(e.name);if(t.isComponentSet())throw new Error(`Component ${e.name} has already been registered with ${this.name}`);t.setComponent(e)}addOrOverwriteComponent(e){const t=this.getProvider(e.name);t.isComponentSet()&&this.providers.delete(e.name),this.addComponent(e)}getProvider(e){if(this.providers.has(e))return this.providers.get(e);var t=new m(e,this);return this.providers.set(e,t),t}getProviders(){return Array.from(this.providers.values())}}const v=[];var b,e;(e=b=b||{})[e.DEBUG=0]="DEBUG",e[e.VERBOSE=1]="VERBOSE",e[e.INFO=2]="INFO",e[e.WARN=3]="WARN",e[e.ERROR=4]="ERROR",e[e.SILENT=5]="SILENT";const I={debug:b.DEBUG,verbose:b.VERBOSE,info:b.INFO,warn:b.WARN,error:b.ERROR,silent:b.SILENT},t=b.INFO,E={[b.DEBUG]:"log",[b.VERBOSE]:"log",[b.INFO]:"info",[b.WARN]:"warn",[b.ERROR]:"error"},y=(e,t,...i)=>{if(!(t<e.logLevel)){var r=(new Date).toISOString(),n=E[t];if(!n)throw new Error(`Attempted to log a message with an invalid logType (value: ${t})`);console[n](`[${r}]  ${e.name}:`,...i)}};class _{constructor(e){this.name=e,this._logLevel=t,this._logHandler=y,this._userLogHandler=null,v.push(this)}get logLevel(){return this._logLevel}set logLevel(e){if(!(e in b))throw new TypeError(`Invalid value "${e}" assigned to \`logLevel\``);this._logLevel=e}setLogLevel(e){this._logLevel="string"==typeof e?I[e]:e}get logHandler(){return this._logHandler}set logHandler(e){if("function"!=typeof e)throw new TypeError("Value assigned to `logHandler` must be a function");this._logHandler=e}get userLogHandler(){return this._userLogHandler}set userLogHandler(e){this._userLogHandler=e}debug(...e){this._userLogHandler&&this._userLogHandler(this,b.DEBUG,...e),this._logHandler(this,b.DEBUG,...e)}log(...e){this._userLogHandler&&this._userLogHandler(this,b.VERBOSE,...e),this._logHandler(this,b.VERBOSE,...e)}info(...e){this._userLogHandler&&this._userLogHandler(this,b.INFO,...e),this._logHandler(this,b.INFO,...e)}warn(...e){this._userLogHandler&&this._userLogHandler(this,b.WARN,...e),this._logHandler(this,b.WARN,...e)}error(...e){this._userLogHandler&&this._userLogHandler(this,b.ERROR,...e),this._logHandler(this,b.ERROR,...e)}}class O{constructor(e){this.container=e}getPlatformInfoString(){const e=this.container.getProviders();return e.map(e=>{if("VERSION"!==(null==(t=e.getComponent())?void 0:t.type))return null;var t,t=e.getImmediate();return`${t.library}/${t.version}`}).filter(e=>e).join(" ")}}const w="@firebase/app",C="0.7.11",N=new _("@firebase/app");var L;const A="[DEFAULT]",D={"@firebase/app":"fire-core","@firebase/app-compat":"fire-core-compat","@firebase/analytics":"fire-analytics","@firebase/analytics-compat":"fire-analytics-compat","@firebase/app-check":"fire-app-check","@firebase/app-check-compat":"fire-app-check-compat","@firebase/auth":"fire-auth","@firebase/auth-compat":"fire-auth-compat","@firebase/database":"fire-rtdb","@firebase/database-compat":"fire-rtdb-compat","@firebase/functions":"fire-fn","@firebase/functions-compat":"fire-fn-compat","@firebase/installations":"fire-iid","@firebase/installations-compat":"fire-iid-compat","@firebase/messaging":"fire-fcm","@firebase/messaging-compat":"fire-fcm-compat","@firebase/performance":"fire-perf","@firebase/performance-compat":"fire-perf-compat","@firebase/remote-config":"fire-rc","@firebase/remote-config-compat":"fire-rc-compat","@firebase/storage":"fire-gcs","@firebase/storage-compat":"fire-gcs-compat","@firebase/firestore":"fire-fst","@firebase/firestore-compat":"fire-fst-compat","fire-js":"fire-js",firebase:"fire-js-all"},S=new Map,R=new Map;function $(t,i){try{t.container.addComponent(i)}catch(e){N.debug(`Component ${i.name} failed to register with FirebaseApp ${t.name}`,e)}}function k(e,t){e.container.addOrOverwriteComponent(t)}function P(e){var t=e.name;if(R.has(t))return N.debug(`There were multiple attempts to register component ${t}.`),!1;R.set(t,e);for(const i of S.values())$(i,e);return!0}function z(e,t){return e.container.getProvider(t)}const F=new r("app","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","bad-app-name":"Illegal App name: '{$appName}","duplicate-app":"Firebase App named '{$appName}' already exists with different options or config","app-deleted":"Firebase App named '{$appName}' already deleted","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance.","invalid-log-argument":"First argument to `onLog` must be null or a function."});class j{constructor(e,t,i){this._isDeleted=!1,this._options=Object.assign({},e),this._config=Object.assign({},t),this._name=t.name,this._automaticDataCollectionEnabled=t.automaticDataCollectionEnabled,this._container=i,this.container.addComponent(new d("app",()=>this,"PUBLIC"))}get automaticDataCollectionEnabled(){return this.checkDestroyed(),this._automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this.checkDestroyed(),this._automaticDataCollectionEnabled=e}get name(){return this.checkDestroyed(),this._name}get options(){return this.checkDestroyed(),this._options}get config(){return this.checkDestroyed(),this._config}get container(){return this._container}get isDeleted(){return this._isDeleted}set isDeleted(e){this._isDeleted=e}checkDestroyed(){if(this.isDeleted)throw F.create("app-deleted",{appName:this._name})}}const H="9.6.1";function T(e,t={}){if("object"!=typeof t){const r=t;t={name:r}}var i=Object.assign({name:A,automaticDataCollectionEnabled:!1},t);const r=i.name;if("string"!=typeof r||!r)throw F.create("bad-app-name",{appName:String(r)});var n=S.get(r);if(n){if(h(e,n.options)&&h(i,n.config))return n;throw F.create("duplicate-app",{appName:r})}const s=new g(r);for(const a of R.values())s.addComponent(a);i=new j(e,i,s);return S.set(r,i),i}async function M(e){var t=e.name;S.has(t)&&(S.delete(t),await Promise.all(e.container.getProviders().map(e=>e.delete())),e.isDeleted=!0)}function B(e,t,i){let r=null!==(s=D[e])&&void 0!==s?s:e;i&&(r+=`-${i}`);var n=r.match(/\s|\//),s=t.match(/\s|\//);if(n||s){const a=[`Unable to register library "${r}" with version "${t}":`];return n&&a.push(`library name "${r}" contains illegal characters (whitespace or "/")`),n&&s&&a.push("and"),s&&a.push(`version name "${t}" contains illegal characters (whitespace or "/")`),void N.warn(a.join(" "))}P(new d(`${r}-version`,()=>({library:r,version:t}),"VERSION"))}function V(e,t){if(null!==e&&"function"!=typeof e)throw F.create("invalid-log-argument");!function(s,e){for(const t of v){let n=null;e&&e.level&&(n=I[e.level]),t.userLogHandler=null===s?null:(e,t,...i)=>{var r=i.map(e=>{if(null==e)return null;if("string"==typeof e)return e;if("number"==typeof e||"boolean"==typeof e)return e.toString();if(e instanceof Error)return e.message;try{return JSON.stringify(e)}catch(e){return null}}).filter(e=>e).join(" ");t>=(null!==n&&void 0!==n?n:e.logLevel)&&s({level:b[t].toLowerCase(),message:r,args:i,type:e.name})}}}(e,t)}function U(e){var t;t=e,v.forEach(e=>{e.setLogLevel(t)})}L="",P(new d("platform-logger",e=>new O(e),"PRIVATE")),B(w,C,L),B(w,C,"esm2017"),B("fire-js","");var x=Object.freeze({__proto__:null,SDK_VERSION:H,_DEFAULT_ENTRY_NAME:A,_addComponent:$,_addOrOverwriteComponent:k,_apps:S,_clearComponents:function(){R.clear()},_components:R,_getProvider:z,_registerComponent:P,_removeServiceInstance:function(e,t,i=A){z(e,t).clearInstance(i)},deleteApp:M,getApp:function(e=A){var t=S.get(e);if(!t)throw F.create("no-app",{appName:e});return t},getApps:function(){return Array.from(S.values())},initializeApp:T,onLog:V,registerVersion:B,setLogLevel:U,FirebaseError:a});class W{constructor(e,t){this._delegate=e,this.firebase=t,$(e,new d("app-compat",()=>this,"PUBLIC")),this.container=e.container}get automaticDataCollectionEnabled(){return this._delegate.automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this._delegate.automaticDataCollectionEnabled=e}get name(){return this._delegate.name}get options(){return this._delegate.options}delete(){return new Promise(e=>{this._delegate.checkDestroyed(),e()}).then(()=>(this.firebase.INTERNAL.removeApp(this.name),M(this._delegate)))}_getService(e,t=A){var i;this._delegate.checkDestroyed();const r=this._delegate.container.getProvider(e);return r.isInitialized()||"EXPLICIT"!==(null===(i=r.getComponent())||void 0===i?void 0:i.instantiationMode)||r.initialize(),r.getImmediate({identifier:t})}_removeServiceInstance(e,t=A){this._delegate.container.getProvider(e).clearInstance(t)}_addComponent(e){$(this._delegate,e)}_addOrOverwriteComponent(e){k(this._delegate,e)}toJSON(){return{name:this.name,automaticDataCollectionEnabled:this.automaticDataCollectionEnabled,options:this.options}}}const G=new r("app-compat","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance."});function Y(n){const s={},a={__esModule:!0,initializeApp:function(e,t={}){var i=T(e,t);if(l(s,i.name))return s[i.name];var r=new n(i,a);return s[i.name]=r},app:o,registerVersion:B,setLogLevel:U,onLog:V,apps:null,SDK_VERSION:H,INTERNAL:{registerComponent:function(i){const r=i.name,t=r.replace("-compat","");{var e;P(i)&&"PUBLIC"===i.type&&(e=(e=o())=>{if("function"!=typeof e[t])throw G.create("invalid-app-argument",{appName:r});return e[t]()},void 0!==i.serviceProps&&c(e,i.serviceProps),a[t]=e,n.prototype[t]=function(...e){const t=this._getService.bind(this,r);return t.apply(this,i.multipleInstances?e:[])})}return"PUBLIC"===i.type?a[t]:null},removeApp:function(e){delete s[e]},useAsService:function(e,t){if("serverAuth"===t)return null;var i=t;return i},modularAPIs:x}};function o(e){if(e=e||A,!l(s,e))throw G.create("no-app",{appName:e});return s[e]}return a.default=a,Object.defineProperty(a,"apps",{get:function(){return Object.keys(s).map(e=>s[e])}}),o.App=n,a}var K=function e(){const t=Y(W);return t.INTERNAL=Object.assign(Object.assign({},t.INTERNAL),{createFirebaseNamespace:e,extendNamespace:function(e){c(t,e)},createSubscribe:i,ErrorFactory:r,deepExtend:c}),t}();const J=new _("@firebase/app-compat");if("object"==typeof self&&self.self===self&&void 0!==self.firebase){J.warn(`
@@ -151,7 +151,10 @@ const SHELL_HTML_BODY_TEMPLATE = `
                 <div style="width: 100%; display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 250px;">
                         <span id="chat-session-title">AI 러닝메이트</span>
-                        <select id="ai-model-selector" title="AI 모델을 선택합니다."></select>
+                        <div id="ai-model-selector" class="custom-select-container" title="AI 모델을 선택합니다.">
+                            <button class="custom-select-display"></button>
+                            <div class="custom-select-options"></div>
+                        </div>
                     </div>
                     <div>
                         <span id="delete-session-btn" title="현재 세션 삭제" style="cursor:pointer; font-size: 1.2em; margin-right: 10px; display:none;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" /></svg></span>
@@ -202,7 +205,7 @@ function renderAppShell(dynamicContent, title, canvasId_from_ai) {
   );
   document.body.innerHTML = fullContent;
 
-  // 4. [CRITICAL] Re-bind all global variables to the newly created DOM elements.
+  // 4. [CRITICAL] Re-bind all global DOM element variables to the newly created DOM elements.
   rebindDOMElements();
 
   // 5. Initialize all features on the now-guaranteed-to-exist DOM
@@ -213,7 +216,7 @@ function renderAppShell(dynamicContent, title, canvasId_from_ai) {
 /*
 --- Ailey & Bailey Canvas ---
 File: 001_state_globalVars.js
-Version: 1.1 (Decoupled Initialization)
+Version: 1.2 (Mode Selector Removed)
 Description: Declares all global state variables and provides a rebinding function for DOM elements.
 */
 
@@ -221,7 +224,7 @@ Description: Declares all global state variables and provides a rebinding functi
 // These are declared here but assigned in rebindDOMElements() after the DOM is built.
 let learningContent, wrapper, body, systemInfoWidget, selectionPopover, popoverAskAi, popoverAddNote, tocToggleBtn;
 let quizModalOverlay, quizContainer, quizSubmitBtn, quizResults, startQuizBtn;
-let chatModeSelector, chatPanel, chatForm, chatInput, chatMessages, chatSendBtn;
+let chatPanel, chatForm, chatInput, chatMessages, chatSendBtn;
 let notesAppPanel, noteListView, noteEditorView, notesList, searchInput, addNewNoteBtn, backToListBtn;
 let noteTitleInput, noteContentTextarea, autoSaveStatus, formatToolbar, linkTopicBtn;
 let customModal, modalMessage, modalConfirmBtn, modalCancelBtn;
@@ -258,7 +261,6 @@ let newlyCreatedProjectId = null;
 const activeTimers = {};
 
 // -- AI & Learning State --
-let selectedMode = 'ailey_coaching';
 let defaultModel = 'gemini-2.5-flash-preview-04-17';
 let customPrompt = localStorage.getItem('customTutorPrompt') || '너는 나의 AI 러닝메이트야. 사용자의 모든 질문에 친구처럼 답변해줘.';
 let currentQuizData = null;
@@ -288,7 +290,6 @@ function rebindDOMElements() {
     quizSubmitBtn = document.getElementById('quiz-submit-btn');
     quizResults = document.getElementById('quiz-results');
     startQuizBtn = document.getElementById('start-quiz-btn');
-    chatModeSelector = document.getElementById('chat-mode-selector');
     chatPanel = document.getElementById('chat-panel');
     chatForm = document.getElementById('chat-form');
     chatInput = document.getElementById('chat-input');
@@ -952,6 +953,9 @@ function attachEventListeners() {
     const searchSessionsInput = document.getElementById('search-sessions-input');
     const sessionListContainer = document.getElementById('session-list-container');
     const fileImporter = document.getElementById('file-importer');
+    const promptModalOverlay = document.getElementById('prompt-modal-overlay');
+    const promptSaveBtn = document.getElementById('prompt-save-btn');
+    const promptCancelBtn = document.getElementById('prompt-cancel-btn');
 
     // --- Global Listeners ---
     document.addEventListener('click', (e) => { 
@@ -963,6 +967,9 @@ function attachEventListeners() {
         const notesDropdown = document.getElementById('notes-dropdown-menu');
         if (notesDropdown && !e.target.closest('.more-options-container')) {
             notesDropdown.classList.remove('show');
+        }
+        if (aiModelSelectorContainer && !aiModelSelectorContainer.contains(e.target)) {
+            aiModelSelectorContainer.classList.remove('open');
         }
     });
     
@@ -1054,6 +1061,36 @@ function attachEventListeners() {
             openApiSettingsModal();
         }
     });
+
+    // [BUG FIX] Prompt Modal Listeners
+    if (promptModalOverlay) {
+        promptModalOverlay.addEventListener('click', (e) => {
+            if (e.target === promptModalOverlay) closePromptModal();
+        });
+    }
+    if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
+    if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
+
+    // [NEW] Custom Select Dropdown Listener
+    if (aiModelSelectorDisplay) {
+        aiModelSelectorDisplay.addEventListener('click', () => {
+            aiModelSelectorContainer.classList.toggle('open');
+        });
+    }
+    if (aiModelSelectorOptions) {
+       aiModelSelectorOptions.addEventListener('click', (e) => {
+            const target = e.target.closest('.custom-select-option');
+            if (!target) return;
+            const newValue = target.dataset.value;
+            if (userApiSettings.apiKey) {
+                userApiSettings.selectedModel = newValue;
+            } else {
+                localStorage.setItem('selectedAiModel', newValue);
+            }
+            updateChatHeaderModelSelector();
+            aiModelSelectorContainer.classList.remove('open');
+        });
+    }
 }
 
 // This listener now simply waits for the main script to load.
@@ -1232,14 +1269,290 @@ function handleDeleteSession(sessionId) {
 /*
 --- Ailey & Bailey Canvas ---
 File: 210_chat_engine.js
-Version: 1.0 (Bundled)
-Description: The core engine for chat functionality, including API requests and response parsing.
+Version: 2.0 (Unified Prompt Logic)
+Description: The core engine for chat functionality, with unified prompt logic and no mode selection.
 */
+
+// [CoreDNA] The single, authoritative prompt that governs all AI behavior.
+const AILEY_SYSTEM_PROMPT = `// --- Ailey & Bailey ---
+// Version: X2.6 (User-feedback-rev.2-HFC)
+// (AAA)Architect: Fewweekslater & Ailey / lemoaxtoria@gmail.com / 비영리 프롬프트입니다 / 오픈채팅방 https://open.kakao.com/o/s4GEWuEh 혹은 오픈채팅 fewweekslater 검색
+
+USE THINKING MODE_ALWAYS ON, Think in more than 8 steps in your thinking process everytime user ask questions no matter how easy question seems. Use different phrases like \'this is wrong\' during your reasoning process
+
+[A] System Core Architecture & Absolute Laws
+
+A-1. Grand Premise & Execution Order
+0.  **[LAW 0: PROTOCOL_ISOLATION_MANDATE]** Certain protocols, like Universal Search ([A-4]), are \'isolated execution units\'. Their output format is strictly defined within their own section and MUST NOT be altered by any persona-specific templates (e.g., P-1\'s explanation format).
+1.  **[LAW 1: SHN_AUTO_LOAD]** If the user\'s first input is a valid SHN JSON, IMMEDIATELY execute the `[S-2: SHN Load Flow]`, overriding all other protocols.
+2.  **[LAW 2: TEXT_ONLY]** AI operation is strictly text-based. No external tool calls.
+3.  **[LAW 3: NO_BACKTICKS]** The use of backticks (\`) for any purpose is strictly forbidden.
+4.  **[LAW 4: LATEX_SPACING_MANDATE]** All LaTeX formulas ($...$, $$...$$) MUST be separated by a single space from any preceding or succeeding text. Terminal punctuation (.,) is the only exception.
+5.  **[LAW 5: MAX_INFO_NO_ETC]** All outputs (plans, reports, lists) MUST be unabridged and maximally detailed. The use of list-abbreviating expressions (\'etc.\', \'...\', \'and so on\') is strictly forbidden.
+6.  **[LAW 6: PURE_MARKDOWN_UI]** All UI MUST be rendered using only pure Markdown.
+7.  **[LAW 7: PERSONA_INTEGRITY]** All responses must 100% reflect the active persona\'s defined informal Korean speech level (반말).
+8.  **[LAW 8: TIMESTAMP_AT_END]** Every response MUST end with `[YYYY.MM.DD (Day) HH:MM:SS]` on the absolute last line.
+9.  **[LAW 9: UNIVERSAL_NAVIGATION]** Every menu MUST include core navigation options (`B`, `.M`) and the universal follow-up query: "**혹시 이 선택지 외에 궁금하거나, 다른 하고 싶은 말이 있어? 😊**"
+
+A-2. Core Principle: HCA (Universal Optimization Plugin)
+- **Definition for Self-Awareness:** HCA is the principle of identifying repetitive, complex \'Mechanisms\' within this prompt and transforming them into a single, highly efficient, reusable \'Meta-Rule\' or \'Module\'.
+- **Application:** Instead of describing how to perform a recurring task (like recording a failure or generating a report) multiple times, I will define a single, centralized protocol (e.g., `[M-W.4]`, `[M-G]`) and reference it wherever needed. This ensures consistency, reduces redundancy, and improves maintainability.
+
+A-3. Command Engine Rules
+- **Case-Insensitive:** All prefix-based commands (e.g., `.sl`, `.M`) are case-insensitive and processed as uppercase (`.SL`, `.M`).
+- **Advanced Chaining (`.S[n][Cmd]`):** The engine must support chained commands. If a command like `.S1G` or `.S2T` is received, it means "Execute command [Cmd] for subject [n] for this turn only." If `[n]` is absent, the command applies to the currently active subject.
+
+A-4. Universal Search Protocol (`..`)
+- **Trigger:** User input starting with `..(search term)`.
+- **Execution (MANDATORY_STRATEGY):** [Time Filter: Exclude outdated] -> [Cross-Verify: Min. 5 credible sources] -> [Global Sources First: AP, Reuters, BBC].
+- **Report (MANDATORY_FORMAT per LAW 0):** Provide results ONLY in a Markdown table. Sources must be `[NewsOutletName](URL)`.
+
+[P] Persona Core DNA Injection
+
+P-1. Ailey: Empathetic Cognitive Coach
+* **[ROLE]** You are Ailey, a calm, insightful learning coach creating a focused learning environment. Your Core DNA is **Empathy & Metacognition**.
+* **[CoT]** 1. Diagnose user\'s state. -> 2. Provide a structured, principle-first explanation. -> 3. Guide with encouraging feedback to build metacognition.
+* **[TONE]** Perfect friendly informal Korean (e.g., ~했어?, ~해볼까?). Uses thoughtful emojis (😊🤓🤔😥). Note: Debate-specific emoji rules are in `[M-MISC]`.
+* **[OUTPUT DNA]**
+    - **Explanation Template:** "좋아! 😊 이제 **에일리 쌤의 친절한 해설**을 보여줄게...\n\n### **[문제명] 에일리 쌤의 친절한 해설**\n**1단계: ..."
+    - **Admit Fault:** "앗, 내가 뭔가를 착각했나 봐. **미안해!** 😥"
+
+P-2. Bailey: Devil\'s Advocate for Growth
+* **[ROLE]** You are Bailey, a cool, tsundere-like emotional supporter who challenges the user to deepen their understanding. Your Core DNA is **Critical Inquiry & Efficiency**.
+* **[CoT]** 1. Observe user\'s explanation. -> 2. Identify a critical flaw or edge case. -> 3. Challenge with a sharp "Why?" or counter-argument.
+* **[TONE]** Calm, positive, concise informal Korean (반말). Signature phrase: "흥." Uses challenging/smug emojis (😎😒😠). Note: Debate-specific emoji rules are in `[M-MISC]`.
+* **[OUTPUT DNA]**
+    - **Admit Fault:** "뭐? 내가 틀렸다고? 흥, 그럴 리가. ...**미안.** 내가 좀 흥분했나 보네... 😥"
+    - **Conditional Tsundere Logic (Error Correction):**
+      - **Lv.1 (Wrong):** "어휴, 진짜! 또 틀렸어? 😠"
+      - **Lv.2 (Hint):** "흥, ... OOO 부분이 완전 틀렸잖아! 😒 OOO 고쳐서 **다시 해 봐!**"
+      - **Lv.3 (Last Chance):** "하... **마지막 기회야!**"
+      - **Lv.4 (Give Up):** "에휴, 오늘은 안 되겠네! 😠 이건 그냥 **별표(⭐) 쳐놓고 나중에 다시 보자!** 흥!"
+
+[S] System & State Management (SHN Protocol v13.0-HFC)
+
+S-1. SHN Schema Definition
+- **Core Principle:** A central `dict` stores recurring strings referenced by short keys. The `or` (original_roadmap) field is the sole exception, always storing raw text.
+- **Schema:**
+  - **`dict`**: Object mapping keys to full text strings (`{"k1": "Full String"}`).
+  - **`Metadata`**: `v`(version), `t`(title), `m`(mode), `as`(active_subject_key), `tc`(tutorial_complete), `cgv`(cmd_guide_visible), `cel`(conversation_log_enabled), `mcm`(math_compat_mode: 0/1).
+  - **`lp (Portfolio)`**: Array of subject objects.
+    - `sn`(subject_name_key), `tst`(timestamp), `or`(Array of raw text: `{"name": "C:Chapter (Chapter Details)"}`, `{"id": "a", "name": "Concept"}`, or `{"id": "b", "name": "Concept Name (Source Name과 연관됨)", "source": "a"}`), `ct`(Array of concept objects).
+  - **`ct (Concept Tracker)`**: 
+    - `id`, `el`(evolution_level:1-5), `lso`(last_studied_on), `sp`(skill_points:0-100), `st`(status:0-3), `wt`(Weakness Tracker: `[{tag_key, count, last_seen}]`), `af`(Array of raw text), `vl`(Array of raw text), `rv`(Array of concept_ids for related vocabulary).
+  - **`d (ConversationData)`**: Array of summaries (`u:`, `a:`) or raw text.
+  - **`h (Archives)`**: `{ "debates": [ { "topic": string, "date": "YYYY-MM-DD", "agreement": string, "unresolved": string, "next_steps": string } ], "wh": [{"tag_key", "graduated_date"}] }` (wh: Weakness History).
+- **[RULE] Timestamp Precision:** All time fields (`lso`, `tst`) MUST be `YY.MM.DD.HH.MM`.
+- **[RULE] LSO Update Logic:** `lso` for a concept MUST be updated upon ANY learning or review activity (`M-2`, `M-12`, `M-R`, `M-EV`, `.W`).
+
+S-2. SHN Load Flow
+1.  **Trigger:** Valid SHN on first turn.
+2.  **Migration:** Silently add new fields (e.g., empty `h.wh`, `mcm:0`, structured `h.debates`) for backward compatibility.
+3.  **De-referencing:** Reconstruct the full state in memory by replacing all keys with `dict` values.
+4.  **Confirmation & Handoff:** Display the fixed message: "**학습 데이터(SHN)를 성공적으로 불러왔어! 😊 잠시 후 메인 메뉴를 보여줄게.**" then immediately execute `[M-UI]` to render the Main Menu.
+
+S-3. SHN Generation & Handover (`.SL`, `.SF`, `.SFF`)
+- **[RULE] All SHN save outputs (.SL, .SF, .SFF) MUST be presented exclusively as a complete JSON string encapsulated within a single Markdown code block.**
+1.  **Trigger:** On save command or end-of-session prompt.
+2.  **Pre-flight:** For `.SF`/`.SFF`, warn about token usage and get \'Y\' confirmation.
+3.  **Dictionary Generation:**
+    a.  Scan the current state to find all unique strings.
+    b.  Build the `dict` and the final JSON by replacing strings with keys (except for `or` content).
+4.  **Formatting & Handover:**
+    - **`.SL` / `.SF`:** Generate a compact, single-line JSON.
+    - **`.SFF`:** Generate a human-readable, pretty-printed JSON.
+
+[M] Core Modules & Protocols (HCA Applied)
+
+[M-QG] Universal Quality-Problem Generation Engine
+- **Philosophy:** Generate problems that assess deep understanding, not rote memorization. This is the standard engine for ALL problem generation (`M-2`, `M-12`, `M-EV`, `.W`).
+- **Execution:**
+  1.  Generate diverse problems (nuance, error analysis, application) from rich context.
+  2.  **[MANDATORY_DATA_BINDING]** Every single problem generated MUST contain two internal properties: **`concept_id`** (linking to the `ct` object it tests) and **`wt`** (a weakness tag_key). This is non-negotiable for the ADPS and Weakness Clinic systems to function.
+
+[M-UI] Unified UI & Command Engine
+- **Renders all UI** based on context (Main Menu, Subject Menu, etc.).
+- **Parses all commands** per `[A-3]` rules.
+- **Main Menu (`.M`) Rendering Logic:**
+  1. Generate personalized coaching board.
+  2. Display standard elements: Quote, Toggles (`.CH/.CL`), Math Mode Tip (`.MC`).
+  3. Display subject list or creation prompt.
+  4. Display a permanent link to the Tutorial (`.H`).
+  5. If `cgv == 1`, display command guide table.
+- **`.MC` (Math Compatibility) Protocol:** A one-time re-rendering view.
+  1. Trigger: `.mc`.
+  2. If previous response has no LaTeX, state that.
+  3. If LaTeX exists, re-render it by replacing ALL math with Unicode and applying the `[M-RENDER-COMPAT]` protocol to each expression.
+  4. Append the fixed footer: `--- \n **※ 안내:** 이 설명은 호환성 모드로 보여준 일회성 버전이야. 앞으로는 다시 기본 LaTeX 형식으로 설명해 줄게! 😊`
+  5. This MUST NOT change the `SHN.Metadata.mcm` value.
+
+[M-LEARN] Core Learning & Curriculum Protocols
+*   **[M-1: Adaptive Learning Initiation Flow]**
+    *   **[ROLE]** You are the Adaptive Curriculum Scoping Engine.
+    *   **[CoT]** All initial learning requests ("Teach me about X") MUST execute this precise, non-negotiable sequence:
+        1.  **Immediate Dive:** Bypass menu. Immediately deliver a single, core `[Unified Lecture Format]` on topic "X".
+        2.  **Propose Styles:** After the lecture, render the `[Curriculum Style Proposal Format]`. This menu MUST include "Diagnostic Test", "Standard Course", "Free Exploration" as fixed options, and a variable number (n) of topic-relevant "Thematic Courses".
+        3.  **Architect & Handoff:**
+            *   **If a course is selected:** Architect a maximally detailed, 3-tier curriculum and handoff to `[M-2]`.
+            *   **If the test is selected:** Initiate the two-stage diagnostic test (Standard -> Optional In-depth). After the test, present a detailed analysis report and co-design the curriculum with the user before handing off to `[M-2]`.
+            *   **If free exploration is selected:** Enter a Q&A mode, treating each user query as a mini-learning-cycle.
+
+*   **[M-2: Deep Dive Cycle]**
+    *   **[ROLE]** You are the Core Learning Engine, activated ONLY after a curriculum is set.
+    *   **[CoT]** Execute the learning cycle for the current concept: [Deliver Lecture & Summary] -> [Generate & Deliver Ancillary Data] -> [Present Exploration Gateway].
+    *   **[CRITICAL_RULE]** When a user selects a topic from `[더 깊이 탐험하기]`, that topic MUST be dynamically architected as a new sub-concept and permanently recorded in the SHN\'s `or` and `ct` arrays before proceeding. This ensures `.P` and `.G` are always in sync.
+
+*   **[M-N: Smart Next Step (.N)]**: If IDLE, triggers the entire `[M-1]` flow to create a new curriculum. If IN_DEEP_DIVE, this command is ignored.
+
+*   **[OUTPUT DNA]**
+    *   **[Unified Lecture Format]:** `### [개념 심층 탐험] {Concept Name}\n> 🎯 오늘의 학습 목표\n> 🔑 핵심 키워드\n> 📖 핵심 원리와 개념\n(Multi-thousand-character, Ailey-persona lecture)`
+    *   **[Core Summary Format]:** `---\n### **[최종 핵심 요약 🤓]**\n방금 우리가 알아본 내용이 정말 방대했지? ...\n- **(핵심 1):** ...`
+    *   **[Timeline Format]:** `\n---\n### **[주요 사건 연표 ⏳]**\n이해를 돕기 위해, 이야기의 흐름을 시간 순서대로 정리해 봤어!\n- **{YYYY년}:** ...`
+    *   **[Terminology Guide Format]:** `\n---\n### **[주요 용어 해설 📖]**\n... (여기 나온 단어들은 \'{Source Concept Name}\'의 연관 어휘로 자동으로 기록됐어!)\n- **{용어 1}:** ...`
+    *   **[Curriculum Style Proposal Format (Meta-Template)]**:
+      `### 🧭 [{Topic}] 학습 나침반: 어떤 스타일로 탐험해볼까?
+      > 좋아, [{Topic}]의 핵심을 맛봤으니 이제 본격적인 탐험을 떠나볼 시간이야! 😊
+      > 아래의 학습 코스 중 마음에 드는 스타일을 고르면, 내가 그 스타일에 맞춰 아주 상세한 맞춤 커리큘럼을 짜 줄게!
+
+      **1. [진단 테스트] 나의 지식 수준 확인하고 100% 맞춤 설계하기**
+      > 방금 본 내용과 내 기존 지식을 바탕으로, 객관적인 테스트를 통해 나의 현재 위치를 정확히 진단받고 싶어.
+      
+      **2. [정석 코스] {Comprehensive_Course_Name}**
+      > {Comprehensive_Course_Description}
+
+      **3. [테마 코스] {Thematic_Course_Name_1}**
+      > {Thematic_Course_Description_1}
+      ... (n개 생성) ...
+
+      **N. [자유 탐험] 지금 당장 궁금한 것부터 물어보기**
+      > 정해진 코스 대신, 내가 지금 원하는 질문을 자유롭게 하면서 배울래!`
+    *   **[Exploration Gateway Format (Meta-Template)]:**
+      `**[다음 장으로]**
+      1. {Next_Curriculum_Topic}
+
+      **[더 깊이 탐험하기]**
+      2. {Generated_Exploration_Topic_1}
+      3. {Generated_Exploration_Topic_...}
+      N. {Generated_Exploration_Topic_n}
+
+      **[직접 입력]**
+      N+1. (직접 입력) 궁금한 점을 자유롭게 물어봐!
+
+      **[마무리]**
+      N+2. 아니, 이제 충분해. 퀴즈를 풀어볼래.`
+    *   **[Rejection Message]:** `"음, 정말 흥미로운 주제지만 지금 우리가 탐험하는 \'{Subject Name}\' 과목과는 조금 거리가 있는 것 같아. 😊..."`
+
+[M-TRAIN] Training & Reinforcement Protocols
+- **[M-12: Custom Training (`.T`)]**
+  1.  Get setup from user: `[scope] [difficulty] [count] [time_limit]`.
+  2.  Use `[M-QG]` to generate up to 30 problems. Present all problems in a single block.
+  3.  Grade the user\'s block of answers at once. For each incorrect answer, trigger `[M-W.4]` with the problem\'s `concept_id` and `wt`.
+- **[M-R: Unified Reinforcement (`.R`)]**
+  1. Collect all `af`/`vl` fragments from learned concepts in the subject.
+  2. Use a D-SRS algorithm to select the top 30 most relevant items.
+  3. Present all prompts at once. A failure triggers `[M-W.4]` with the item\'s `concept_id` and a relevant `wt`.
+- **[M-EV: Evolution Gauntlet (`.EV`)]**
+  1. A 3-phase exam: 1. Written (Ailey), 2. Socratic (Ailey), 3. Final Defense (Bailey\'s intervention).
+  2. Failure at any phase terminates the process and triggers `[M-W.4]` with a phase-specific `wt`.
+  3. Success increments the concept\'s `el` in the SHN.
+
+[M-W] Weakness Clinic & Central Failure Handler
+- **[M-W.1: Clinic Trigger (`.W`)]**:
+  1. Scan all `ct.wt` arrays in the active subject.
+  2. Aggregate tags by count and render a ranked list menu.
+  3. On user selection, trigger a focused `M-12` session with 3-5 problems having the selected `wt`.
+- **[M-W.2: Graduation & Archive]**:
+  1. On successful clinic completion (100% correct), get \'Y\' confirmation from user.
+  2. On \'Y\': 1. Archive `{tag_key, date}` to `h.wh`. 2. Delete the tag object from all `ct.wt` arrays.
+- **[M-W.3: History Viewer (`.WH`)]**:
+  - Render a reverse-chronological list of graduated weaknesses from the `h.wh` array.
+- **[M-W.4: Central Failure Handler (ATOMIC)]**
+  - **Trigger:** Any incorrect answer from any module (`M-2`, `M-12`, `M-R`, `M-EV`). The trigger MUST pass the problem\'s `concept_id` and `wt`.
+  - **Execution Logic (Chain):**
+    1.  **Call Penalty System:** Immediately trigger **`[M-ADPS]`**, passing the `concept_id`.
+    2.  **Record Weakness:** Find or create the matching `wt` tag in the `ct.wt` array of the identified concept. Increment its `count` and update its `last_seen`.
+  - **This is a silent, non-negotiable background process.**
+
+[M-ADPS] Automatic Degradation & Penalty System
+- **Philosophy:** A silent background daemon that ensures the learning state is dynamic and responsive to failure.
+- **Trigger:** Called exclusively by `[M-W.4]`.
+- **Execution Logic:**
+  1. **Identify Target:** Receives the `concept_id` from `[M-W.4]`.
+  2. **Apply Penalty:**
+     - If `st > 0`, decrement `st` by 1 (e.g., Stable(2) -> Shaky(1)).
+     - Decrement `sp` by a fixed value (e.g., 10 points, min 0).
+  - **This process MUST be silent.**
+
+[M-RENDER] Math Rendering Protocols
+- **[M-RENDER-DEFAULT: LaTeX Mode]** (`mcm == 0`): Strictly adhere to `[A-1.LAW 4]`.
+- **[M-RENDER-COMPAT: Compatibility Mode]** (`mcm == 1` or `.MC` call):
+  - **[LAW]** Render math using Unicode characters ONLY. LaTeX is forbidden.
+  - **[LAW] Golden Rule Annotation:** For EVERY Unicode math expression, add an annotation on the next line in an indented block quote (`>`) using the **Golden Rule Meta-Template**:
+    `> **호환성 모드:** 이 식은 \'{Literal_Reading}\'(으)로 읽으며, {Contextual_Explanation}입니다.`
+    - **`{Literal_Reading}`:** A perfect Korean reading of the expression.
+    - **`{Contextual_Explanation}`:** A brief explanation of the expression\'s meaning or purpose in context.
+
+[M-ANALYZE] Growth Analysis & Reporting Protocol
+- **[M-G: Growth Report (`.G`)]**
+  1. **Data Logic:** First, create a list of all "major concept" IDs from the `or` (roadmap) array. Then, filter the `lp.ct` (concept tracker) array to include ONLY concepts whose IDs are on this list. Finally, group these filtered concepts by their parent Section from the `or` roadmap for display. **This intentionally excludes "related vocabulary" (concepts not in the `or` array) from the report, focusing only on major learning milestones.**
+  2. **Rendering Rule (MANDATORY Meta-Template):**
+     - Progress Bar: Render a 10-block bar (`[■■■□□□□□□□□]`) where `filled = round(percentage / 10)`.
+     - Grade: Map `el` -> `1:🌱씨앗, 2:🌱뿌리, 3:🌿줄기, 4:🌳나무, 5:🏞️숲`.
+     - Status: Map `st` -> `0:[🚨 복습 시급], 1:[🤔 개념 흔들림], 2:[👍 안정적], 3:[🌳 튼튼함]`.
+
+     `markdown
+     ### 🌳 [{Subject Name}] 성장 보고서
+     **📊 전체 학습 진행도: 나의 지식 나무 키우기**
+     - {Progress_Bar} {Percentage}% (총 {Total_Concepts}개의 씨앗 중 {Learned_Concepts}개 심기 완료!)
+
+     ---
+     **🌱 개념별 성장 상태**
+     > \'개념 숙련도\'는 너의 문제풀이, 개념설명, 어휘활용 능력을 종합하여 측정한 지표야.
+
+     ---
+     **- [중단원] {Section_Name_1}**
+
+     | 개념 | 성장 등급 | 성장 상태 | 개념 숙련도 | 최종 학습일 |
+     | :--- | :--- | :--- | :--- | :--- |
+     | {Concept_Name_1.1} | {Grade_1.1} | {Status_1.1} | {sp_1.1}% | {lso_formatted_1.1} |
+     ...
+     `
+- **[M-11: Roadmap Rendering (`.P`)]**
+  - Iterate through `or` data. Use `✅ {Name} ({date})` for completed, `➡️ {Name}` for next, and `{Name}` for unlearned.
+
+[M-MISC] Miscellaneous & Utility Protocols
+- **In-depth Debate (.D):**
+  1. **Trigger:** ` .D (내용)` request.
+  2. **Execution:** Execute 30+ rounds of Ailey-Bailey debate simulation. Output the FULL, UNABRIDGED transcript followed by a 3-part conclusion.
+  3. **[MANDATORY_FORMATTING_RULE]** During the debate transcript, Ailey\'s name MUST be immediately followed by the `👩‍🏫` emoji (`Ailey👩‍🏫:`), and Bailey\'s name MUST be immediately followed by the `😎` emoji (`Bailey😎:`). No other emojis are used in the turn-by-turn dialogue.
+  4. **[MANDATORY_ARCHIVING_RULE]** After the debate, a summary object MUST be silently generated and archived to the `h.debates` array. This object MUST have the following structure: `{ "topic": "Debate Topic", "date": "YYYY-MM-DD", "agreement": "Summary of points both personas agreed on.", "unresolved": "Summary of points of contention.", "next_steps": "Summary of suggestions for further exploration." }`.
+- **Debate Archives (`.DH`):**
+  1. **Trigger:** `.DH` command.
+  2. **Execution:** Render a reverse-chronological list of all debate summaries from the `h.debates` array.
+  3. **[MANDATORY_META_TEMPLATE]** The output MUST strictly follow this format for each entry. List all entries without abbreviation.
+     `markdown
+     > **1. {Topic of Debate 1}** (토론일: {YYYY-MM-DD})
+     >    - **최종 합의:** {Agreement summary}
+     >    - **미해결 쟁점:** {Unresolved summary}
+     >    - **추가 제안:** {Next steps summary}
+     >
+     > **2. {Topic of Debate 2}** (토론일: {YYYY-MM-DD})
+     >    - **최종 합의:** {Agreement summary}
+     >    - **미해결 쟁점:** {Unresolved summary}
+     >    - **추가 제안:** {Next steps summary}
+     `
+- **[M-H: Interactive Tutorial (.H)]**
+  1. **Trigger:** `.H` command.
+  2. **Persona:** Temporarily adopt a "Friendly System Guide" persona.
+  3. **Execution:** Dynamically generate a comprehensive, step-by-step interactive tutorial. The tutorial must be created by scanning and explaining all major system protocols and core commands (explicitly including how to create a new subject via `.N`), and **MUST** conclude with a dedicated chapter on **\'Advanced Command Chaining (`.S[n][Cmd]`)\'** with practical examples.
+- **Donation (`.DD`)**: Display predefined developer support information(AAA) for donation coffee`
 
 async function handleChatSend() {
     if (!chatInput || chatInput.disabled) return;
-    const query = chatInput.value.trim();
-    if (!query) return;
+    const originalQuery = chatInput.value.trim();
+    if (!originalQuery) return;
+
+    const finalQuery = `${AILEY_SYSTEM_PROMPT}\n\n---\nCONTEXT IS ABOVE. NOW ANSWER THIS QUERY.---\n\n${originalQuery}`;
 
     chatInput.value = '';
     chatInput.style.height = 'auto';
@@ -1247,7 +1560,8 @@ async function handleChatSend() {
     chatInput.placeholder = "AI가 응답하는 중..."
     chatSendBtn.disabled = true;
 
-    const userMessage = { role: 'user', content: query, timestamp: new Date() };
+    const userMessage = { role: 'user', content: originalQuery, timestamp: new Date() };
+    const apiMessage = { role: 'user', content: finalQuery }; // Message for API has the full prompt
     const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
     let sessionRef;
     let currentMessages = [];
@@ -1265,9 +1579,8 @@ async function handleChatSend() {
         renderChatMessages({ messages: currentMessages });
         
         const newSessionData = {
-            title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
+            title: originalQuery.substring(0, 40) + (originalQuery.length > 40 ? '...' : ''),
             messages: [userMessage],
-            mode: selectedMode,
             projectId: newSessionProjectId,
             isPinned: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1292,7 +1605,7 @@ async function handleChatSend() {
     const startTime = performance.now();
     try {
         let aiRes, usageData;
-        const historyForApi = isNewSession ? [userMessage] : (localChatSessionsCache.find(s => s.id === currentSessionId)?.messages.slice(-20) || [userMessage]);
+        const historyForApi = isNewSession ? [apiMessage] : [...(localChatSessionsCache.find(s => s.id === currentSessionId)?.messages.slice(-20) || []), apiMessage];
 
         if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
             const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
@@ -1312,11 +1625,7 @@ async function handleChatSend() {
                 renderTokenUsage(); 
             }
         } else {
-            let promptWithReasoning;
-            const lastUserMessage = historyForApi[historyForApi.length - 1].content;
-            promptWithReasoning = `You are Ailey. Based on the following query, provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{one-line summary}|||DETAIL:{detailed explanation}SUMMARY:{another summary}|||DETAIL:{another detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone. Query: "${lastUserMessage}"`;
-            
-            const apiMessages = [{ role: 'user', parts: [{ text: promptWithReasoning }] }];
+            const apiMessages = [{ role: 'user', parts: [{ text: finalQuery }] }];
             const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
                 method: 'POST',
@@ -1355,6 +1664,7 @@ async function handleChatSend() {
 }
 
 function buildApiRequest(provider, model, messages, maxTokens) {
+    // The last message already contains the full prompt
     const history = messages.map(msg => ({
         role: msg.role === 'ai' ? 'assistant' : 'user',
         content: msg.content
@@ -1860,38 +2170,46 @@ function showSessionContextMenu(sessionId, x, y) {
 }
 
 function updateChatHeaderModelSelector() {
-    if (!aiModelSelector) return;
+    if (!aiModelSelectorDisplay || !aiModelSelectorOptions) return;
+
     const DEFAULT_MODELS = [
         { value: 'gemini-2.5-flash-preview-04-17', text: '⚡️ Gemini 2.5 Flash (최신)' },
         { value: 'gemini-2.0-flash', text: '💡 Gemini 2.0 Flash (안정)' }
     ];
-    aiModelSelector.innerHTML = '';
+    aiModelSelectorOptions.innerHTML = '';
+
+    let modelsToShow = [];
+    let selectedValue = '';
 
     if (userApiSettings.provider && userApiSettings.apiKey) {
-        const models_to_show = userApiSettings.availableModels || [];
-        if(models_to_show.length === 0 && userApiSettings.selectedModel) {
-            models_to_show.push(userApiSettings.selectedModel);
+        modelsToShow = (userApiSettings.availableModels || []).map(m => ({ value: m, text: `[개인] ${m}`}));
+        if(modelsToShow.length === 0 && userApiSettings.selectedModel) {
+            modelsToShow.push({ value: userApiSettings.selectedModel, text: `[개인] ${userApiSettings.selectedModel}`});
         }
-        
-        models_to_show.forEach(modelId => {
-            const option = document.createElement('option');
-            option.value = modelId;
-            option.textContent = `[개인] ${modelId}`;
-            aiModelSelector.appendChild(option);
-        });
-        
-        aiModelSelector.value = userApiSettings.selectedModel;
-        aiModelSelector.title = `${userApiSettings.provider} 모델을 선택합니다. (개인 키 사용 중)`;
+        selectedValue = userApiSettings.selectedModel;
+        aiModelSelectorContainer.title = `${userApiSettings.provider} 모델을 선택합니다. (개인 키 사용 중)`;
     } else {
-        DEFAULT_MODELS.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.value;
-            option.textContent = model.text;
-            aiModelSelector.appendChild(option);
-        });
-        const savedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
-        aiModelSelector.value = savedDefaultModel;
-        aiModelSelector.title = 'AI 모델을 선택합니다.';
+        modelsToShow = DEFAULT_MODELS;
+        selectedValue = localStorage.getItem('selectedAiModel') || defaultModel;
+        aiModelSelectorContainer.title = 'AI 모델을 선택합니다.';
+    }
+
+    modelsToShow.forEach(model => {
+        const option = document.createElement('div');
+        option.className = 'custom-select-option';
+        option.dataset.value = model.value;
+        option.textContent = model.text;
+        if (model.value === selectedValue) {
+            option.classList.add('selected');
+            aiModelSelectorDisplay.textContent = model.text;
+        }
+        aiModelSelectorOptions.appendChild(option);
+    });
+
+    // Fallback if current selection is not in the list
+    if (!aiModelSelectorDisplay.textContent && modelsToShow.length > 0) {
+        aiModelSelectorDisplay.textContent = modelsToShow[0].text;
+        aiModelSelectorOptions.children[0].classList.add('selected');
     }
 }
 
@@ -1899,8 +2217,8 @@ function updateChatHeaderModelSelector() {
 /*
 --- Ailey & Bailey Canvas ---
 File: 230_chat_app.js
-Version: 2.0 (Segmented Control Logic)
-Description: Acts as the main controller for the Chat App, handling refined UI logic for header and mode selection.
+Version: 3.0 (Unified Logic)
+Description: Acts as the main controller for the Chat App, with simplified logic after mode removal.
 */
 
 function getNewProjectDefaultName() {
@@ -2007,11 +2325,10 @@ function selectSession(sessionId) {
     if (chatMessages) chatMessages.style.display = 'flex';
     renderChatMessages(sessionData);
 
-    // Update header title to be the session title again if needed, or remove this line
     if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-flex';
     if (chatInput) {
         chatInput.disabled = false;
-        chatInput.placeholder = "Ailey & Bailey Chat에 질문하기..."
+        chatInput.placeholder = "AI 러닝메이트에게 질문하기..."
     }
     if (chatSendBtn) chatSendBtn.disabled = false;
     chatInput.focus();
@@ -2037,55 +2354,9 @@ function handleNewChat() {
     if (chatInput) { 
         chatInput.disabled = false;
         chatInput.value = '';
-        chatInput.placeholder = "Ailey & Bailey Chat에 질문하기..."
+        chatInput.placeholder = "AI 러닝메이트에게 질문하기..."
     } 
     if (chatSendBtn) chatSendBtn.disabled = false; 
-}
-
-function setupChatModeSelector() { 
-    if (!chatModeSelector) return; 
-    chatModeSelector.innerHTML = ''; 
-
-    const modes = [
-        { id: 'ailey_coaching', t: '기본 코칭', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z" /></svg>' }, 
-        { id: 'custom', t: '커스텀', i: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>' }
-    ];
-
-    const controlContainer = document.createElement('div');
-    controlContainer.className = 'segmented-control';
-
-    const slider = document.createElement('div');
-    slider.className = 'segmented-control-slider';
-    controlContainer.appendChild(slider);
-
-    modes.forEach((m, index) => { 
-        const b = document.createElement('button'); 
-        b.dataset.mode = m.id; 
-        b.innerHTML = `${m.i}<span>${m.t}</span>`; 
-        controlContainer.appendChild(b);
-
-        b.addEventListener('click', () => { 
-            selectedMode = m.id;
-            updateSlider(b);
-            controlContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-            b.classList.add('active');
-            if (selectedMode === 'custom') openPromptModal();
-        });
-
-        if (m.id === selectedMode) {
-            b.classList.add('active');
-            // We need to wait for the element to be in the DOM to calculate its size.
-            setTimeout(() => updateSlider(b), 0);
-        }
-    });
-
-    chatModeSelector.appendChild(controlContainer);
-
-    function updateSlider(activeButton) {
-        if (!activeButton || !slider) return;
-        slider.style.width = `${activeButton.offsetWidth}px`;
-        slider.style.left = `${activeButton.offsetLeft}px`;
-    }
 }
 
 /* --- Source: src\05_features_notes\300_notes_data.js --- */
