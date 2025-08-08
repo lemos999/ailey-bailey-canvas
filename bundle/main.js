@@ -1,11 +1,11 @@
-/* Auto-generated bundle from 2025-08-08T15:19:18.366Z */
+/* Auto-generated bundle from 2025-08-08T15:30:22.445Z */
 
 /* --- Source: src\00_shell\000_shell_template.js --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: 000_shell_template.js
-Version: 1.2 (Hotfix)
-Description: Defines the application's static HTML shell and the core rendering function. (Corrected Logic)
+Version: 1.3 (DOM Rebinding Logic)
+Description: Defines the application's static HTML shell and the core rendering function.
 */
 
 // [CoreDNA] This const holds the entire static structure of the application's BODY.
@@ -111,14 +111,15 @@ const SHELL_HTML_BODY_TEMPLATE = `
 `;
 
 // [HCA] This function is the new, corrected entry point for rendering.
-function renderAppShell(dynamicContent, title, canvasId) {
+function renderAppShell(dynamicContent, title, canvasId_from_ai) {
   // 1. Clear the initial loader message
   document.body.innerHTML = '';
-  document.body.className = 'dark-mode'; // Ensure theme is consistent
+  document.body.className = 'dark-mode';
   if(localStorage.getItem('theme') === 'light') document.body.classList.remove('dark-mode');
 
-  // 2. Set meta information
+  // 2. Set meta information and update global state
   document.title = title;
+  canvasId = canvasId_from_ai;
   let meta = document.createElement('meta');
   meta.name = 'canvas-id';
   meta.content = canvasId;
@@ -131,7 +132,10 @@ function renderAppShell(dynamicContent, title, canvasId) {
   );
   document.body.innerHTML = fullContent;
 
-  // 4. Initialize all features on the newly created DOM
+  // 4. [CRITICAL] Re-bind all global variables to the newly created DOM elements.
+  rebindDOMElements();
+
+  // 5. Initialize all features on the now-guaranteed-to-exist DOM
   initializeCoreFeatures();
 }
 
@@ -139,74 +143,26 @@ function renderAppShell(dynamicContent, title, canvasId) {
 /*
 --- Ailey & Bailey Canvas ---
 File: 001_state_globalVars.js
-Version: 1.0 (Bundled)
-Description: Declares all global state variables and DOM element constants. This file must be loaded first to ensure all other script modules can access this shared state.
+Version: 1.1 (Decoupled Initialization)
+Description: Declares all global state variables and provides a rebinding function for DOM elements.
 */
 
-// --- 1. Element Declarations (Global Scope) ---
-const learningContent = document.getElementById('learning-content');
-const wrapper = document.querySelector('.wrapper');
-const body = document.body;
-const systemInfoWidget = document.getElementById('system-info-widget');
-const selectionPopover = document.getElementById('selection-popover');
-const popoverAskAi = document.getElementById('popover-ask-ai');
-const popoverAddNote = document.getElementById('popover-add-note');
-const tocToggleBtn = document.getElementById('toc-toggle-btn');
-const quizModalOverlay = document.getElementById('quiz-modal-overlay');
-const quizContainer = document.getElementById('quiz-container');
-const quizSubmitBtn = document.getElementById('quiz-submit-btn');
-const quizResults = document.getElementById('quiz-results');
-const startQuizBtn = document.getElementById('start-quiz-btn');
-const chatModeSelector = document.getElementById('chat-mode-selector');
-const chatPanel = document.getElementById('chat-panel');
-const chatForm = document.getElementById('chat-form');
-const chatInput = document.getElementById('chat-input');
-const chatMessages = document.getElementById('chat-messages');
-const chatSendBtn = document.getElementById('chat-send-btn');
-const notesAppPanel = document.getElementById('notes-app-panel');
-const noteListView = document.getElementById('note-list-view');
-const noteEditorView = document.getElementById('note-editor-view');
-const notesList = document.getElementById('notes-list');
-const searchInput = document.getElementById('search-input');
-const addNewNoteBtn = document.getElementById('add-new-note-btn');
-const backToListBtn = document.getElementById('back-to-list-btn');
-const noteTitleInput = document.getElementById('note-title-input');
-const noteContentTextarea = document.getElementById('note-content-textarea');
-const autoSaveStatus = document.getElementById('auto-save-status');
-const formatToolbar = document.querySelector('.format-toolbar');
-const linkTopicBtn = document.getElementById('link-topic-btn');
-const customModal = document.getElementById('custom-modal');
-const modalMessage = document.getElementById('modal-message');
-const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-const modalCancelBtn = document.getElementById('modal-cancel-btn');
-const promptModalOverlay = document.getElementById('prompt-modal-overlay');
-const customPromptInput = document.getElementById('custom-prompt-input');
-const promptSaveBtn = document.getElementById('prompt-save-btn');
-const promptCancelBtn = document.getElementById('prompt-cancel-btn');
-const themeToggle = document.getElementById('theme-toggle');
-const chatToggleBtn = document.getElementById('chat-toggle-btn');
-const notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
-
-// -- Chat Session & Project UI Elements --
-const newChatBtn = document.getElementById('new-chat-btn');
-const newProjectBtn = document.getElementById('new-project-btn');
-const sessionListContainer = document.getElementById('session-list-container');
-const chatSessionTitle = document.getElementById('chat-session-title');
-const deleteSessionBtn = document.getElementById('delete-session-btn');
-const chatWelcomeMessage = document.getElementById('chat-welcome-message');
-const searchSessionsInput = document.getElementById('search-sessions-input');
-const aiModelSelector = document.getElementById('ai-model-selector');
-
-// -- Backup & Restore UI Elements (Now part of dropdown) --
-const fileImporter = document.getElementById('file-importer');
-
-// -- API Settings UI Elements (dynamically created) --
-let apiSettingsBtn, apiSettingsModalOverlay, apiKeyInput, verifyApiKeyBtn, apiKeyStatus,
-    apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn,
-    apiSettingsSaveBtn, apiSettingsCancelBtn;
+// --- 1. Element Declarations (Global Scope, UNINITIALIZED) ---
+// These are declared here but assigned in rebindDOMElements() after the DOM is built.
+let learningContent, wrapper, body, systemInfoWidget, selectionPopover, popoverAskAi, popoverAddNote, tocToggleBtn;
+let quizModalOverlay, quizContainer, quizSubmitBtn, quizResults, startQuizBtn;
+let chatModeSelector, chatPanel, chatForm, chatInput, chatMessages, chatSendBtn;
+let notesAppPanel, noteListView, noteEditorView, notesList, searchInput, addNewNoteBtn, backToListBtn;
+let noteTitleInput, noteContentTextarea, autoSaveStatus, formatToolbar, linkTopicBtn;
+let customModal, modalMessage, modalConfirmBtn, modalCancelBtn;
+let promptModalOverlay, customPromptInput, promptSaveBtn, promptCancelBtn;
+let themeToggle, chatToggleBtn, notesAppToggleBtn;
+let newChatBtn, newProjectBtn, sessionListContainer, chatSessionTitle, deleteSessionBtn, chatWelcomeMessage, searchSessionsInput, aiModelSelector;
+let fileImporter;
+let apiSettingsBtn, apiSettingsModalOverlay, apiKeyInput, verifyApiKeyBtn, apiKeyStatus, apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn, apiSettingsSaveBtn, apiSettingsCancelBtn;
 
 // --- 2. State Management (Global Scope) ---
-const canvasId = document.querySelector('meta[name="canvas-id"]')?.content || 'global_fallback_id';
+let canvasId = 'global_fallback_id'; // Will be updated in renderAppShell
 let db;
 let currentUser = null;
 const appId = 'AileyBailey_Global_Space';
@@ -221,7 +177,7 @@ let unsubscribeFromNotes = null, unsubscribeFromNoteProjects = null, unsubscribe
 let currentNoteId = null;
 let newlyCreatedNoteProjectId = null;
 let currentNoteSort = 'updatedAt_desc';
-let draggedNoteId = null; // [NEW] For drag & drop
+let draggedNoteId = null;
 
 // -- Chat & Project State --
 let chatSessionsCollectionRef, projectsCollectionRef;
@@ -243,6 +199,60 @@ let userApiSettings = {
     provider: null, apiKey: '', selectedModel: '', availableModels: [],
     maxOutputTokens: 2048, tokenUsage: { prompt: 0, completion: 0 }
 };
+
+/**
+ * [NEW & CRITICAL] Re-binds all global DOM element variables.
+ * This function MUST be called after the main shell is rendered into the DOM.
+ */
+function rebindDOMElements() {
+    learningContent = document.getElementById('learning-content');
+    wrapper = document.querySelector('.wrapper');
+    body = document.body;
+    systemInfoWidget = document.getElementById('system-info-widget');
+    selectionPopover = document.getElementById('selection-popover');
+    popoverAskAi = document.getElementById('popover-ask-ai');
+    popoverAddNote = document.getElementById('popover-add-note');
+    tocToggleBtn = document.getElementById('toc-toggle-btn');
+    quizModalOverlay = document.getElementById('quiz-modal-overlay');
+    quizContainer = document.getElementById('quiz-container');
+    quizSubmitBtn = document.getElementById('quiz-submit-btn');
+    quizResults = document.getElementById('quiz-results');
+    startQuizBtn = document.getElementById('start-quiz-btn');
+    chatModeSelector = document.getElementById('chat-mode-selector');
+    chatPanel = document.getElementById('chat-panel');
+    chatForm = document.getElementById('chat-form');
+    chatInput = document.getElementById('chat-input');
+    chatMessages = document.getElementById('chat-messages');
+    chatSendBtn = document.getElementById('chat-send-btn');
+    notesAppPanel = document.getElementById('notes-app-panel');
+    noteListView = document.getElementById('note-list-view');
+    noteEditorView = document.getElementById('note-editor-view');
+    // notesList, searchInput, etc., are dynamically created inside noteListView
+    backToListBtn = document.getElementById('back-to-list-btn');
+    noteTitleInput = document.getElementById('note-title-input');
+    // noteContentTextarea is also dynamic (part of Toast UI)
+    autoSaveStatus = document.getElementById('auto-save-status');
+    customModal = document.getElementById('custom-modal');
+    modalMessage = document.getElementById('modal-message');
+    modalConfirmBtn = document.getElementById('modal-confirm-btn');
+    modalCancelBtn = document.getElementById('modal-cancel-btn');
+    promptModalOverlay = document.getElementById('prompt-modal-overlay');
+    customPromptInput = document.getElementById('custom-prompt-input');
+    promptSaveBtn = document.getElementById('prompt-save-btn');
+    promptCancelBtn = document.getElementById('prompt-cancel-btn');
+    themeToggle = document.getElementById('theme-toggle');
+    chatToggleBtn = document.getElementById('chat-toggle-btn');
+    notesAppToggleBtn = document.getElementById('notes-app-toggle-btn');
+    newChatBtn = document.getElementById('new-chat-btn');
+    newProjectBtn = document.getElementById('new-project-btn');
+    sessionListContainer = document.getElementById('session-list-container');
+    chatSessionTitle = document.getElementById('chat-session-title');
+    deleteSessionBtn = document.getElementById('delete-session-btn');
+    chatWelcomeMessage = document.getElementById('chat-welcome-message');
+    searchSessionsInput = document.getElementById('search-sessions-input');
+    aiModelSelector = document.getElementById('ai-model-selector');
+    fileImporter = document.getElementById('file-importer');
+}
 
 /* --- Source: src\02_utils\010_utils_debounce.js --- */
 /*
