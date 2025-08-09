@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T18:55:13.830Z */
+/* Auto-generated bundle from 2025-08-09T19:05:12.055Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -482,7 +482,7 @@ body:dark-mode #settings-button:hover { border-color: #D4B28C; }
 
 
 
-#settings-popover { display: none; position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 320px; z-index: 1200; border-radius: 8px; padding: 15px; border: 1px solid; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+#settings-popover { display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; width: 320px; z-index: 1200; border-radius: 8px; padding: 15px; border: 1px solid; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
 
 #settings-popover.show { display: block; }
 
