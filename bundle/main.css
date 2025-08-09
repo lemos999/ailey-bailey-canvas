@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T11:20:29.677Z */
+/* Auto-generated bundle from 2025-08-09T11:38:53.135Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -309,8 +309,8 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 /*
 --- Ailey & Bailey Canvas ---
 File: style_chat.css
-Version: 12.0 (Responsive Header Patch)
-Description: Contains all styles related to the AI Chat panel, now with responsive header and minimum width.
+Version: 13.0 (Layout Finalization Patch)
+Description: Applies absolute minimum width and centers the welcome message for a stable UI.
 */
 
 #chat-panel {
@@ -318,8 +318,8 @@ Description: Contains all styles related to the AI Chat panel, now with responsi
     right: 100px;
     height: 600px;
     width: 700px;
-    min-width: 450px; /* [NEW] Prevents layout from breaking at very small sizes */
-    min-height: 350px; /* [NEW] Added for vertical stability */
+    min-width: 580px; /* [MODIFIED] Absolute min-width to prevent any header layout breaking */
+    min-height: 350px;
     flex-direction: row;
     overflow: hidden;
 }
@@ -373,7 +373,6 @@ body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-li
 
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
 
-/* [NEW] Responsive Chat Header Styles */
 .chat-header-main-row { width: 100%; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
 .chat-header-left-group { display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 280px; }
 .chat-header-right-group { display: flex; align-items: center; }
@@ -382,7 +381,7 @@ body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-li
 #ai-model-selector, #quick-prompt-select { padding: 4px 8px; font-size: 0.9em; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
 
 body:not(.dark-mode) #ai-model-selector, body:not(.dark-mode) #quick-prompt-select { background-color: var(--quote-bg-light); border-color: var(--border-color-light); color: var(--text-color-light); }
-body.dark-mode #ai-model-selector, body:dark-mode #quick-prompt-select { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
+body.dark-mode #ai-model-selector, body.dark-mode #quick-prompt-select { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
 #quick-prompt-select:disabled { opacity: 0.6; cursor: not-allowed; }
 
 #chat-mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; width: 100%; justify-content: center; padding: 8px 0; border-top: 1px solid transparent; }
@@ -401,6 +400,25 @@ body.dark-mode #chat-mode-selector button:hover { background-color: #555; }
 body.dark-mode #chat-mode-selector button.active { background-color: var(--h2-color-dark); color: var(--bg-color-dark); border-color: var(--h2-color-dark); font-weight: bold; }
 
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+
+/* [NEW] Styles for centering the welcome message */
+#chat-welcome-message {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    opacity: 0.6;
+    font-size: 1.1em;
+    user-select: none;
+    height: 100%;
+}
+
+#chat-welcome-message h3 {
+    margin-bottom: 5px;
+    font-family: 'Noto Serif KR', serif;
+}
 
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; align-items: center; }
 body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
