@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T13:49:21.337Z */
+/* Auto-generated bundle from 2025-08-09T14:03:23.878Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -309,8 +309,8 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 /*
 --- Ailey & Bailey Canvas ---
 File: style_chat.css
-Version: 15.0 (Word Wrap Hotfix)
-Description: Adds overflow-wrap property to prevent text from being cut off on resize.
+Version: 16.0 (Minimalist Header Implementation)
+Description: Styles for the new icon-based, minimalist chat header.
 */
 
 #chat-panel {
@@ -373,73 +373,52 @@ body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-li
 
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
 
-.chat-header-main-row { width: 100%; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-.chat-header-left-group { display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 280px; }
-.chat-header-right-group { display: flex; align-items: center; }
-#chat-session-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
+/* [NEW] Minimalist Chat Header Styles */
+.panel-header { padding: 5px 10px; } /* Reduced padding */
+.chat-header-controls { width: 100%; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
 
-#ai-model-selector, #quick-prompt-select { padding: 4px 8px; font-size: 0.9em; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
-
+#ai-model-selector, #quick-prompt-select {
+    padding: 4px 8px; font-size: 0.9em; border-radius: 6px; border: 1px solid transparent;
+    font-family: 'Gowun Batang', serif; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
 body:not(.dark-mode) #ai-model-selector, body:not(.dark-mode) #quick-prompt-select { background-color: var(--quote-bg-light); border-color: var(--border-color-light); color: var(--text-color-light); }
 body.dark-mode #ai-model-selector, body.dark-mode #quick-prompt-select { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
 #quick-prompt-select:disabled { opacity: 0.6; cursor: not-allowed; }
 
-#chat-mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; width: 100%; justify-content: center; padding: 8px 0; border-top: 1px solid transparent; }
-body:not(.dark-mode) #chat-mode-selector { border-top-color: var(--border-color-light); }
-body.dark-mode #chat-mode-selector { border-top-color: var(--border-color-dark); }
+#chat-mode-selector { display: flex; align-items: center; gap: 5px; border-left: 1px solid var(--border-color-dark); padding-left: 8px; margin-left: 2px; }
+body:not(.dark-mode) #chat-mode-selector { border-left-color: var(--border-color-light); }
 
-#chat-mode-selector button { padding: 6px 12px; font-size: 0.9em; border-radius: 18px; border: 1px solid; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
-#chat-mode-selector button svg { fill: currentColor; }
+#chat-mode-selector button, .header-icon-btn {
+    background: none; border: none; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    line-height: 0; transition: background-color 0.2s;
+    color: var(--sub-text-color-dark);
+}
+body:not(.dark-mode) #chat-mode-selector button, body:not(.dark-mode) .header-icon-btn { color: var(--sub-text-color-light); }
 
-body:not(.dark-mode) #chat-mode-selector button { background-color: #e0d8ca; border-color: #d1c8bb; color: var(--text-color-light); }
-body:not(.dark-mode) #chat-mode-selector button:hover { background-color: #d1c8bb; }
-body:not(.dark-mode) #chat-mode-selector button.active { background-color: var(--h2-color-light); color: white; border-color: var(--h2-color-light); font-weight: bold; }
+#chat-mode-selector button:hover, .header-icon-btn:hover { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) #chat-mode-selector button:hover, body:not(.dark-mode) .header-icon-btn:hover { background-color: var(--quote-bg-light); }
 
-body.dark-mode #chat-mode-selector button { background-color: #3f3f3f; border-color: #555; color: var(--text-color-dark); }
-body.dark-mode #chat-mode-selector button:hover { background-color: #555; }
-body.dark-mode #chat-mode-selector button.active { background-color: var(--h2-color-dark); color: var(--bg-color-dark); border-color: var(--h2-color-dark); font-weight: bold; }
+#chat-mode-selector button.active { color: var(--h2-color-dark); background-color: var(--strong-bg-dark); }
+body:not(.dark-mode) #chat-mode-selector button.active { color: var(--h2-color-light); background-color: var(--strong-bg-light); }
+
+#chat-mode-selector button svg, .header-icon-btn svg { fill: currentColor; }
 
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 
 #chat-welcome-message { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; opacity: 0.6; font-size: 1.1em; user-select: none; height: 100%; }
 #chat-welcome-message h3 { margin-bottom: 5px; font-family: 'Noto Serif KR', serif; }
 
-/* --- Chat Message Bubble Styles --- */
-.chat-message {
-    padding: 12px 18px;
-    border-radius: 8px;
-    max-width: 85%;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    overflow-wrap: break-word; /* [MODIFIED] Ensures long text wraps correctly */
-    word-wrap: break-word; /* For older browser compatibility */
-}
-
-.chat-message.user {
-    align-self: flex-end;
-    border-left: 3px solid #5e97f6;
-    padding-left: 15px;
-}
+.chat-message { padding: 12px 18px; border-radius: 8px; max-width: 85%; line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; word-wrap: break-word; }
+.chat-message.user { align-self: flex-end; border-left: 3px solid #5e97f6; padding-left: 15px; }
 body.dark-mode .chat-message.user { background-color: #2a2c3c; }
 body:not(.dark-mode) .chat-message.user { background-color: #e8eaf6; }
 
-.ai-response-container {
-    align-self: flex-start;
-    max-width: 90%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 0; /* [MODIFIED] Critical fix for flexbox shrinking behavior */
-}
-
-.ai-response-container .chat-message.ai {}
+.ai-response-container { align-self: flex-start; max-width: 90%; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 body:dark-mode .ai-response-container .chat-message.ai { background-color: var(--chat-ai-bg-dark); }
 body:not(.dark-mode) .ai-response-container .chat-message.ai { background-color: var(--chat-ai-bg-light); }
 
 .ai-response-meta { font-size: 0.8em; opacity: 0.6; display: flex; align-items: center; gap: 5px; margin-left: 5px; }
 .ai-response-meta svg { fill: currentColor; }
-
-/* --- End Chat Message Bubble Styles --- */
 
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; align-items: center; }
 body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
@@ -455,42 +434,15 @@ body:not(.dark-mode) #chat-input { background-color: #fff; color: var(--text-col
 body.dark-mode #chat-send-btn { color: var(--header-color-dark); }
 body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
 
-/* --- Prompt Manager & Quick Select Styles --- */
+/* --- Prompt Manager Styles --- */
 .prompt-manager-modal { max-width: 800px; width: 95%; height: 80vh; max-height: 600px; padding: 0; overflow: hidden; position: relative; }
 .prompt-manager-modal .close-btn { position: absolute; top: 15px; right: 15px; z-index: 10; }
 .prompt-manager-container { display: flex; width: 100%; height: 100%; }
-
 .template-list-panel { width: 250px; flex-shrink: 0; padding: 20px; display: flex; flex-direction: column; }
 body.dark-mode .template-list-panel { background-color: var(--bg-color-dark); border-right: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) .template-list-panel { background-color: var(--bg-color-light); border-right: 1px solid var(--border-color-light); }
-
-.template-list-panel h3 { text-align: center; margin-top: 0; margin-bottom: 15px; }
-#template-list-container { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; }
-
-.template-list-item { padding: 10px 15px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.template-list-item.is-default .item-name::after { content: ' (기본)'; font-size: 0.8em; opacity: 0.7; margin-left: 5px; }
-
-body:not(.dark-mode) .template-list-item:hover { background-color: var(--quote-bg-light); }
-body.dark-mode .template-list-item:hover { background-color: var(--quote-bg-dark); }
-body.dark-mode .template-list-item.active { background-color: var(--h2-color-dark); color: var(--bg-color-dark); font-weight: bold; }
-body:not(.dark-mode) .template-list-item.active { background-color: var(--h2-color-light); color: white; font-weight: bold; }
-
 .template-editor-panel { flex-grow: 1; padding: 20px 30px; display: flex; flex-direction: column; }
-.editor-form-group { margin-bottom: 20px; display: flex; flex-direction: column; }
-.editor-form-group:last-of-type { flex-grow: 1; }
-.editor-form-group label { font-weight: bold; margin-bottom: 8px; }
-.editor-form-group input, .editor-form-group textarea { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; font-size: 1em; box-sizing: border-box; }
-
-body:not(.dark-mode) .editor-form-group input, body:not(.dark-mode) .editor-form-group textarea { border-color: var(--border-color-light); background-color: white; color: var(--text-color-light); }
-body.dark-mode .editor-form-group input, body.dark-mode .editor-form-group textarea { border-color: var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
-
-.editor-form-group textarea { flex-grow: 1; resize: none; }
-.editor-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px; }
-.editor-actions .modal-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; }
-.editor-actions .modal-btn.confirm { background-color: var(--h2-color-light); color: white; }
-body.dark-mode .editor-actions .modal-btn.confirm { background-color: var(--h2-color-dark); color: var(--bg-color-dark); }
-.editor-actions .modal-btn.cancel { background-color: #d9534f; color: white; }
-.editor-actions .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+#template-list-container { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; }
 
 /* --- Source: src_css\006_notes.css --- */
 /*
