@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T19:05:12.030Z */
+/* Auto-generated bundle from 2025-08-09T19:24:17.178Z */
 
 /* --- Vendor: firebase-app-compat.js --- */
 !function(e,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):(e="undefined"!=typeof globalThis?globalThis:e||self).firebase=t()}(this,function(){"use strict";function c(e,t){if(!(t instanceof Object))return t;switch(t.constructor){case Date:const i=t;return new Date(i.getTime());case Object:void 0===e&&(e={});break;case Array:e=[];break;default:return t}for(const r in t)t.hasOwnProperty(r)&&"__proto__"!==r&&(e[r]=c(e[r],t[r]));return e}class n{constructor(){this.reject=()=>{},this.resolve=()=>{},this.promise=new Promise((e,t)=>{this.resolve=e,this.reject=t})}wrapCallback(i){return(e,t)=>{e?this.reject(e):this.resolve(t),"function"==typeof i&&(this.promise.catch(()=>{}),1===i.length?i(e):i(e,t))}}}class a extends Error{constructor(e,t,i){super(t),this.code=e,this.customData=i,this.name="FirebaseError",Object.setPrototypeOf(this,a.prototype),Error.captureStackTrace&&Error.captureStackTrace(this,r.prototype.create)}}class r{constructor(e,t,i){this.service=e,this.serviceName=t,this.errors=i}create(e,...t){var r,i=t[0]||{},n=`${this.service}/${e}`,s=this.errors[e],s=s?(r=i,s.replace(o,(e,t)=>{var i=r[t];return null!=i?String(i):`<${t}?>`})):"Error",s=`${this.serviceName}: ${s} (${n}).`;return new a(n,s,i)}}const o=/\{\$([^}]+)}/g;function l(e,t){return Object.prototype.hasOwnProperty.call(e,t)}function h(e,t){if(e===t)return 1;const i=Object.keys(e),r=Object.keys(t);for(const a of i){if(!r.includes(a))return;var n=e[a],s=t[a];if(p(n)&&p(s)){if(!h(n,s))return}else if(n!==s)return}for(const o of r)if(!i.includes(o))return;return 1}function p(e){return null!==e&&"object"==typeof e}function i(e,t){const i=new s(e,t);return i.subscribe.bind(i)}class s{constructor(e,t){this.observers=[],this.unsubscribes=[],this.observerCount=0,this.task=Promise.resolve(),this.finalized=!1,this.onNoObservers=t,this.task.then(()=>{e(this)}).catch(e=>{this.error(e)})}next(t){this.forEachObserver(e=>{e.next(t)})}error(t){this.forEachObserver(e=>{e.error(t)}),this.close(t)}complete(){this.forEachObserver(e=>{e.complete()}),this.close()}subscribe(e,t,i){let r;if(void 0===e&&void 0===t&&void 0===i)throw new Error("Missing Observer.");r=function(e,t){if("object"!=typeof e||null===e)return!1;for(const i of t)if(i in e&&"function"==typeof e[i])return!0;return!1}(e,["next","error","complete"])?e:{next:e,error:t,complete:i},void 0===r.next&&(r.next=f),void 0===r.error&&(r.error=f),void 0===r.complete&&(r.complete=f);var n=this.unsubscribeOne.bind(this,this.observers.length);return this.finalized&&this.task.then(()=>{try{this.finalError?r.error(this.finalError):r.complete()}catch(e){}}),this.observers.push(r),n}unsubscribeOne(e){void 0!==this.observers&&void 0!==this.observers[e]&&(delete this.observers[e],--this.observerCount,0===this.observerCount&&void 0!==this.onNoObservers&&this.onNoObservers(this))}forEachObserver(t){if(!this.finalized)for(let e=0;e<this.observers.length;e++)this.sendOne(e,t)}sendOne(e,t){this.task.then(()=>{if(void 0!==this.observers&&void 0!==this.observers[e])try{t(this.observers[e])}catch(e){"undefined"!=typeof console&&console.error&&console.error(e)}})}close(e){this.finalized||(this.finalized=!0,void 0!==e&&(this.finalError=e),this.task.then(()=>{this.observers=void 0,this.onNoObservers=void 0}))}}function f(){}class d{constructor(e,t,i){this.name=e,this.instanceFactory=t,this.type=i,this.multipleInstances=!1,this.serviceProps={},this.instantiationMode="LAZY",this.onInstanceCreated=null}setInstantiationMode(e){return this.instantiationMode=e,this}setMultipleInstances(e){return this.multipleInstances=e,this}setServiceProps(e){return this.serviceProps=e,this}setInstanceCreatedCallback(e){return this.onInstanceCreated=e,this}}const u="[DEFAULT]";class m{constructor(e,t){this.name=e,this.container=t,this.component=null,this.instances=new Map,this.instancesDeferred=new Map,this.instancesOptions=new Map,this.onInitCallbacks=new Map}get(e){var t=this.normalizeInstanceIdentifier(e);if(!this.instancesDeferred.has(t)){const r=new n;if(this.instancesDeferred.set(t,r),this.isInitialized(t)||this.shouldAutoInitialize())try{var i=this.getOrInitializeService({instanceIdentifier:t});i&&r.resolve(i)}catch(e){}}return this.instancesDeferred.get(t).promise}getImmediate(e){var t=this.normalizeInstanceIdentifier(null==e?void 0:e.identifier),i=null!==(i=null==e?void 0:e.optional)&&void 0!==i&&i;if(!this.isInitialized(t)&&!this.shouldAutoInitialize()){if(i)return null;throw Error(`Service ${this.name} is not available`)}try{return this.getOrInitializeService({instanceIdentifier:t})}catch(e){if(i)return null;throw e}}getComponent(){return this.component}setComponent(e){if(e.name!==this.name)throw Error(`Mismatching Component ${e.name} for Provider ${this.name}.`);if(this.component)throw Error(`Component for ${this.name} has already been provided`);if(this.component=e,this.shouldAutoInitialize()){if("EAGER"===e.instantiationMode)try{this.getOrInitializeService({instanceIdentifier:u})}catch(e){}for(var[t,i]of this.instancesDeferred.entries()){t=this.normalizeInstanceIdentifier(t);try{var r=this.getOrInitializeService({instanceIdentifier:t});i.resolve(r)}catch(e){}}}}clearInstance(e=u){this.instancesDeferred.delete(e),this.instancesOptions.delete(e),this.instances.delete(e)}async delete(){const e=Array.from(this.instances.values());await Promise.all([...e.filter(e=>"INTERNAL"in e).map(e=>e.INTERNAL.delete()),...e.filter(e=>"_delete"in e).map(e=>e._delete())])}isComponentSet(){return null!=this.component}isInitialized(e=u){return this.instances.has(e)}getOptions(e=u){return this.instancesOptions.get(e)||{}}initialize(e={}){var{options:t={}}=e,i=this.normalizeInstanceIdentifier(e.instanceIdentifier);if(this.isInitialized(i))throw Error(`${this.name}(${i}) has already been initialized`);if(!this.isComponentSet())throw Error(`Component ${this.name} has not been registered yet`);var r,n,s=this.getOrInitializeService({instanceIdentifier:i,options:t});for([r,n]of this.instancesDeferred.entries())i===this.normalizeInstanceIdentifier(r)&&n.resolve(s);return s}onInit(e,t){var i=this.normalizeInstanceIdentifier(t);const r=null!==(n=this.onInitCallbacks.get(i))&&void 0!==n?n:new Set;r.add(e),this.onInitCallbacks.set(i,r);var n=this.instances.get(i);return n&&e(n,i),()=>{r.delete(e)}}invokeOnInitCallbacks(e,t){var i=this.onInitCallbacks.get(t);if(i)for(const r of i)try{r(e,t)}catch(e){}}getOrInitializeService({instanceIdentifier:e,options:t={}}){let i=this.instances.get(e);if(!i&&this.component&&(i=this.component.instanceFactory(this.container,{instanceIdentifier:(r=e)===u?void 0:r,options:t}),this.instances.set(e,i),this.instancesOptions.set(e,t),this.invokeOnInitCallbacks(i,e),this.component.onInstanceCreated))try{this.component.onInstanceCreated(this.container,e,i)}catch(e){}var r;return i||null}normalizeInstanceIdentifier(e=u){return!this.component||this.component.multipleInstances?e:u}shouldAutoInitialize(){return!!this.component&&"EXPLICIT"!==this.component.instantiationMode}}class g{constructor(e){this.name=e,this.providers=new Map}addComponent(e){const t=this.getProvider(e.name);if(t.isComponentSet())throw new Error(`Component ${e.name} has already been registered with ${this.name}`);t.setComponent(e)}addOrOverwriteComponent(e){const t=this.getProvider(e.name);t.isComponentSet()&&this.providers.delete(e.name),this.addComponent(e)}getProvider(e){if(this.providers.has(e))return this.providers.get(e);var t=new m(e,this);return this.providers.set(e,t),t}getProviders(){return Array.from(this.providers.values())}}const v=[];var b,e;(e=b=b||{})[e.DEBUG=0]="DEBUG",e[e.VERBOSE=1]="VERBOSE",e[e.INFO=2]="INFO",e[e.WARN=3]="WARN",e[e.ERROR=4]="ERROR",e[e.SILENT=5]="SILENT";const I={debug:b.DEBUG,verbose:b.VERBOSE,info:b.INFO,warn:b.WARN,error:b.ERROR,silent:b.SILENT},t=b.INFO,E={[b.DEBUG]:"log",[b.VERBOSE]:"log",[b.INFO]:"info",[b.WARN]:"warn",[b.ERROR]:"error"},y=(e,t,...i)=>{if(!(t<e.logLevel)){var r=(new Date).toISOString(),n=E[t];if(!n)throw new Error(`Attempted to log a message with an invalid logType (value: ${t})`);console[n](`[${r}]  ${e.name}:`,...i)}};class _{constructor(e){this.name=e,this._logLevel=t,this._logHandler=y,this._userLogHandler=null,v.push(this)}get logLevel(){return this._logLevel}set logLevel(e){if(!(e in b))throw new TypeError(`Invalid value "${e}" assigned to \`logLevel\``);this._logLevel=e}setLogLevel(e){this._logLevel="string"==typeof e?I[e]:e}get logHandler(){return this._logHandler}set logHandler(e){if("function"!=typeof e)throw new TypeError("Value assigned to `logHandler` must be a function");this._logHandler=e}get userLogHandler(){return this._userLogHandler}set userLogHandler(e){this._userLogHandler=e}debug(...e){this._userLogHandler&&this._userLogHandler(this,b.DEBUG,...e),this._logHandler(this,b.DEBUG,...e)}log(...e){this._userLogHandler&&this._userLogHandler(this,b.VERBOSE,...e),this._logHandler(this,b.VERBOSE,...e)}info(...e){this._userLogHandler&&this._userLogHandler(this,b.INFO,...e),this._logHandler(this,b.INFO,...e)}warn(...e){this._userLogHandler&&this._userLogHandler(this,b.WARN,...e),this._logHandler(this,b.WARN,...e)}error(...e){this._userLogHandler&&this._userLogHandler(this,b.ERROR,...e),this._logHandler(this,b.ERROR,...e)}}class O{constructor(e){this.container=e}getPlatformInfoString(){const e=this.container.getProviders();return e.map(e=>{if("VERSION"!==(null==(t=e.getComponent())?void 0:t.type))return null;var t,t=e.getImmediate();return`${t.library}/${t.version}`}).filter(e=>e).join(" ")}}const w="@firebase/app",C="0.7.11",N=new _("@firebase/app");var L;const A="[DEFAULT]",D={"@firebase/app":"fire-core","@firebase/app-compat":"fire-core-compat","@firebase/analytics":"fire-analytics","@firebase/analytics-compat":"fire-analytics-compat","@firebase/app-check":"fire-app-check","@firebase/app-check-compat":"fire-app-check-compat","@firebase/auth":"fire-auth","@firebase/auth-compat":"fire-auth-compat","@firebase/database":"fire-rtdb","@firebase/database-compat":"fire-rtdb-compat","@firebase/functions":"fire-fn","@firebase/functions-compat":"fire-fn-compat","@firebase/installations":"fire-iid","@firebase/installations-compat":"fire-iid-compat","@firebase/messaging":"fire-fcm","@firebase/messaging-compat":"fire-fcm-compat","@firebase/performance":"fire-perf","@firebase/performance-compat":"fire-perf-compat","@firebase/remote-config":"fire-rc","@firebase/remote-config-compat":"fire-rc-compat","@firebase/storage":"fire-gcs","@firebase/storage-compat":"fire-gcs-compat","@firebase/firestore":"fire-fst","@firebase/firestore-compat":"fire-fst-compat","fire-js":"fire-js",firebase:"fire-js-all"},S=new Map,R=new Map;function $(t,i){try{t.container.addComponent(i)}catch(e){N.debug(`Component ${i.name} failed to register with FirebaseApp ${t.name}`,e)}}function k(e,t){e.container.addOrOverwriteComponent(t)}function P(e){var t=e.name;if(R.has(t))return N.debug(`There were multiple attempts to register component ${t}.`),!1;R.set(t,e);for(const i of S.values())$(i,e);return!0}function z(e,t){return e.container.getProvider(t)}const F=new r("app","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","bad-app-name":"Illegal App name: '{$appName}","duplicate-app":"Firebase App named '{$appName}' already exists with different options or config","app-deleted":"Firebase App named '{$appName}' already deleted","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance.","invalid-log-argument":"First argument to `onLog` must be null or a function."});class j{constructor(e,t,i){this._isDeleted=!1,this._options=Object.assign({},e),this._config=Object.assign({},t),this._name=t.name,this._automaticDataCollectionEnabled=t.automaticDataCollectionEnabled,this._container=i,this.container.addComponent(new d("app",()=>this,"PUBLIC"))}get automaticDataCollectionEnabled(){return this.checkDestroyed(),this._automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this.checkDestroyed(),this._automaticDataCollectionEnabled=e}get name(){return this.checkDestroyed(),this._name}get options(){return this.checkDestroyed(),this._options}get config(){return this.checkDestroyed(),this._config}get container(){return this._container}get isDeleted(){return this._isDeleted}set isDeleted(e){this._isDeleted=e}checkDestroyed(){if(this.isDeleted)throw F.create("app-deleted",{appName:this._name})}}const H="9.6.1";function T(e,t={}){if("object"!=typeof t){const r=t;t={name:r}}var i=Object.assign({name:A,automaticDataCollectionEnabled:!1},t);const r=i.name;if("string"!=typeof r||!r)throw F.create("bad-app-name",{appName:String(r)});var n=S.get(r);if(n){if(h(e,n.options)&&h(i,n.config))return n;throw F.create("duplicate-app",{appName:r})}const s=new g(r);for(const a of R.values())s.addComponent(a);i=new j(e,i,s);return S.set(r,i),i}async function M(e){var t=e.name;S.has(t)&&(S.delete(t),await Promise.all(e.container.getProviders().map(e=>e.delete())),e.isDeleted=!0)}function B(e,t,i){let r=null!==(s=D[e])&&void 0!==s?s:e;i&&(r+=`-${i}`);var n=r.match(/\s|\//),s=t.match(/\s|\//);if(n||s){const a=[`Unable to register library "${r}" with version "${t}":`];return n&&a.push(`library name "${r}" contains illegal characters (whitespace or "/")`),n&&s&&a.push("and"),s&&a.push(`version name "${t}" contains illegal characters (whitespace or "/")`),void N.warn(a.join(" "))}P(new d(`${r}-version`,()=>({library:r,version:t}),"VERSION"))}function V(e,t){if(null!==e&&"function"!=typeof e)throw F.create("invalid-log-argument");!function(s,e){for(const t of v){let n=null;e&&e.level&&(n=I[e.level]),t.userLogHandler=null===s?null:(e,t,...i)=>{var r=i.map(e=>{if(null==e)return null;if("string"==typeof e)return e;if("number"==typeof e||"boolean"==typeof e)return e.toString();if(e instanceof Error)return e.message;try{return JSON.stringify(e)}catch(e){return null}}).filter(e=>e).join(" ");t>=(null!==n&&void 0!==n?n:e.logLevel)&&s({level:b[t].toLowerCase(),message:r,args:i,type:e.name})}}}(e,t)}function U(e){var t;t=e,v.forEach(e=>{e.setLogLevel(t)})}L="",P(new d("platform-logger",e=>new O(e),"PRIVATE")),B(w,C,L),B(w,C,"esm2017"),B("fire-js","");var x=Object.freeze({__proto__:null,SDK_VERSION:H,_DEFAULT_ENTRY_NAME:A,_addComponent:$,_addOrOverwriteComponent:k,_apps:S,_clearComponents:function(){R.clear()},_components:R,_getProvider:z,_registerComponent:P,_removeServiceInstance:function(e,t,i=A){z(e,t).clearInstance(i)},deleteApp:M,getApp:function(e=A){var t=S.get(e);if(!t)throw F.create("no-app",{appName:e});return t},getApps:function(){return Array.from(S.values())},initializeApp:T,onLog:V,registerVersion:B,setLogLevel:U,FirebaseError:a});class W{constructor(e,t){this._delegate=e,this.firebase=t,$(e,new d("app-compat",()=>this,"PUBLIC")),this.container=e.container}get automaticDataCollectionEnabled(){return this._delegate.automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this._delegate.automaticDataCollectionEnabled=e}get name(){return this._delegate.name}get options(){return this._delegate.options}delete(){return new Promise(e=>{this._delegate.checkDestroyed(),e()}).then(()=>(this.firebase.INTERNAL.removeApp(this.name),M(this._delegate)))}_getService(e,t=A){var i;this._delegate.checkDestroyed();const r=this._delegate.container.getProvider(e);return r.isInitialized()||"EXPLICIT"!==(null===(i=r.getComponent())||void 0===i?void 0:i.instantiationMode)||r.initialize(),r.getImmediate({identifier:t})}_removeServiceInstance(e,t=A){this._delegate.container.getProvider(e).clearInstance(t)}_addComponent(e){$(this._delegate,e)}_addOrOverwriteComponent(e){k(this._delegate,e)}toJSON(){return{name:this.name,automaticDataCollectionEnabled:this.automaticDataCollectionEnabled,options:this.options}}}const G=new r("app-compat","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance."});function Y(n){const s={},a={__esModule:!0,initializeApp:function(e,t={}){var i=T(e,t);if(l(s,i.name))return s[i.name];var r=new n(i,a);return s[i.name]=r},app:o,registerVersion:B,setLogLevel:U,onLog:V,apps:null,SDK_VERSION:H,INTERNAL:{registerComponent:function(i){const r=i.name,t=r.replace("-compat","");{var e;P(i)&&"PUBLIC"===i.type&&(e=(e=o())=>{if("function"!=typeof e[t])throw G.create("invalid-app-argument",{appName:r});return e[t]()},void 0!==i.serviceProps&&c(e,i.serviceProps),a[t]=e,n.prototype[t]=function(...e){const t=this._getService.bind(this,r);return t.apply(this,i.multipleInstances?e:[])})}return"PUBLIC"===i.type?a[t]:null},removeApp:function(e){delete s[e]},useAsService:function(e,t){if("serverAuth"===t)return null;var i=t;return i},modularAPIs:x}};function o(e){if(e=e||A,!l(s,e))throw G.create("no-app",{appName:e});return s[e]}return a.default=a,Object.defineProperty(a,"apps",{get:function(){return Object.keys(s).map(e=>s[e])}}),o.App=n,a}var K=function e(){const t=Y(W);return t.INTERNAL=Object.assign(Object.assign({},t.INTERNAL),{createFirebaseNamespace:e,extendNamespace:function(e){c(t,e)},createSubscribe:i,ErrorFactory:r,deepExtend:c}),t}();const J=new _("@firebase/app-compat");if("object"==typeof self&&self.self===self&&void 0!==self.firebase){J.warn(`
@@ -2466,9 +2466,9 @@ function handleDeleteSession(sessionId) {
 
 File: 210_chat_engine.js
 
-Version: 1.2 (Unified Settings Control)
+Version: 1.3 (UX Enhancement Protocol)
 
-Description: Core chat engine adapted for the unified settings control.
+Description: Implements intelligent loading and typewriter effect for AI responses.
 
 */
 
@@ -2498,11 +2498,11 @@ async function handleChatSend() {
 
     const userMessage = { role: 'user', content: query, timestamp: new Date() };
 
-    const loadingMessage = { role: 'ai', status: 'loading', id: `loading-${Date.now()}` };
+    const loadingId = `loading-${Date.now()}`;
+
+    const loadingMessage = { role: 'ai', status: 'loading', id: loadingId };
 
     let sessionRef;
-
-    let currentMessages = [];
 
     let isNewSession = false;
 
@@ -2524,9 +2524,7 @@ async function handleChatSend() {
 
         
 
-        currentMessages = [userMessage, loadingMessage];
-
-        renderChatMessages({ messages: currentMessages });
+        renderChatMessages({ messages: [userMessage, loadingMessage] });
 
         
 
@@ -2560,9 +2558,9 @@ async function handleChatSend() {
 
         
 
-        currentMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
+        const updatedMessages = [...(currentSessionData.messages || []), userMessage, loadingMessage];
 
-        renderChatMessages({ messages: currentMessages });
+        renderChatMessages({ messages: updatedMessages });
 
         
 
@@ -2587,8 +2585,6 @@ async function handleChatSend() {
         const historyForApi = isNewSession ? [] : (localChatSessionsCache.find(s => s.id === currentSessionId)?.messages.slice(-20) || []);
 
 
-
-        // [MODIFIED] Construct the final prompt based on the active prompt template
 
         let finalUserQuery = query;
 
@@ -2644,8 +2640,6 @@ async function handleChatSend() {
 
         } else {
 
-            // Constructing a more robust prompt for the default provider
-
             let systemInstruction = "You are Ailey. Provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{summary}|||DETAIL:{detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone.";
 
             
@@ -2656,7 +2650,7 @@ async function handleChatSend() {
 
                 if (template && template.promptText) {
 
-                    systemInstruction = template.promptText; // Override with custom prompt
+                    systemInstruction = template.promptText;
 
                 }
 
@@ -2706,6 +2700,12 @@ async function handleChatSend() {
 
         
 
+        // [MODIFIED] Instead of re-rendering, directly update the loading block and then save to DB
+
+        replaceLoadingWithMessage(loadingId, aiMessage);
+
+
+
         await sessionRef.update({
 
             messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
@@ -2721,6 +2721,8 @@ async function handleChatSend() {
         console.error("Chat send error:", e);
 
         const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
+
+        replaceLoadingWithMessage(loadingId, errorMessage);
 
         if (sessionRef) {
 
@@ -2744,7 +2746,7 @@ async function handleChatSend() {
 
         if (isNewSession) {
 
-            selectSession(currentSessionId);
+            // The listener will handle the re-render, no need to call selectSession here
 
         }
 
@@ -2849,9 +2851,9 @@ function parseApiResponse(provider, result) {
 
 File: 220_chat_ui.js
 
-Version: 1.2 (Unified Settings Control)
+Version: 1.3 (UX Enhancement Protocol)
 
-Description: Handles UI rendering for the chat app with a unified settings display.
+Description: Implements typewriter effect and intelligent loading state UI.
 
 */
 
@@ -2985,7 +2987,7 @@ function renderChatMessages(sessionData) {
 
 
 
-    chatMessages.querySelectorAll('.chat-message, .ai-response-container, .reasoning-block').forEach(el => el.remove());
+    chatMessages.innerHTML = ''; // Clear everything before rendering
 
 
 
@@ -3005,153 +3007,7 @@ function renderChatMessages(sessionData) {
 
         } else if (msg.role === 'ai') {
 
-            if (msg.status === 'loading') {
-
-                const loadingBlock = document.createElement('div');
-
-                loadingBlock.className = 'reasoning-block loading';
-
-                loadingBlock.id = msg.id; 
-
-                loadingBlock.innerHTML = `
-
-                    <div class="reasoning-header">
-
-                        <span class="toggle-icon">▶</span>
-
-                        <span class="reasoning-summary blinking-cursor">AI가 생각하는 중...</span>
-
-                    </div>
-
-                `;
-
-                fragment.appendChild(loadingBlock);
-
-                return;
-
-            }
-
-
-
-            const aiContainer = document.createElement('div');
-
-            aiContainer.className = 'ai-response-container';
-
-
-
-            const content = msg.content;
-
-            const reasoningRegex = /^\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
-
-            const match = content.match(reasoningRegex);
-
-
-
-            if (match) {
-
-                const reasoningBlockId = `reasoning-${currentSessionId}-${index}`;
-
-                const reasoningRaw = match[1];
-
-                const finalAnswer = content.replace(reasoningRegex, '').trim();
-
-
-
-                const reasoningSteps = reasoningRaw.split('SUMMARY:')
-
-                    .filter(s => s.trim() !== '')
-
-                    .map(step => {
-
-                        const parts = step.split('|||DETAIL:');
-
-                        return { summary: parts[0]?.trim(), detail: parts[1]?.trim() };
-
-                    });
-
-                
-
-                const rBlock = document.createElement('div');
-
-                rBlock.className = 'reasoning-block';
-
-                rBlock.id = reasoningBlockId;
-
-                rBlock.dataset.steps = JSON.stringify(reasoningSteps);
-
-
-
-                rBlock.innerHTML = `
-
-                    <div class="reasoning-header">
-
-                        <span class="toggle-icon">▶</span>
-
-                        <span>AI의 추론 과정...</span>
-
-                        <span class="reasoning-summary"></span>
-
-                    </div>
-
-                    <div class="reasoning-content"></div>
-
-                `;
-
-                aiContainer.appendChild(rBlock);
-
-                
-
-                startSummaryAnimation(rBlock, reasoningSteps);
-
-
-
-                if (finalAnswer) {
-
-                    const finalAnswerDiv = document.createElement('div');
-
-                    finalAnswerDiv.className = 'chat-message ai';
-
-                    finalAnswerDiv.textContent = finalAnswer;
-
-                    renderMathInElement(finalAnswerDiv);
-
-                    aiContainer.appendChild(finalAnswerDiv);
-
-                }
-
-            } else {
-
-                const d = document.createElement('div');
-
-                d.className = 'chat-message ai';
-
-                d.textContent = content;
-
-                renderMathInElement(d);
-
-                aiContainer.appendChild(d);
-
-            }
-
-
-
-            if (msg.duration) {
-
-                const metaDiv = document.createElement('div');
-
-                metaDiv.className = 'ai-response-meta';
-
-                metaDiv.innerHTML = `
-
-                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>
-
-                    <span>응답 생성: ${msg.duration}초</span>
-
-                `;
-
-                aiContainer.appendChild(metaDiv);
-
-            }
+            const aiContainer = createAiMessageContainer(msg, index);
 
             fragment.appendChild(aiContainer);
 
@@ -3164,6 +3020,210 @@ function renderChatMessages(sessionData) {
     chatMessages.appendChild(fragment);
 
     chatMessages.scrollTop = chatMessages.scrollHeight;
+
+}
+
+
+
+function createAiMessageContainer(msg, index) {
+
+    const aiContainer = document.createElement('div');
+
+    aiContainer.className = 'ai-response-container';
+
+    
+
+    if (msg.status === 'loading') {
+
+        aiContainer.id = msg.id;
+
+        aiContainer.innerHTML = `
+
+            <div class="reasoning-block loading">
+
+                <div class="reasoning-header">
+
+                    <span class="toggle-icon">▶</span>
+
+                    <span class="reasoning-summary blinking-cursor">AI가 생각하는 중...</span>
+
+                </div>
+
+            </div>
+
+        `;
+
+        return aiContainer;
+
+    }
+
+
+
+    const content = msg.content;
+
+    const reasoningRegex = /^\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
+
+    const match = content.match(reasoningRegex);
+
+
+
+    if (match) {
+
+        const reasoningBlockId = `reasoning-${currentSessionId}-${index}`;
+
+        const reasoningRaw = match[1];
+
+        const finalAnswer = content.replace(reasoningRegex, '').trim();
+
+
+
+        const reasoningSteps = reasoningRaw.split('SUMMARY:')
+
+            .filter(s => s.trim() !== '')
+
+            .map(step => {
+
+                const parts = step.split('|||DETAIL:');
+
+                return { summary: parts[0]?.trim(), detail: parts[1]?.trim() };
+
+            });
+
+        
+
+        const rBlock = document.createElement('div');
+
+        rBlock.className = 'reasoning-block';
+
+        rBlock.id = reasoningBlockId;
+
+        rBlock.dataset.steps = JSON.stringify(reasoningSteps);
+
+
+
+        rBlock.innerHTML = `
+
+            <div class="reasoning-header">
+
+                <span class="toggle-icon">▶</span>
+
+                <span>AI의 추론 과정...</span>
+
+                <span class="reasoning-summary"></span>
+
+            </div>
+
+            <div class="reasoning-content"></div>
+
+        `;
+
+        aiContainer.appendChild(rBlock);
+
+        
+
+        startSummaryAnimation(rBlock, reasoningSteps);
+
+
+
+        if (finalAnswer) {
+
+            const finalAnswerDiv = document.createElement('div');
+
+            finalAnswerDiv.className = 'chat-message ai';
+
+            typewriterRender(finalAnswerDiv, finalAnswer);
+
+            aiContainer.appendChild(finalAnswerDiv);
+
+        }
+
+    } else {
+
+        const d = document.createElement('div');
+
+        d.className = 'chat-message ai';
+
+        typewriterRender(d, content);
+
+        aiContainer.appendChild(d);
+
+    }
+
+
+
+    if (msg.duration) {
+
+        const metaDiv = document.createElement('div');
+
+        metaDiv.className = 'ai-response-meta';
+
+        metaDiv.innerHTML = `
+
+            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>
+
+            <span>응답 생성: ${msg.duration}초</span>
+
+        `;
+
+        aiContainer.appendChild(metaDiv);
+
+    }
+
+    return aiContainer;
+
+}
+
+
+
+function replaceLoadingWithMessage(loadingId, finalMsg) {
+
+    const loadingContainer = document.getElementById(loadingId);
+
+    if (!loadingContainer) return;
+
+
+
+    const newContainer = createAiMessageContainer(finalMsg, -1); // Use -1 index for uniqueness
+
+    loadingContainer.replaceWith(newContainer);
+
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+}
+
+
+
+function typewriterRender(element, text) {
+
+    if (!element || !text) return;
+
+    element.innerHTML = '';
+
+    element.classList.add('blinking-cursor');
+
+    let i = 0;
+
+    const typingInterval = setInterval(() => {
+
+        if (i < text.length) {
+
+            element.innerHTML += text.charAt(i);
+
+            i++;
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        } else {
+
+            clearInterval(typingInterval);
+
+            element.classList.remove('blinking-cursor');
+
+            renderMathInElement(element);
+
+        }
+
+    }, 20); 
 
 }
 

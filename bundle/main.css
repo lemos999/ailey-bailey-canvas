@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T19:05:12.055Z */
+/* Auto-generated bundle from 2025-08-09T19:24:17.650Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -312,11 +312,39 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 
 File: style_chat.css
 
-Version: 17.0 (Unified Settings Control)
+Version: 17.1 (UX Enhancement Protocol)
 
-Description: Styles for the new unified settings control, removing mode selection.
+Description: Adds blinking cursor animation for typewriter effect.
 
 */
+
+
+
+@keyframes blink {
+
+    50% { border-color: transparent; }
+
+}
+
+.blinking-cursor::after {
+
+    content: '';
+
+    display: inline-block;
+
+    width: 1px;
+
+    height: 1.2em;
+
+    background-color: currentColor;
+
+    animation: blink 1s infinite;
+
+    vertical-align: middle;
+
+    margin-left: 3px;
+
+}
 
 
 
