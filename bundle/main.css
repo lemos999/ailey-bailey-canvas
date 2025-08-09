@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T17:56:42.885Z */
+/* Auto-generated bundle from 2025-08-09T18:13:30.637Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -309,8 +309,8 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 /*
 --- Ailey & Bailey Canvas ---
 File: style_chat.css
-Version: 17.0 (Unified Settings Control)
-Description: Styles for the new unified settings control, removing mode selection.
+Version: 18.0 (Custom Dropdown Component)
+Description: Implements styles for the new portal-based custom dropdown component.
 */
 
 #chat-panel {
@@ -378,7 +378,7 @@ body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-li
 #chat-session-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
 .chat-header-right-group { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
-/* --- [NEW] Unified Settings Control Deck --- */
+/* --- [REFINED] Unified Settings Control Deck --- */
 #chat-control-deck { display: flex; justify-content: flex-end; align-items: center; padding: 8px 10px; gap: 15px; border-bottom: 1px solid transparent; }
 body:not(.dark-mode) #chat-control-deck { border-bottom-color: var(--border-color-light); }
 body.dark-mode #chat-control-deck { border-bottom-color: var(--border-color-dark); }
@@ -402,25 +402,38 @@ body:dark-mode #settings-popover { background-color: var(--container-bg-dark); b
 .popover-section { margin-bottom: 15px; }
 .popover-section:last-child { margin-bottom: 0; }
 .popover-section label { font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 8px; }
-.popover-section select { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; }
-body:not(.dark-mode) .popover-section select { background-color: white; border-color: var(--border-color-light); }
-body:dark-mode .popover-section select { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
-
 .prompt-popover-group { display: flex; gap: 8px; }
-.prompt-popover-group select { flex-grow: 1; }
+.prompt-popover-group .custom-select-trigger { flex-grow: 1; }
 .prompt-popover-group button { flex-shrink: 0; padding: 0 10px; border-radius: 6px; border: 1px solid; cursor: pointer; }
 body:not(.dark-mode) .prompt-popover-group button { background-color: #e0d8ca; border-color: var(--border-color-light); }
 body:dark-mode .prompt-popover-group button { background-color: #3f3f3f; border-color: var(--border-color-dark); }
 body:not(.dark-mode) .prompt-popover-group button:hover { background-color: #d1c8bb; }
 body:dark-mode .prompt-popover-group button:hover { background-color: #555; }
-/* --- End Unified Settings --- */
+
+/* --- [NEW] Custom Select (Dropdown) Component --- */
+.custom-select-trigger { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; border: 1px solid; cursor: pointer; user-select: none; font-family: 'Gowun Batang', serif; width: 100%; box-sizing: border-box; }
+body:not(.dark-mode) .custom-select-trigger { background-color: white; border-color: var(--border-color-light); }
+body:dark-mode .custom-select-trigger { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
+.custom-select-trigger .selected-value { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.custom-select-trigger .dropdown-arrow { flex-shrink: 0; margin-left: 8px; display: flex; align-items: center; }
+.custom-select-trigger .dropdown-arrow svg { fill: currentColor; }
+
+.custom-select-options-panel { position: fixed; display: none; z-index: 2100; border-radius: 6px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); max-height: 200px; overflow-y: auto; padding: 5px; }
+.custom-select-options-panel.show { display: block; }
+body:not(.dark-mode) .custom-select-options-panel { background-color: var(--container-bg-light); border: 1px solid var(--border-color-light); }
+body:dark-mode .custom-select-options-panel { background-color: var(--container-bg-dark); border: 1px solid var(--border-color-dark); }
+
+.custom-select-option { padding: 8px 12px; cursor: pointer; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95em; }
+body:not(.dark-mode) .custom-select-option:hover { background-color: var(--quote-bg-light); }
+body:dark-mode .custom-select-option:hover { background-color: var(--quote-bg-dark); }
+.custom-select-option.selected { font-weight: bold; }
+body:not(.dark-mode) .custom-select-option.selected { background-color: var(--strong-bg-light); }
+body:dark-mode .custom-select-option.selected { background-color: var(--strong-bg-dark); }
+/* --- End Custom Select --- */
 
 .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-
 #chat-welcome-message { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; opacity: 0.6; font-size: 1.1em; user-select: none; height: 100%; }
 #chat-welcome-message h3 { margin-bottom: 5px; font-family: 'Noto Serif KR', serif; }
-
-/* --- Chat Message Bubble Styles --- */
 .chat-message { padding: 12px 18px; border-radius: 8px; max-width: 85%; line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; word-wrap: break-word; }
 .chat-message.user { align-self: flex-end; border-left: 3px solid #5e97f6; padding-left: 15px; }
 body.dark-mode .chat-message.user { background-color: #2a2c3c; }
@@ -430,51 +443,37 @@ body:dark-mode .ai-response-container .chat-message.ai { background-color: var(-
 body:not(.dark-mode) .ai-response-container .chat-message.ai { background-color: var(--chat-ai-bg-light); }
 .ai-response-meta { font-size: 0.8em; opacity: 0.6; display: flex; align-items: center; gap: 5px; margin-left: 5px; }
 .ai-response-meta svg { fill: currentColor; }
-/* --- End Chat Message Bubble Styles --- */
-
 .chat-input-form { display: flex; padding: 10px; border-top: 1px solid; transition: border-color 0.3s; align-items: center; }
 body.dark-mode .chat-input-form { border-top-color: var(--border-color-dark); }
 body:not(.dark-mode) .chat-input-form { border-top-color: var(--border-color-light); }
-
 #chat-input { flex-grow: 1; border: 1px solid; border-radius: 20px; padding: 10px 15px; resize: none; outline: none; font-family: 'Gowun Batang', serif; font-size: 1em; transition: all 0.3s; }
 body.dark-mode #chat-input { background-color: #2a2a2a; color: var(--text-color-dark); border-color: var(--border-color-dark); }
 body:not(.dark-mode) #chat-input { background-color: #fff; color: var(--text-color-light); border-color: var(--border-color-light); }
-
 #chat-send-btn { background: none; border: none; cursor: pointer; padding: 0 10px; transition: color 0.3s; display: flex; align-items: center; justify-content: center; }
 #chat-send-btn svg { fill: currentColor; }
-
 body.dark-mode #chat-send-btn { color: var(--header-color-dark); }
 body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
-
-/* --- Prompt Manager & Quick Select Styles --- */
 .prompt-manager-modal { max-width: 800px; width: 95%; height: 80vh; max-height: 600px; padding: 0; overflow: hidden; position: relative; }
 .prompt-manager-modal .close-btn { position: absolute; top: 15px; right: 15px; z-index: 10; }
 .prompt-manager-container { display: flex; width: 100%; height: 100%; }
-
 .template-list-panel { width: 250px; flex-shrink: 0; padding: 20px; display: flex; flex-direction: column; }
 body.dark-mode .template-list-panel { background-color: var(--bg-color-dark); border-right: 1px solid var(--border-color-dark); }
 body:not(.dark-mode) .template-list-panel { background-color: var(--bg-color-light); border-right: 1px solid var(--border-color-light); }
-
 .template-list-panel h3 { text-align: center; margin-top: 0; margin-bottom: 15px; }
 #template-list-container { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; }
-
 .template-list-item { padding: 10px 15px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .template-list-item.is-default .item-name::after { content: ' (기본)'; font-size: 0.8em; opacity: 0.7; margin-left: 5px; }
-
 body:not(.dark-mode) .template-list-item:hover { background-color: var(--quote-bg-light); }
 body.dark-mode .template-list-item:hover { background-color: var(--quote-bg-dark); }
 body.dark-mode .template-list-item.active { background-color: var(--h2-color-dark); color: var(--bg-color-dark); font-weight: bold; }
 body:not(.dark-mode) .template-list-item.active { background-color: var(--h2-color-light); color: white; font-weight: bold; }
-
 .template-editor-panel { flex-grow: 1; padding: 20px 30px; display: flex; flex-direction: column; }
 .editor-form-group { margin-bottom: 20px; display: flex; flex-direction: column; }
 .editor-form-group:last-of-type { flex-grow: 1; }
 .editor-form-group label { font-weight: bold; margin-bottom: 8px; }
 .editor-form-group input, .editor-form-group textarea { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; font-size: 1em; box-sizing: border-box; }
-
 body:not(.dark-mode) .editor-form-group input, body:not(.dark-mode) .editor-form-group textarea { border-color: var(--border-color-light); background-color: white; color: var(--text-color-light); }
 body.dark-mode .editor-form-group input, body.dark-mode .editor-form-group textarea { border-color: var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
-
 .editor-form-group textarea { flex-grow: 1; resize: none; }
 .editor-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px; }
 .editor-actions .modal-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; }
