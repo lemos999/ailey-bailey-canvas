@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T19:45:37.693Z */
+/* Auto-generated bundle from 2025-08-09T21:01:46.458Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -843,4 +843,183 @@ body:not(.dark-mode) #note-editor-view .editor-header { border-bottom-color: var
 .tag-container { padding: 5px 15px 10px; display: flex; flex-wrap: wrap; gap: 8px; }
 .note-tag { background-color: var(--h2-border-dark); color: var(--text-color-dark); padding: 3px 10px; border-radius: 15px; font-size: 0.85em; cursor: pointer; }
 body:not(.dark-mode) .note-tag { background-color: var(--h2-border-light); color: var(--text-color-light); }
+
+/* --- Source: src_css\007_markdown.css --- */
+/*
+
+--- Ailey & Bailey Canvas ---
+
+File: 007_markdown.css
+
+Version: 1.0 (Markdown Support)
+
+Description: Styles for rendered Markdown content in chat messages.
+
+*/
+
+
+
+.chat-message.ai h1, .chat-message.ai h2, .chat-message.ai h3, .chat-message.ai h4 {
+
+    margin-top: 1.2em;
+
+    margin-bottom: 0.6em;
+
+    font-family: 'Noto Serif KR', serif;
+
+}
+
+body.dark-mode .chat-message.ai h1, body.dark-mode .chat-message.ai h2, body.dark-mode .chat-message.ai h3 { color: var(--header-color-dark); }
+
+body:not(.dark-mode) .chat-message.ai h1, body:not(.dark-mode) .chat-message.ai h2, body:not(.dark-mode) .chat-message.ai h3 { color: var(--header-color-light); }
+
+
+
+.chat-message.ai p { margin-bottom: 1em; }
+
+
+
+.chat-message.ai ul, .chat-message.ai ol {
+
+    padding-left: 25px;
+
+    margin-bottom: 1em;
+
+}
+
+
+
+.chat-message.ai li {
+
+    margin-bottom: 0.5em;
+
+}
+
+
+
+.chat-message.ai blockquote {
+
+    margin: 1em 0;
+
+    padding: 10px 20px;
+
+    border-left-width: 4px;
+
+    border-left-style: solid;
+
+}
+
+body.dark-mode .chat-message.ai blockquote { background-color: var(--quote-bg-dark); border-color: var(--h2-border-dark); }
+
+body:not(.dark-mode) .chat-message.ai blockquote { background-color: var(--quote-bg-light); border-color: var(--h2-border-light); }
+
+
+
+.chat-message.ai a {
+
+    text-decoration: underline;
+
+}
+
+body.dark-mode .chat-message.ai a { color: #8cb4ff; }
+
+body:not(.dark-mode) .chat-message.ai a { color: #0056b3; }
+
+
+
+/* Inline and block code styles */
+
+.chat-message.ai code {
+
+    font-family: "D2Coding", monospace;
+
+    padding: .2em .4em;
+
+    margin: 0;
+
+    font-size: 85%;
+
+    border-radius: 6px;
+
+}
+
+
+
+body.dark-mode .chat-message.ai code { background-color: var(--quote-bg-dark); }
+
+body:not(.dark-mode) .chat-message.ai code { background-color: var(--quote-bg-light); }
+
+
+
+.chat-message.ai pre {
+
+    padding: 16px;
+
+    overflow: auto;
+
+    font-size: 85%;
+
+    line-height: 1.45;
+
+    border-radius: 6px;
+
+    margin: 1em 0;
+
+}
+
+
+
+.chat-message.ai pre code {
+
+    display: inline;
+
+    padding: 0;
+
+    margin: 0;
+
+    overflow: visible;
+
+    line-height: inherit;
+
+    word-wrap: normal;
+
+    background-color: transparent;
+
+    border: 0;
+
+}
+
+
+
+/* Table styles */
+
+.chat-message.ai table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+    margin: 1em 0;
+
+}
+
+
+
+.chat-message.ai th, .chat-message.ai td {
+
+    padding: 8px 12px;
+
+    border: 1px solid;
+
+}
+
+body.dark-mode .chat-message.ai th, body.dark-mode .chat-message.ai td { border-color: var(--border-color-dark); }
+
+body:not(.dark-mode) .chat-message.ai th, body:not(.dark-mode) .chat-message.ai td { border-color: var(--border-color-light); }
+
+
+
+body.dark-mode .chat-message.ai th { background-color: #2a2a2a; }
+
+body:not(.dark-mode) .chat-message.ai th { background-color: #f2eee5; }
 
