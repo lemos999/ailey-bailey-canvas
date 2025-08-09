@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T19:24:17.650Z */
+/* Auto-generated bundle from 2025-08-09T19:45:37.693Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -312,9 +312,9 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 
 File: style_chat.css
 
-Version: 17.1 (UX Enhancement Protocol)
+Version: 17.2 (Intelligent DOM Reconciliation)
 
-Description: Adds blinking cursor animation for typewriter effect.
+Description: Adds pulsing dot animation styles.
 
 */
 
@@ -345,6 +345,44 @@ Description: Adds blinking cursor animation for typewriter effect.
     margin-left: 3px;
 
 }
+
+
+
+@keyframes pulse {
+
+    0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+
+    40% { transform: scale(1.0); opacity: 1; }
+
+}
+
+.loading-animation {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+}
+
+.loading-animation .dot {
+
+    width: 8px;
+
+    height: 8px;
+
+    background-color: currentColor;
+
+    border-radius: 50%;
+
+    animation: pulse 1.4s infinite ease-in-out both;
+
+}
+
+.loading-animation .dot:nth-child(1) { animation-delay: -0.32s; }
+
+.loading-animation .dot:nth-child(2) { animation-delay: -0.16s; }
 
 
 
