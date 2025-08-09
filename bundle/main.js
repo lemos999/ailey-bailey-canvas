@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T11:38:52.725Z */
+/* Auto-generated bundle from 2025-08-09T12:02:08.833Z */
 
 /* --- Vendor: firebase-app-compat.js --- */
 !function(e,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):(e="undefined"!=typeof globalThis?globalThis:e||self).firebase=t()}(this,function(){"use strict";function c(e,t){if(!(t instanceof Object))return t;switch(t.constructor){case Date:const i=t;return new Date(i.getTime());case Object:void 0===e&&(e={});break;case Array:e=[];break;default:return t}for(const r in t)t.hasOwnProperty(r)&&"__proto__"!==r&&(e[r]=c(e[r],t[r]));return e}class n{constructor(){this.reject=()=>{},this.resolve=()=>{},this.promise=new Promise((e,t)=>{this.resolve=e,this.reject=t})}wrapCallback(i){return(e,t)=>{e?this.reject(e):this.resolve(t),"function"==typeof i&&(this.promise.catch(()=>{}),1===i.length?i(e):i(e,t))}}}class a extends Error{constructor(e,t,i){super(t),this.code=e,this.customData=i,this.name="FirebaseError",Object.setPrototypeOf(this,a.prototype),Error.captureStackTrace&&Error.captureStackTrace(this,r.prototype.create)}}class r{constructor(e,t,i){this.service=e,this.serviceName=t,this.errors=i}create(e,...t){var r,i=t[0]||{},n=`${this.service}/${e}`,s=this.errors[e],s=s?(r=i,s.replace(o,(e,t)=>{var i=r[t];return null!=i?String(i):`<${t}?>`})):"Error",s=`${this.serviceName}: ${s} (${n}).`;return new a(n,s,i)}}const o=/\{\$([^}]+)}/g;function l(e,t){return Object.prototype.hasOwnProperty.call(e,t)}function h(e,t){if(e===t)return 1;const i=Object.keys(e),r=Object.keys(t);for(const a of i){if(!r.includes(a))return;var n=e[a],s=t[a];if(p(n)&&p(s)){if(!h(n,s))return}else if(n!==s)return}for(const o of r)if(!i.includes(o))return;return 1}function p(e){return null!==e&&"object"==typeof e}function i(e,t){const i=new s(e,t);return i.subscribe.bind(i)}class s{constructor(e,t){this.observers=[],this.unsubscribes=[],this.observerCount=0,this.task=Promise.resolve(),this.finalized=!1,this.onNoObservers=t,this.task.then(()=>{e(this)}).catch(e=>{this.error(e)})}next(t){this.forEachObserver(e=>{e.next(t)})}error(t){this.forEachObserver(e=>{e.error(t)}),this.close(t)}complete(){this.forEachObserver(e=>{e.complete()}),this.close()}subscribe(e,t,i){let r;if(void 0===e&&void 0===t&&void 0===i)throw new Error("Missing Observer.");r=function(e,t){if("object"!=typeof e||null===e)return!1;for(const i of t)if(i in e&&"function"==typeof e[i])return!0;return!1}(e,["next","error","complete"])?e:{next:e,error:t,complete:i},void 0===r.next&&(r.next=f),void 0===r.error&&(r.error=f),void 0===r.complete&&(r.complete=f);var n=this.unsubscribeOne.bind(this,this.observers.length);return this.finalized&&this.task.then(()=>{try{this.finalError?r.error(this.finalError):r.complete()}catch(e){}}),this.observers.push(r),n}unsubscribeOne(e){void 0!==this.observers&&void 0!==this.observers[e]&&(delete this.observers[e],--this.observerCount,0===this.observerCount&&void 0!==this.onNoObservers&&this.onNoObservers(this))}forEachObserver(t){if(!this.finalized)for(let e=0;e<this.observers.length;e++)this.sendOne(e,t)}sendOne(e,t){this.task.then(()=>{if(void 0!==this.observers&&void 0!==this.observers[e])try{t(this.observers[e])}catch(e){"undefined"!=typeof console&&console.error&&console.error(e)}})}close(e){this.finalized||(this.finalized=!0,void 0!==e&&(this.finalError=e),this.task.then(()=>{this.observers=void 0,this.onNoObservers=void 0}))}}function f(){}class d{constructor(e,t,i){this.name=e,this.instanceFactory=t,this.type=i,this.multipleInstances=!1,this.serviceProps={},this.instantiationMode="LAZY",this.onInstanceCreated=null}setInstantiationMode(e){return this.instantiationMode=e,this}setMultipleInstances(e){return this.multipleInstances=e,this}setServiceProps(e){return this.serviceProps=e,this}setInstanceCreatedCallback(e){return this.onInstanceCreated=e,this}}const u="[DEFAULT]";class m{constructor(e,t){this.name=e,this.container=t,this.component=null,this.instances=new Map,this.instancesDeferred=new Map,this.instancesOptions=new Map,this.onInitCallbacks=new Map}get(e){var t=this.normalizeInstanceIdentifier(e);if(!this.instancesDeferred.has(t)){const r=new n;if(this.instancesDeferred.set(t,r),this.isInitialized(t)||this.shouldAutoInitialize())try{var i=this.getOrInitializeService({instanceIdentifier:t});i&&r.resolve(i)}catch(e){}}return this.instancesDeferred.get(t).promise}getImmediate(e){var t=this.normalizeInstanceIdentifier(null==e?void 0:e.identifier),i=null!==(i=null==e?void 0:e.optional)&&void 0!==i&&i;if(!this.isInitialized(t)&&!this.shouldAutoInitialize()){if(i)return null;throw Error(`Service ${this.name} is not available`)}try{return this.getOrInitializeService({instanceIdentifier:t})}catch(e){if(i)return null;throw e}}getComponent(){return this.component}setComponent(e){if(e.name!==this.name)throw Error(`Mismatching Component ${e.name} for Provider ${this.name}.`);if(this.component)throw Error(`Component for ${this.name} has already been provided`);if(this.component=e,this.shouldAutoInitialize()){if("EAGER"===e.instantiationMode)try{this.getOrInitializeService({instanceIdentifier:u})}catch(e){}for(var[t,i]of this.instancesDeferred.entries()){t=this.normalizeInstanceIdentifier(t);try{var r=this.getOrInitializeService({instanceIdentifier:t});i.resolve(r)}catch(e){}}}}clearInstance(e=u){this.instancesDeferred.delete(e),this.instancesOptions.delete(e),this.instances.delete(e)}async delete(){const e=Array.from(this.instances.values());await Promise.all([...e.filter(e=>"INTERNAL"in e).map(e=>e.INTERNAL.delete()),...e.filter(e=>"_delete"in e).map(e=>e._delete())])}isComponentSet(){return null!=this.component}isInitialized(e=u){return this.instances.has(e)}getOptions(e=u){return this.instancesOptions.get(e)||{}}initialize(e={}){var{options:t={}}=e,i=this.normalizeInstanceIdentifier(e.instanceIdentifier);if(this.isInitialized(i))throw Error(`${this.name}(${i}) has already been initialized`);if(!this.isComponentSet())throw Error(`Component ${this.name} has not been registered yet`);var r,n,s=this.getOrInitializeService({instanceIdentifier:i,options:t});for([r,n]of this.instancesDeferred.entries())i===this.normalizeInstanceIdentifier(r)&&n.resolve(s);return s}onInit(e,t){var i=this.normalizeInstanceIdentifier(t);const r=null!==(n=this.onInitCallbacks.get(i))&&void 0!==n?n:new Set;r.add(e),this.onInitCallbacks.set(i,r);var n=this.instances.get(i);return n&&e(n,i),()=>{r.delete(e)}}invokeOnInitCallbacks(e,t){var i=this.onInitCallbacks.get(t);if(i)for(const r of i)try{r(e,t)}catch(e){}}getOrInitializeService({instanceIdentifier:e,options:t={}}){let i=this.instances.get(e);if(!i&&this.component&&(i=this.component.instanceFactory(this.container,{instanceIdentifier:(r=e)===u?void 0:r,options:t}),this.instances.set(e,i),this.instancesOptions.set(e,t),this.invokeOnInitCallbacks(i,e),this.component.onInstanceCreated))try{this.component.onInstanceCreated(this.container,e,i)}catch(e){}var r;return i||null}normalizeInstanceIdentifier(e=u){return!this.component||this.component.multipleInstances?e:u}shouldAutoInitialize(){return!!this.component&&"EXPLICIT"!==this.component.instantiationMode}}class g{constructor(e){this.name=e,this.providers=new Map}addComponent(e){const t=this.getProvider(e.name);if(t.isComponentSet())throw new Error(`Component ${e.name} has already been registered with ${this.name}`);t.setComponent(e)}addOrOverwriteComponent(e){const t=this.getProvider(e.name);t.isComponentSet()&&this.providers.delete(e.name),this.addComponent(e)}getProvider(e){if(this.providers.has(e))return this.providers.get(e);var t=new m(e,this);return this.providers.set(e,t),t}getProviders(){return Array.from(this.providers.values())}}const v=[];var b,e;(e=b=b||{})[e.DEBUG=0]="DEBUG",e[e.VERBOSE=1]="VERBOSE",e[e.INFO=2]="INFO",e[e.WARN=3]="WARN",e[e.ERROR=4]="ERROR",e[e.SILENT=5]="SILENT";const I={debug:b.DEBUG,verbose:b.VERBOSE,info:b.INFO,warn:b.WARN,error:b.ERROR,silent:b.SILENT},t=b.INFO,E={[b.DEBUG]:"log",[b.VERBOSE]:"log",[b.INFO]:"info",[b.WARN]:"warn",[b.ERROR]:"error"},y=(e,t,...i)=>{if(!(t<e.logLevel)){var r=(new Date).toISOString(),n=E[t];if(!n)throw new Error(`Attempted to log a message with an invalid logType (value: ${t})`);console[n](`[${r}]  ${e.name}:`,...i)}};class _{constructor(e){this.name=e,this._logLevel=t,this._logHandler=y,this._userLogHandler=null,v.push(this)}get logLevel(){return this._logLevel}set logLevel(e){if(!(e in b))throw new TypeError(`Invalid value "${e}" assigned to \`logLevel\``);this._logLevel=e}setLogLevel(e){this._logLevel="string"==typeof e?I[e]:e}get logHandler(){return this._logHandler}set logHandler(e){if("function"!=typeof e)throw new TypeError("Value assigned to `logHandler` must be a function");this._logHandler=e}get userLogHandler(){return this._userLogHandler}set userLogHandler(e){this._userLogHandler=e}debug(...e){this._userLogHandler&&this._userLogHandler(this,b.DEBUG,...e),this._logHandler(this,b.DEBUG,...e)}log(...e){this._userLogHandler&&this._userLogHandler(this,b.VERBOSE,...e),this._logHandler(this,b.VERBOSE,...e)}info(...e){this._userLogHandler&&this._userLogHandler(this,b.INFO,...e),this._logHandler(this,b.INFO,...e)}warn(...e){this._userLogHandler&&this._userLogHandler(this,b.WARN,...e),this._logHandler(this,b.WARN,...e)}error(...e){this._userLogHandler&&this._userLogHandler(this,b.ERROR,...e),this._logHandler(this,b.ERROR,...e)}}class O{constructor(e){this.container=e}getPlatformInfoString(){const e=this.container.getProviders();return e.map(e=>{if("VERSION"!==(null==(t=e.getComponent())?void 0:t.type))return null;var t,t=e.getImmediate();return`${t.library}/${t.version}`}).filter(e=>e).join(" ")}}const w="@firebase/app",C="0.7.11",N=new _("@firebase/app");var L;const A="[DEFAULT]",D={"@firebase/app":"fire-core","@firebase/app-compat":"fire-core-compat","@firebase/analytics":"fire-analytics","@firebase/analytics-compat":"fire-analytics-compat","@firebase/app-check":"fire-app-check","@firebase/app-check-compat":"fire-app-check-compat","@firebase/auth":"fire-auth","@firebase/auth-compat":"fire-auth-compat","@firebase/database":"fire-rtdb","@firebase/database-compat":"fire-rtdb-compat","@firebase/functions":"fire-fn","@firebase/functions-compat":"fire-fn-compat","@firebase/installations":"fire-iid","@firebase/installations-compat":"fire-iid-compat","@firebase/messaging":"fire-fcm","@firebase/messaging-compat":"fire-fcm-compat","@firebase/performance":"fire-perf","@firebase/performance-compat":"fire-perf-compat","@firebase/remote-config":"fire-rc","@firebase/remote-config-compat":"fire-rc-compat","@firebase/storage":"fire-gcs","@firebase/storage-compat":"fire-gcs-compat","@firebase/firestore":"fire-fst","@firebase/firestore-compat":"fire-fst-compat","fire-js":"fire-js",firebase:"fire-js-all"},S=new Map,R=new Map;function $(t,i){try{t.container.addComponent(i)}catch(e){N.debug(`Component ${i.name} failed to register with FirebaseApp ${t.name}`,e)}}function k(e,t){e.container.addOrOverwriteComponent(t)}function P(e){var t=e.name;if(R.has(t))return N.debug(`There were multiple attempts to register component ${t}.`),!1;R.set(t,e);for(const i of S.values())$(i,e);return!0}function z(e,t){return e.container.getProvider(t)}const F=new r("app","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","bad-app-name":"Illegal App name: '{$appName}","duplicate-app":"Firebase App named '{$appName}' already exists with different options or config","app-deleted":"Firebase App named '{$appName}' already deleted","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance.","invalid-log-argument":"First argument to `onLog` must be null or a function."});class j{constructor(e,t,i){this._isDeleted=!1,this._options=Object.assign({},e),this._config=Object.assign({},t),this._name=t.name,this._automaticDataCollectionEnabled=t.automaticDataCollectionEnabled,this._container=i,this.container.addComponent(new d("app",()=>this,"PUBLIC"))}get automaticDataCollectionEnabled(){return this.checkDestroyed(),this._automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this.checkDestroyed(),this._automaticDataCollectionEnabled=e}get name(){return this.checkDestroyed(),this._name}get options(){return this.checkDestroyed(),this._options}get config(){return this.checkDestroyed(),this._config}get container(){return this._container}get isDeleted(){return this._isDeleted}set isDeleted(e){this._isDeleted=e}checkDestroyed(){if(this.isDeleted)throw F.create("app-deleted",{appName:this._name})}}const H="9.6.1";function T(e,t={}){if("object"!=typeof t){const r=t;t={name:r}}var i=Object.assign({name:A,automaticDataCollectionEnabled:!1},t);const r=i.name;if("string"!=typeof r||!r)throw F.create("bad-app-name",{appName:String(r)});var n=S.get(r);if(n){if(h(e,n.options)&&h(i,n.config))return n;throw F.create("duplicate-app",{appName:r})}const s=new g(r);for(const a of R.values())s.addComponent(a);i=new j(e,i,s);return S.set(r,i),i}async function M(e){var t=e.name;S.has(t)&&(S.delete(t),await Promise.all(e.container.getProviders().map(e=>e.delete())),e.isDeleted=!0)}function B(e,t,i){let r=null!==(s=D[e])&&void 0!==s?s:e;i&&(r+=`-${i}`);var n=r.match(/\s|\//),s=t.match(/\s|\//);if(n||s){const a=[`Unable to register library "${r}" with version "${t}":`];return n&&a.push(`library name "${r}" contains illegal characters (whitespace or "/")`),n&&s&&a.push("and"),s&&a.push(`version name "${t}" contains illegal characters (whitespace or "/")`),void N.warn(a.join(" "))}P(new d(`${r}-version`,()=>({library:r,version:t}),"VERSION"))}function V(e,t){if(null!==e&&"function"!=typeof e)throw F.create("invalid-log-argument");!function(s,e){for(const t of v){let n=null;e&&e.level&&(n=I[e.level]),t.userLogHandler=null===s?null:(e,t,...i)=>{var r=i.map(e=>{if(null==e)return null;if("string"==typeof e)return e;if("number"==typeof e||"boolean"==typeof e)return e.toString();if(e instanceof Error)return e.message;try{return JSON.stringify(e)}catch(e){return null}}).filter(e=>e).join(" ");t>=(null!==n&&void 0!==n?n:e.logLevel)&&s({level:b[t].toLowerCase(),message:r,args:i,type:e.name})}}}(e,t)}function U(e){var t;t=e,v.forEach(e=>{e.setLogLevel(t)})}L="",P(new d("platform-logger",e=>new O(e),"PRIVATE")),B(w,C,L),B(w,C,"esm2017"),B("fire-js","");var x=Object.freeze({__proto__:null,SDK_VERSION:H,_DEFAULT_ENTRY_NAME:A,_addComponent:$,_addOrOverwriteComponent:k,_apps:S,_clearComponents:function(){R.clear()},_components:R,_getProvider:z,_registerComponent:P,_removeServiceInstance:function(e,t,i=A){z(e,t).clearInstance(i)},deleteApp:M,getApp:function(e=A){var t=S.get(e);if(!t)throw F.create("no-app",{appName:e});return t},getApps:function(){return Array.from(S.values())},initializeApp:T,onLog:V,registerVersion:B,setLogLevel:U,FirebaseError:a});class W{constructor(e,t){this._delegate=e,this.firebase=t,$(e,new d("app-compat",()=>this,"PUBLIC")),this.container=e.container}get automaticDataCollectionEnabled(){return this._delegate.automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this._delegate.automaticDataCollectionEnabled=e}get name(){return this._delegate.name}get options(){return this._delegate.options}delete(){return new Promise(e=>{this._delegate.checkDestroyed(),e()}).then(()=>(this.firebase.INTERNAL.removeApp(this.name),M(this._delegate)))}_getService(e,t=A){var i;this._delegate.checkDestroyed();const r=this._delegate.container.getProvider(e);return r.isInitialized()||"EXPLICIT"!==(null===(i=r.getComponent())||void 0===i?void 0:i.instantiationMode)||r.initialize(),r.getImmediate({identifier:t})}_removeServiceInstance(e,t=A){this._delegate.container.getProvider(e).clearInstance(t)}_addComponent(e){$(this._delegate,e)}_addOrOverwriteComponent(e){k(this._delegate,e)}toJSON(){return{name:this.name,automaticDataCollectionEnabled:this.automaticDataCollectionEnabled,options:this.options}}}const G=new r("app-compat","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance."});function Y(n){const s={},a={__esModule:!0,initializeApp:function(e,t={}){var i=T(e,t);if(l(s,i.name))return s[i.name];var r=new n(i,a);return s[i.name]=r},app:o,registerVersion:B,setLogLevel:U,onLog:V,apps:null,SDK_VERSION:H,INTERNAL:{registerComponent:function(i){const r=i.name,t=r.replace("-compat","");{var e;P(i)&&"PUBLIC"===i.type&&(e=(e=o())=>{if("function"!=typeof e[t])throw G.create("invalid-app-argument",{appName:r});return e[t]()},void 0!==i.serviceProps&&c(e,i.serviceProps),a[t]=e,n.prototype[t]=function(...e){const t=this._getService.bind(this,r);return t.apply(this,i.multipleInstances?e:[])})}return"PUBLIC"===i.type?a[t]:null},removeApp:function(e){delete s[e]},useAsService:function(e,t){if("serverAuth"===t)return null;var i=t;return i},modularAPIs:x}};function o(e){if(e=e||A,!l(s,e))throw G.create("no-app",{appName:e});return s[e]}return a.default=a,Object.defineProperty(a,"apps",{get:function(){return Object.keys(s).map(e=>s[e])}}),o.App=n,a}var K=function e(){const t=Y(W);return t.INTERNAL=Object.assign(Object.assign({},t.INTERNAL),{createFirebaseNamespace:e,extendNamespace:function(e){c(t,e)},createSubscribe:i,ErrorFactory:r,deepExtend:c}),t}();const J=new _("@firebase/app-compat");if("object"==typeof self&&self.self===self&&void 0!==self.firebase){J.warn(`
@@ -74,8 +74,8 @@ var _self="undefined"!=typeof window?window:"undefined"!=typeof WorkerGlobalScop
 /*
 --- Ailey & Bailey Canvas ---
 File: 000_shell_template.js
-Version: 1.4 (Branding Update)
-Description: Defines the application's static HTML shell and the core rendering function.
+Version: 2.0 (Mobile-First Responsive Architecture)
+Description: Defines the application's static HTML shell, including desktop and mobile-specific UI structures.
 */
 
 // [CoreDNA] This const holds the entire static structure of the application's BODY.
@@ -205,6 +205,30 @@ const SHELL_HTML_BODY_TEMPLATE = `
         </div>
     </div>
 
+        <!-- [NEW] Mobile-Specific UI -->
+    <div id="mobile-nav-drawer">
+        <div class="drawer-header">
+            <h3>학습 내비게이션</h3>
+            <button id="mobile-nav-close-btn">&times;</button>
+        </div>
+        <div id="mobile-nav-content">
+            <!-- Mobile TOC will be rendered here by JS -->
+        </div>
+    </div>
+    <div id="mobile-nav-overlay"></div>
+
+    <div id="mobile-fab-container">
+        <div class="fab-menu">
+            <button class="fab-menu-item" id="fab-chat" title="Ailey & Bailey와 대화"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M18,14V11H16V14H13V16H16V19H18V16H21V14M12,2C6.5,2 2,6.5 2,12C2,17.5 6.5,22 12,22C13.2,22 14.4,21.8 15.5,21.3C15.9,21.9 16.5,22.4 17.2,22.7L19,23.5V21.1C20.2,20.1 21.1,18.8 21.7,17.3C21.9,16.5 22,15.8 22,15C22,8.4 17.6,2 12,2Z" /></svg></button>
+            <button class="fab-menu-item" id="fab-notes" title="지식 발전소 (클라우드 메모)"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M17,4V10L15,8L13,10V4H6A2,2 0 0,0 4,6V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18V6A2,2 0 0,0 18,4H17Z" /></svg></button>
+            <button class="fab-menu-item" id="fab-toc" title="목차 보기/숨기기"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z" /></svg></button>
+        </div>
+        <button id="mobile-fab-main">
+            <svg class="icon-main" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>
+            <svg class="icon-close" style="display:none;" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" /></svg>
+        </button>
+    </div>
+    
     <!-- AI Content will be injected here -->
     <main id="ai-content-placeholder"></main>
 
@@ -231,13 +255,10 @@ function renderAppShell(dynamicContent, title, canvasId_from_ai) {
 }
 
 /* --- Source: src\01_state\001_state_globalVars.js --- */
-/*
---- Ailey & Bailey Canvas ---
-File: 001_state_globalVars.js
-Version: 1.1 (Decoupled Initialization)
-Description: Declares all global state variables and provides a rebinding function for DOM elements.
-*/
-
+/* --- Ailey & Bailey Canvas --- */
+/* File: 001_state_globalVars.js */
+/* Version: 2.0 (Mobile-First Responsive Architecture) */
+/* ... */
 // --- 1. Element Declarations (Global Scope, UNINITIALIZED) ---
 // These are declared here but assigned in rebindDOMElements() after the DOM is built.
 let learningContent, wrapper, body, systemInfoWidget, selectionPopover, popoverAskAi, popoverAddNote, tocToggleBtn;
@@ -253,8 +274,13 @@ let fileImporter;
 let apiSettingsBtn, apiSettingsModalOverlay, apiKeyInput, verifyApiKeyBtn, apiKeyStatus, apiModelSelect, maxOutputTokensInput, tokenUsageDisplay, resetTokenUsageBtn, apiSettingsSaveBtn, apiSettingsCancelBtn;
 // [NEW] Prompt Manager elements
 let promptManagerModalOverlay, managePromptsBtn, promptManagerCloseBtn, templateListContainer, addNewTemplateBtn, templateEditorPanel, templateNameInput, templatePromptTextarea, saveTemplateBtn, deleteTemplateBtn, quickPromptSelect;
+// [NEW] Mobile UI elements
+let mobileFabContainer, mobileFabMain, fabChat, fabNotes, fabToc;
+let mobileNavDrawer, mobileNavContent, mobileNavCloseBtn, mobileNavOverlay;
 
 // --- 2. State Management (Global Scope) ---
+// ... (rest of the file is unchanged, so we only list what is being added/modified at the top)
+// ... (rest of the file is unchanged, so we only list what is being added/modified at the top)
 let canvasId = 'global_fallback_id'; // Will be updated in renderAppShell
 let db;
 let currentUser = null;
@@ -285,7 +311,7 @@ let promptTemplatesCollectionRef;
 let promptTemplatesCache = [];
 let unsubscribeFromPromptTemplates = null;
 let selectedTemplateId = null;
-let activePromptId = null; // [NEW]
+let activePromptId = null;
 
 // -- AI & Learning State --
 let selectedMode = 'ailey_coaching';
@@ -327,10 +353,8 @@ function rebindDOMElements() {
     notesAppPanel = document.getElementById('notes-app-panel');
     noteListView = document.getElementById('note-list-view');
     noteEditorView = document.getElementById('note-editor-view');
-    // notesList, searchInput, etc., are dynamically created inside noteListView
     backToListBtn = document.getElementById('back-to-list-btn');
     noteTitleInput = document.getElementById('note-title-input');
-    // noteContentTextarea is also dynamic (part of Toast UI)
     autoSaveStatus = document.getElementById('auto-save-status');
     customModal = document.getElementById('custom-modal');
     modalMessage = document.getElementById('modal-message');
@@ -352,8 +376,6 @@ function rebindDOMElements() {
     searchSessionsInput = document.getElementById('search-sessions-input');
     aiModelSelector = document.getElementById('ai-model-selector');
     fileImporter = document.getElementById('file-importer');
-
-    // Re-bind Prompt Manager elements
     promptManagerModalOverlay = document.getElementById('prompt-manager-modal-overlay');
     managePromptsBtn = document.getElementById('manage-prompts-btn');
     promptManagerCloseBtn = document.getElementById('prompt-manager-close-btn');
@@ -365,6 +387,16 @@ function rebindDOMElements() {
     saveTemplateBtn = document.getElementById('save-template-btn');
     deleteTemplateBtn = document.getElementById('delete-template-btn');
     quickPromptSelect = document.getElementById('quick-prompt-select');
+    // Re-bind Mobile UI elements
+    mobileFabContainer = document.getElementById('mobile-fab-container');
+    mobileFabMain = document.getElementById('mobile-fab-main');
+    fabChat = document.getElementById('fab-chat');
+    fabNotes = document.getElementById('fab-notes');
+    fabToc = document.getElementById('fab-toc');
+    mobileNavDrawer = document.getElementById('mobile-nav-drawer');
+    mobileNavContent = document.getElementById('mobile-nav-content');
+    mobileNavCloseBtn = document.getElementById('mobile-nav-close-btn');
+    mobileNavOverlay = document.getElementById('mobile-nav-overlay');
 }
 
 /* --- Source: src\02_utils\010_utils_debounce.js --- */
@@ -1041,12 +1073,10 @@ function renderTokenUsage() {
 function resetTokenUsage() { showModal('누적 토큰 사용량을 정말로 초기화하시겠습니까?', () => { userApiSettings.tokenUsage = { prompt: 0, completion: 0 }; saveApiSettings(false); renderTokenUsage(); }); }
 
 /* --- Source: src\03_core\120_core_main_initializer.js --- */
-/*
---- Ailey & Bailey Canvas ---
-File: 120_core_main_initializer.js
-Version: 2.1 (Hotfix)
-Description: The main entry point for the application. Initializes the app and attaches all primary event listeners.
-*/
+/* --- Ailey & Bailey Canvas --- */
+/* File: 120_core_main_initializer.js */
+/* Version: 3.0 (Mobile Responsive) */
+/* ... */
 
 // Helper functions for the prompt manager modal
 function openPromptManager() {
@@ -1058,55 +1088,44 @@ function closePromptManager() {
     if (promptManagerModalOverlay) promptManagerModalOverlay.style.display = 'none';
 }
 
-/**
- * Initializes all core features after the shell has been rendered.
- */
+/** Initializes all core features after the shell has been rendered. */
 function initializeCoreFeatures() {
+    // ... (previous initializations) ...
     const body = document.body;
     const wrapper = document.querySelector('.wrapper');
     if (!body || !wrapper) { console.error("Core layout elements not found post-render."); return; }
     
-    // Basic UI setup
-    updateClock(); 
-    setInterval(updateClock, 1000);
+    updateClock(); setInterval(updateClock, 1000);
     
-    // Dynamically create and inject the API settings modal and its trigger button
     createApiSettingsModal();
     const chatHeader = document.querySelector('#chat-main-view .panel-header > div');
     if (chatHeader) {
-        apiSettingsBtn = document.createElement('span'); 
-        apiSettingsBtn.id = 'api-settings-btn'; 
+        apiSettingsBtn = document.createElement('span');
+        apiSettingsBtn.id = 'api-settings-btn';
         apiSettingsBtn.title = '개인 API 설정';
         apiSettingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M19.03,7.39L20.45,5.97C20,5.46 19.54,5 19.03,4.55L17.61,5.97C16.07,4.74 14.12,4 12,4C9.88,4 7.93,4.74 6.39,5.97L5,4.55C4.5,5 4,5.46 3.55,5.97L4.97,7.39C3.74,8.93 3,10.88 3,13C3,15.12 3.74,17.07 4.97,18.61L3.55,20.03C4,20.54 4.5,21 5,21.45L6.39,20.03C7.93,21.26 9.88,22 12,22C14.12,22 16.07,21.26 17.61,20.03L19.03,21.45C19.54,21 20,20.54 20.45,20.03L19.03,18.61C20.26,17.07 21,15.12 21,13C21,10.88 20.26,8.93 19.03,7.39Z" /></svg>`;
         const deleteBtn = chatHeader.querySelector('#delete-session-btn');
-        if (deleteBtn) {
-            deleteBtn.insertAdjacentElement('beforebegin', apiSettingsBtn);
-        } else {
-             chatHeader.appendChild(apiSettingsBtn);
-        }
+        if (deleteBtn) { deleteBtn.insertAdjacentElement('beforebegin', apiSettingsBtn); }
+        else { chatHeader.appendChild(apiSettingsBtn); }
     }
     
-    // Load settings and initialize Firebase
     loadApiSettings();
     updateChatHeaderModelSelector();
     
-    initializeFirebase().then(() => { 
-        // Initialize UI components that depend on data
-        setupNavigator(); 
-        setupChatModeSelector(); 
-        initializeTooltips(); 
-        makePanelDraggable(document.getElementById('chat-panel')); 
-        handleNewChat(); // Start with a clean chat slate
+    initializeFirebase().then(() => {
+        setupNavigator();
+        setupChatModeSelector();
+        initializeTooltips();
+        makePanelDraggable(document.getElementById('chat-panel'));
+        handleNewChat();
     });
 
     attachEventListeners();
 }
 
-/**
- * Attaches all primary event listeners to the newly rendered DOM.
- */
+/** Attaches all primary event listeners to the newly rendered DOM. */
 function attachEventListeners() {
-    // Re-bind all critical elements after document.write
+    
     const body = document.body;
     const wrapper = document.querySelector('.wrapper');
     const popoverAskAi = document.getElementById('popover-ask-ai');
@@ -1127,8 +1146,34 @@ function attachEventListeners() {
     const searchSessionsInput = document.getElementById('search-sessions-input');
     const sessionListContainer = document.getElementById('session-list-container');
     const fileImporter = document.getElementById('file-importer');
+    const mobileFabContainer = document.getElementById('mobile-fab-container');
+    const mobileFabMain = document.getElementById('mobile-fab-main');
+    const fabChat = document.getElementById('fab-chat');
+    const fabNotes = document.getElementById('fab-notes');
+    const fabToc = document.getElementById('fab-toc');
+    const mobileNavDrawer = document.getElementById('mobile-nav-drawer');
+    const mobileNavContent = document.getElementById('mobile-nav-content');
+    const mobileNavCloseBtn = document.getElementById('mobile-nav-close-btn');
+    const mobileNavOverlay = document.getElementById('mobile-nav-overlay');
+
+
+    // --- [NEW] Mobile-Specific Event Listeners ---
+    if (mobileFabMain) {
+        mobileFabMain.addEventListener('click', () => {
+            mobileFabContainer.classList.toggle('open');
+        });
+    }
+
+    const closeFabMenu = () => mobileFabContainer.classList.remove('open');
+
+    if (fabChat) fabChat.addEventListener('click', () => { togglePanel(chatPanel, true); closeFabMenu(); });
+    if (fabNotes) fabNotes.addEventListener('click', () => { togglePanel(notesAppPanel, true); if(notesAppPanel.style.display === 'flex') { ensureNotePanelHeader(); renderNoteList(); } closeFabMenu(); });
+    if (fabToc) fabToc.addEventListener('click', () => { document.body.classList.add('drawer-open'); closeFabMenu(); });
+    if (mobileNavCloseBtn) mobileNavCloseBtn.addEventListener('click', () => document.body.classList.remove('drawer-open'));
+    if (mobileNavOverlay) mobileNavOverlay.addEventListener('click', () => document.body.classList.remove('drawer-open'));
 
     // --- Global Listeners ---
+    
     document.addEventListener('click', (e) => { 
         const selectionPopover = document.getElementById('selection-popover');
         if (selectionPopover) handleTextSelection(e, selectionPopover);
@@ -1139,12 +1184,14 @@ function attachEventListeners() {
         if (notesDropdown && !e.target.closest('.more-options-container')) {
             notesDropdown.classList.remove('show');
         }
+        if (mobileFabContainer && !e.target.closest('#mobile-fab-container')) {
+            mobileFabContainer.classList.remove('open');
+        }
     });
     
     if (popoverAskAi) popoverAskAi.addEventListener('click', () => handlePopoverAskAi(document.getElementById('chat-input'), document.getElementById('chat-panel')));
     if (popoverAddNote) popoverAddNote.addEventListener('click', handlePopoverAddNote);
 
-    // --- Global UI Listeners ---
     if (themeToggle) { 
         themeToggle.addEventListener('click', () => { 
             body.classList.toggle('dark-mode'); 
@@ -1157,7 +1204,6 @@ function attachEventListeners() {
     }
     if (tocToggleBtn) tocToggleBtn.addEventListener('click', () => { wrapper?.classList.toggle('toc-hidden'); document.getElementById('system-info-widget')?.classList.toggle('tucked'); });
 
-    // --- Panel Toggles ---
     if (chatToggleBtn) chatToggleBtn.addEventListener('click', () => togglePanel(chatPanel));
     if (chatPanel) chatPanel.querySelector('.close-btn').addEventListener('click', () => togglePanel(chatPanel, false));
     if (notesAppToggleBtn) {
@@ -1170,7 +1216,6 @@ function attachEventListeners() {
         });
     }
     
-    // --- Notes App Event Delegation ---
     if (noteListView) {
        noteListView.addEventListener('click', e => {
             const target = e.target;
@@ -1194,11 +1239,9 @@ function attachEventListeners() {
         
     if (fileImporter) fileImporter.addEventListener('change', importAllData);
     
-    // --- Note Editor Listeners ---
     if (backToListBtn) backToListBtn.addEventListener('click', () => switchView('list'));
     if (noteTitleInput) noteTitleInput.addEventListener('input', debounce(() => saveNote(), 1500));
 
-    // --- Chat App Event Delegation ---
     if (chatForm) chatForm.addEventListener('submit', e => { e.preventDefault(); handleChatSend(); });
     if (chatInput) chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } });
     if (newChatBtn) newChatBtn.addEventListener('click', handleNewChat);
@@ -1222,14 +1265,12 @@ function attachEventListeners() {
          });
     }
 
-    // --- API & Modal Listeners ---
     document.body.addEventListener('click', e => {
         if (e.target.closest('#api-settings-btn')) {
             openApiSettingsModal();
         }
     });
 
-    // --- Legacy Custom Prompt Modal Listeners ---
     if (promptSaveBtn) promptSaveBtn.addEventListener('click', saveCustomPrompt);
     if (promptCancelBtn) promptCancelBtn.addEventListener('click', closePromptModal);
     if (promptModalOverlay) {
@@ -1240,7 +1281,6 @@ function attachEventListeners() {
         });
     }
 
-    // Prompt Manager Listeners
     if (managePromptsBtn) managePromptsBtn.addEventListener('click', openPromptManager);
     if (promptManagerCloseBtn) promptManagerCloseBtn.addEventListener('click', closePromptManager);
     if (promptManagerModalOverlay) {
@@ -1257,13 +1297,13 @@ function attachEventListeners() {
         });
     }
     if (addNewTemplateBtn) addNewTemplateBtn.addEventListener('click', handleAddNewTemplateClick);
-    if (saveTemplateBtn) saveTemplateBtn.addEventListener('click', handleSaveTemplate); // [MODIFIED] Corrected event listener
+    if (saveTemplateBtn) saveTemplateBtn.addEventListener('click', handleSaveTemplate);
     if (deleteTemplateBtn) deleteTemplateBtn.addEventListener('click', handleDeleteTemplate);
     if (quickPromptSelect) quickPromptSelect.addEventListener('change', (e) => { activePromptId = e.target.value; });
+
 }
 
-// This listener now simply waits for the main script to load.
-// The actual app initialization is triggered by the AI-generated script.
+// ... (rest of the file remains the same) ...
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Core script (bundle/main.js) loaded. Waiting for render trigger.");
 });
