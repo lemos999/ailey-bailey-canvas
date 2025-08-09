@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T10:06:36.539Z */
+/* Auto-generated bundle from 2025-08-09T10:49:59.304Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -310,6 +310,7 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 --- Ailey & Bailey Canvas ---
 File: style_chat.css
 Version: 11.0 (Modular CSS Structure)
+Description: Contains all styles related to the AI Chat panel, including the session/project sidebar, context menus, the main message view, user/AI message bubbles, the reasoning block, and the input form.
 */
 
 #chat-panel { bottom: 100px; right: 100px; height: 600px; width: 700px; flex-direction: row; overflow: hidden; }
@@ -341,7 +342,7 @@ body:not(.dark-mode) .session-item.active { background-color: var(--strong-bg-li
 #chat-main-view { flex-grow: 1; display: flex; flex-direction: column; }
 #ai-model-selector, #quick-prompt-select { padding: 4px 8px; font-size: 0.9em; border-radius: 6px; border: 1px solid; font-family: 'Gowun Batang', serif; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
 body:not(.dark-mode) #ai-model-selector, body:not(.dark-mode) #quick-prompt-select { background-color: var(--quote-bg-light); border-color: var(--border-color-light); color: var(--text-color-light); }
-body.dark-mode #ai-model-selector, body.dark-mode #quick-prompt-select { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
+body.dark-mode #ai-model-selector, body.dark-mode) #quick-prompt-select { background-color: var(--quote-bg-dark); border-color: var(--border-color-dark); color: var(--text-color-dark); }
 #quick-prompt-select:disabled { opacity: 0.6; cursor: not-allowed; }
 #chat-mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; width: 100%; justify-content: center; padding: 8px 0; border-top: 1px solid transparent; }
 body:not(.dark-mode) #chat-mode-selector { border-top-color: var(--border-color-light); }
@@ -370,8 +371,8 @@ body:not(.dark-mode) #chat-send-btn { color: var(--header-color-light); }
 .prompt-manager-modal .close-btn { position: absolute; top: 15px; right: 15px; z-index: 10; }
 .prompt-manager-container { display: flex; width: 100%; height: 100%; }
 .template-list-panel { width: 250px; flex-shrink: 0; padding: 20px; display: flex; flex-direction: column; }
-body.dark-mode .template-list-panel { background-color: var(--container-bg-dark); border-right: 1px solid var(--border-color-dark); }
-body:not(.dark-mode) .template-list-panel { background-color: var(--container-bg-light); border-right: 1px solid var(--border-color-light); }
+body.dark-mode .template-list-panel { background-color: var(--bg-color-dark); border-right: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) .template-list-panel { background-color: var(--bg-color-light); border-right: 1px solid var(--border-color-light); }
 .template-list-panel h3 { text-align: center; margin-top: 0; margin-bottom: 15px; }
 #template-list-container { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; }
 .template-list-item { padding: 10px 15px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -388,13 +389,10 @@ body:not(.dark-mode) .template-list-item.active { background-color: var(--h2-col
 body:not(.dark-mode) .editor-form-group input, body:not(.dark-mode) .editor-form-group textarea { border-color: var(--border-color-light); background-color: white; color: var(--text-color-light); }
 body.dark-mode .editor-form-group input, body.dark-mode .editor-form-group textarea { border-color: var(--border-color-dark); background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
 .editor-form-group textarea { flex-grow: 1; resize: none; }
-.editor-actions { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-top: 20px; }
-#template-save-status { font-size: 0.9em; opacity: 0.8; flex-grow: 1; text-align: left; }
-#template-save-status.status-success { color: var(--correct-color-dark); }
-body:not(.dark-mode) #template-save-status.status-success { color: var(--correct-color); }
-#template-save-status.status-error { color: var(--incorrect-color-dark); }
-body:not(.dark-mode) #template-save-status.status-error { color: var(--incorrect-color); }
+.editor-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px; }
 .editor-actions .modal-btn { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; }
+.editor-actions .modal-btn.confirm { background-color: var(--h2-color-light); color: white; }
+body.dark-mode .editor-actions .modal-btn.confirm { background-color: var(--h2-color-dark); color: var(--bg-color-dark); }
 .editor-actions .modal-btn.cancel { background-color: #d9534f; color: white; }
 .editor-actions .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
