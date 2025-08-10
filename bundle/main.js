@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-10T05:46:37.240Z */
+/* Auto-generated bundle from 2025-08-10T06:35:39.479Z */
 
 /* --- Vendor: firebase-app-compat.js --- */
 !function(e,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):(e="undefined"!=typeof globalThis?globalThis:e||self).firebase=t()}(this,function(){"use strict";function c(e,t){if(!(t instanceof Object))return t;switch(t.constructor){case Date:const i=t;return new Date(i.getTime());case Object:void 0===e&&(e={});break;case Array:e=[];break;default:return t}for(const r in t)t.hasOwnProperty(r)&&"__proto__"!==r&&(e[r]=c(e[r],t[r]));return e}class n{constructor(){this.reject=()=>{},this.resolve=()=>{},this.promise=new Promise((e,t)=>{this.resolve=e,this.reject=t})}wrapCallback(i){return(e,t)=>{e?this.reject(e):this.resolve(t),"function"==typeof i&&(this.promise.catch(()=>{}),1===i.length?i(e):i(e,t))}}}class a extends Error{constructor(e,t,i){super(t),this.code=e,this.customData=i,this.name="FirebaseError",Object.setPrototypeOf(this,a.prototype),Error.captureStackTrace&&Error.captureStackTrace(this,r.prototype.create)}}class r{constructor(e,t,i){this.service=e,this.serviceName=t,this.errors=i}create(e,...t){var r,i=t[0]||{},n=`${this.service}/${e}`,s=this.errors[e],s=s?(r=i,s.replace(o,(e,t)=>{var i=r[t];return null!=i?String(i):`<${t}?>`})):"Error",s=`${this.serviceName}: ${s} (${n}).`;return new a(n,s,i)}}const o=/\{\$([^}]+)}/g;function l(e,t){return Object.prototype.hasOwnProperty.call(e,t)}function h(e,t){if(e===t)return 1;const i=Object.keys(e),r=Object.keys(t);for(const a of i){if(!r.includes(a))return;var n=e[a],s=t[a];if(p(n)&&p(s)){if(!h(n,s))return}else if(n!==s)return}for(const o of r)if(!i.includes(o))return;return 1}function p(e){return null!==e&&"object"==typeof e}function i(e,t){const i=new s(e,t);return i.subscribe.bind(i)}class s{constructor(e,t){this.observers=[],this.unsubscribes=[],this.observerCount=0,this.task=Promise.resolve(),this.finalized=!1,this.onNoObservers=t,this.task.then(()=>{e(this)}).catch(e=>{this.error(e)})}next(t){this.forEachObserver(e=>{e.next(t)})}error(t){this.forEachObserver(e=>{e.error(t)}),this.close(t)}complete(){this.forEachObserver(e=>{e.complete()}),this.close()}subscribe(e,t,i){let r;if(void 0===e&&void 0===t&&void 0===i)throw new Error("Missing Observer.");r=function(e,t){if("object"!=typeof e||null===e)return!1;for(const i of t)if(i in e&&"function"==typeof e[i])return!0;return!1}(e,["next","error","complete"])?e:{next:e,error:t,complete:i},void 0===r.next&&(r.next=f),void 0===r.error&&(r.error=f),void 0===r.complete&&(r.complete=f);var n=this.unsubscribeOne.bind(this,this.observers.length);return this.finalized&&this.task.then(()=>{try{this.finalError?r.error(this.finalError):r.complete()}catch(e){}}),this.observers.push(r),n}unsubscribeOne(e){void 0!==this.observers&&void 0!==this.observers[e]&&(delete this.observers[e],--this.observerCount,0===this.observerCount&&void 0!==this.onNoObservers&&this.onNoObservers(this))}forEachObserver(t){if(!this.finalized)for(let e=0;e<this.observers.length;e++)this.sendOne(e,t)}sendOne(e,t){this.task.then(()=>{if(void 0!==this.observers&&void 0!==this.observers[e])try{t(this.observers[e])}catch(e){"undefined"!=typeof console&&console.error&&console.error(e)}})}close(e){this.finalized||(this.finalized=!0,void 0!==e&&(this.finalError=e),this.task.then(()=>{this.observers=void 0,this.onNoObservers=void 0}))}}function f(){}class d{constructor(e,t,i){this.name=e,this.instanceFactory=t,this.type=i,this.multipleInstances=!1,this.serviceProps={},this.instantiationMode="LAZY",this.onInstanceCreated=null}setInstantiationMode(e){return this.instantiationMode=e,this}setMultipleInstances(e){return this.multipleInstances=e,this}setServiceProps(e){return this.serviceProps=e,this}setInstanceCreatedCallback(e){return this.onInstanceCreated=e,this}}const u="[DEFAULT]";class m{constructor(e,t){this.name=e,this.container=t,this.component=null,this.instances=new Map,this.instancesDeferred=new Map,this.instancesOptions=new Map,this.onInitCallbacks=new Map}get(e){var t=this.normalizeInstanceIdentifier(e);if(!this.instancesDeferred.has(t)){const r=new n;if(this.instancesDeferred.set(t,r),this.isInitialized(t)||this.shouldAutoInitialize())try{var i=this.getOrInitializeService({instanceIdentifier:t});i&&r.resolve(i)}catch(e){}}return this.instancesDeferred.get(t).promise}getImmediate(e){var t=this.normalizeInstanceIdentifier(null==e?void 0:e.identifier),i=null!==(i=null==e?void 0:e.optional)&&void 0!==i&&i;if(!this.isInitialized(t)&&!this.shouldAutoInitialize()){if(i)return null;throw Error(`Service ${this.name} is not available`)}try{return this.getOrInitializeService({instanceIdentifier:t})}catch(e){if(i)return null;throw e}}getComponent(){return this.component}setComponent(e){if(e.name!==this.name)throw Error(`Mismatching Component ${e.name} for Provider ${this.name}.`);if(this.component)throw Error(`Component for ${this.name} has already been provided`);if(this.component=e,this.shouldAutoInitialize()){if("EAGER"===e.instantiationMode)try{this.getOrInitializeService({instanceIdentifier:u})}catch(e){}for(var[t,i]of this.instancesDeferred.entries()){t=this.normalizeInstanceIdentifier(t);try{var r=this.getOrInitializeService({instanceIdentifier:t});i.resolve(r)}catch(e){}}}}clearInstance(e=u){this.instancesDeferred.delete(e),this.instancesOptions.delete(e),this.instances.delete(e)}async delete(){const e=Array.from(this.instances.values());await Promise.all([...e.filter(e=>"INTERNAL"in e).map(e=>e.INTERNAL.delete()),...e.filter(e=>"_delete"in e).map(e=>e._delete())])}isComponentSet(){return null!=this.component}isInitialized(e=u){return this.instances.has(e)}getOptions(e=u){return this.instancesOptions.get(e)||{}}initialize(e={}){var{options:t={}}=e,i=this.normalizeInstanceIdentifier(e.instanceIdentifier);if(this.isInitialized(i))throw Error(`${this.name}(${i}) has already been initialized`);if(!this.isComponentSet())throw Error(`Component ${this.name} has not been registered yet`);var r,n,s=this.getOrInitializeService({instanceIdentifier:i,options:t});for([r,n]of this.instancesDeferred.entries())i===this.normalizeInstanceIdentifier(r)&&n.resolve(s);return s}onInit(e,t){var i=this.normalizeInstanceIdentifier(t);const r=null!==(n=this.onInitCallbacks.get(i))&&void 0!==n?n:new Set;r.add(e),this.onInitCallbacks.set(i,r);var n=this.instances.get(i);return n&&e(n,i),()=>{r.delete(e)}}invokeOnInitCallbacks(e,t){var i=this.onInitCallbacks.get(t);if(i)for(const r of i)try{r(e,t)}catch(e){}}getOrInitializeService({instanceIdentifier:e,options:t={}}){let i=this.instances.get(e);if(!i&&this.component&&(i=this.component.instanceFactory(this.container,{instanceIdentifier:(r=e)===u?void 0:r,options:t}),this.instances.set(e,i),this.instancesOptions.set(e,t),this.invokeOnInitCallbacks(i,e),this.component.onInstanceCreated))try{this.component.onInstanceCreated(this.container,e,i)}catch(e){}var r;return i||null}normalizeInstanceIdentifier(e=u){return!this.component||this.component.multipleInstances?e:u}shouldAutoInitialize(){return!!this.component&&"EXPLICIT"!==this.component.instantiationMode}}class g{constructor(e){this.name=e,this.providers=new Map}addComponent(e){const t=this.getProvider(e.name);if(t.isComponentSet())throw new Error(`Component ${e.name} has already been registered with ${this.name}`);t.setComponent(e)}addOrOverwriteComponent(e){const t=this.getProvider(e.name);t.isComponentSet()&&this.providers.delete(e.name),this.addComponent(e)}getProvider(e){if(this.providers.has(e))return this.providers.get(e);var t=new m(e,this);return this.providers.set(e,t),t}getProviders(){return Array.from(this.providers.values())}}const v=[];var b,e;(e=b=b||{})[e.DEBUG=0]="DEBUG",e[e.VERBOSE=1]="VERBOSE",e[e.INFO=2]="INFO",e[e.WARN=3]="WARN",e[e.ERROR=4]="ERROR",e[e.SILENT=5]="SILENT";const I={debug:b.DEBUG,verbose:b.VERBOSE,info:b.INFO,warn:b.WARN,error:b.ERROR,silent:b.SILENT},t=b.INFO,E={[b.DEBUG]:"log",[b.VERBOSE]:"log",[b.INFO]:"info",[b.WARN]:"warn",[b.ERROR]:"error"},y=(e,t,...i)=>{if(!(t<e.logLevel)){var r=(new Date).toISOString(),n=E[t];if(!n)throw new Error(`Attempted to log a message with an invalid logType (value: ${t})`);console[n](`[${r}]  ${e.name}:`,...i)}};class _{constructor(e){this.name=e,this._logLevel=t,this._logHandler=y,this._userLogHandler=null,v.push(this)}get logLevel(){return this._logLevel}set logLevel(e){if(!(e in b))throw new TypeError(`Invalid value "${e}" assigned to \`logLevel\``);this._logLevel=e}setLogLevel(e){this._logLevel="string"==typeof e?I[e]:e}get logHandler(){return this._logHandler}set logHandler(e){if("function"!=typeof e)throw new TypeError("Value assigned to `logHandler` must be a function");this._logHandler=e}get userLogHandler(){return this._userLogHandler}set userLogHandler(e){this._userLogHandler=e}debug(...e){this._userLogHandler&&this._userLogHandler(this,b.DEBUG,...e),this._logHandler(this,b.DEBUG,...e)}log(...e){this._userLogHandler&&this._userLogHandler(this,b.VERBOSE,...e),this._logHandler(this,b.VERBOSE,...e)}info(...e){this._userLogHandler&&this._userLogHandler(this,b.INFO,...e),this._logHandler(this,b.INFO,...e)}warn(...e){this._userLogHandler&&this._userLogHandler(this,b.WARN,...e),this._logHandler(this,b.WARN,...e)}error(...e){this._userLogHandler&&this._userLogHandler(this,b.ERROR,...e),this._logHandler(this,b.ERROR,...e)}}class O{constructor(e){this.container=e}getPlatformInfoString(){const e=this.container.getProviders();return e.map(e=>{if("VERSION"!==(null==(t=e.getComponent())?void 0:t.type))return null;var t,t=e.getImmediate();return`${t.library}/${t.version}`}).filter(e=>e).join(" ")}}const w="@firebase/app",C="0.7.11",N=new _("@firebase/app");var L;const A="[DEFAULT]",D={"@firebase/app":"fire-core","@firebase/app-compat":"fire-core-compat","@firebase/analytics":"fire-analytics","@firebase/analytics-compat":"fire-analytics-compat","@firebase/app-check":"fire-app-check","@firebase/app-check-compat":"fire-app-check-compat","@firebase/auth":"fire-auth","@firebase/auth-compat":"fire-auth-compat","@firebase/database":"fire-rtdb","@firebase/database-compat":"fire-rtdb-compat","@firebase/functions":"fire-fn","@firebase/functions-compat":"fire-fn-compat","@firebase/installations":"fire-iid","@firebase/installations-compat":"fire-iid-compat","@firebase/messaging":"fire-fcm","@firebase/messaging-compat":"fire-fcm-compat","@firebase/performance":"fire-perf","@firebase/performance-compat":"fire-perf-compat","@firebase/remote-config":"fire-rc","@firebase/remote-config-compat":"fire-rc-compat","@firebase/storage":"fire-gcs","@firebase/storage-compat":"fire-gcs-compat","@firebase/firestore":"fire-fst","@firebase/firestore-compat":"fire-fst-compat","fire-js":"fire-js",firebase:"fire-js-all"},S=new Map,R=new Map;function $(t,i){try{t.container.addComponent(i)}catch(e){N.debug(`Component ${i.name} failed to register with FirebaseApp ${t.name}`,e)}}function k(e,t){e.container.addOrOverwriteComponent(t)}function P(e){var t=e.name;if(R.has(t))return N.debug(`There were multiple attempts to register component ${t}.`),!1;R.set(t,e);for(const i of S.values())$(i,e);return!0}function z(e,t){return e.container.getProvider(t)}const F=new r("app","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","bad-app-name":"Illegal App name: '{$appName}","duplicate-app":"Firebase App named '{$appName}' already exists with different options or config","app-deleted":"Firebase App named '{$appName}' already deleted","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance.","invalid-log-argument":"First argument to `onLog` must be null or a function."});class j{constructor(e,t,i){this._isDeleted=!1,this._options=Object.assign({},e),this._config=Object.assign({},t),this._name=t.name,this._automaticDataCollectionEnabled=t.automaticDataCollectionEnabled,this._container=i,this.container.addComponent(new d("app",()=>this,"PUBLIC"))}get automaticDataCollectionEnabled(){return this.checkDestroyed(),this._automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this.checkDestroyed(),this._automaticDataCollectionEnabled=e}get name(){return this.checkDestroyed(),this._name}get options(){return this.checkDestroyed(),this._options}get config(){return this.checkDestroyed(),this._config}get container(){return this._container}get isDeleted(){return this._isDeleted}set isDeleted(e){this._isDeleted=e}checkDestroyed(){if(this.isDeleted)throw F.create("app-deleted",{appName:this._name})}}const H="9.6.1";function T(e,t={}){if("object"!=typeof t){const r=t;t={name:r}}var i=Object.assign({name:A,automaticDataCollectionEnabled:!1},t);const r=i.name;if("string"!=typeof r||!r)throw F.create("bad-app-name",{appName:String(r)});var n=S.get(r);if(n){if(h(e,n.options)&&h(i,n.config))return n;throw F.create("duplicate-app",{appName:r})}const s=new g(r);for(const a of R.values())s.addComponent(a);i=new j(e,i,s);return S.set(r,i),i}async function M(e){var t=e.name;S.has(t)&&(S.delete(t),await Promise.all(e.container.getProviders().map(e=>e.delete())),e.isDeleted=!0)}function B(e,t,i){let r=null!==(s=D[e])&&void 0!==s?s:e;i&&(r+=`-${i}`);var n=r.match(/\s|\//),s=t.match(/\s|\//);if(n||s){const a=[`Unable to register library "${r}" with version "${t}":`];return n&&a.push(`library name "${r}" contains illegal characters (whitespace or "/")`),n&&s&&a.push("and"),s&&a.push(`version name "${t}" contains illegal characters (whitespace or "/")`),void N.warn(a.join(" "))}P(new d(`${r}-version`,()=>({library:r,version:t}),"VERSION"))}function V(e,t){if(null!==e&&"function"!=typeof e)throw F.create("invalid-log-argument");!function(s,e){for(const t of v){let n=null;e&&e.level&&(n=I[e.level]),t.userLogHandler=null===s?null:(e,t,...i)=>{var r=i.map(e=>{if(null==e)return null;if("string"==typeof e)return e;if("number"==typeof e||"boolean"==typeof e)return e.toString();if(e instanceof Error)return e.message;try{return JSON.stringify(e)}catch(e){return null}}).filter(e=>e).join(" ");t>=(null!==n&&void 0!==n?n:e.logLevel)&&s({level:b[t].toLowerCase(),message:r,args:i,type:e.name})}}}(e,t)}function U(e){var t;t=e,v.forEach(e=>{e.setLogLevel(t)})}L="",P(new d("platform-logger",e=>new O(e),"PRIVATE")),B(w,C,L),B(w,C,"esm2017"),B("fire-js","");var x=Object.freeze({__proto__:null,SDK_VERSION:H,_DEFAULT_ENTRY_NAME:A,_addComponent:$,_addOrOverwriteComponent:k,_apps:S,_clearComponents:function(){R.clear()},_components:R,_getProvider:z,_registerComponent:P,_removeServiceInstance:function(e,t,i=A){z(e,t).clearInstance(i)},deleteApp:M,getApp:function(e=A){var t=S.get(e);if(!t)throw F.create("no-app",{appName:e});return t},getApps:function(){return Array.from(S.values())},initializeApp:T,onLog:V,registerVersion:B,setLogLevel:U,FirebaseError:a});class W{constructor(e,t){this._delegate=e,this.firebase=t,$(e,new d("app-compat",()=>this,"PUBLIC")),this.container=e.container}get automaticDataCollectionEnabled(){return this._delegate.automaticDataCollectionEnabled}set automaticDataCollectionEnabled(e){this._delegate.automaticDataCollectionEnabled=e}get name(){return this._delegate.name}get options(){return this._delegate.options}delete(){return new Promise(e=>{this._delegate.checkDestroyed(),e()}).then(()=>(this.firebase.INTERNAL.removeApp(this.name),M(this._delegate)))}_getService(e,t=A){var i;this._delegate.checkDestroyed();const r=this._delegate.container.getProvider(e);return r.isInitialized()||"EXPLICIT"!==(null===(i=r.getComponent())||void 0===i?void 0:i.instantiationMode)||r.initialize(),r.getImmediate({identifier:t})}_removeServiceInstance(e,t=A){this._delegate.container.getProvider(e).clearInstance(t)}_addComponent(e){$(this._delegate,e)}_addOrOverwriteComponent(e){k(this._delegate,e)}toJSON(){return{name:this.name,automaticDataCollectionEnabled:this.automaticDataCollectionEnabled,options:this.options}}}const G=new r("app-compat","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance."});function Y(n){const s={},a={__esModule:!0,initializeApp:function(e,t={}){var i=T(e,t);if(l(s,i.name))return s[i.name];var r=new n(i,a);return s[i.name]=r},app:o,registerVersion:B,setLogLevel:U,onLog:V,apps:null,SDK_VERSION:H,INTERNAL:{registerComponent:function(i){const r=i.name,t=r.replace("-compat","");{var e;P(i)&&"PUBLIC"===i.type&&(e=(e=o())=>{if("function"!=typeof e[t])throw G.create("invalid-app-argument",{appName:r});return e[t]()},void 0!==i.serviceProps&&c(e,i.serviceProps),a[t]=e,n.prototype[t]=function(...e){const t=this._getService.bind(this,r);return t.apply(this,i.multipleInstances?e:[])})}return"PUBLIC"===i.type?a[t]:null},removeApp:function(e){delete s[e]},useAsService:function(e,t){if("serverAuth"===t)return null;var i=t;return i},modularAPIs:x}};function o(e){if(e=e||A,!l(s,e))throw G.create("no-app",{appName:e});return s[e]}return a.default=a,Object.defineProperty(a,"apps",{get:function(){return Object.keys(s).map(e=>s[e])}}),o.App=n,a}var K=function e(){const t=Y(W);return t.INTERNAL=Object.assign(Object.assign({},t.INTERNAL),{createFirebaseNamespace:e,extendNamespace:function(e){c(t,e)},createSubscribe:i,ErrorFactory:r,deepExtend:c}),t}();const J=new _("@firebase/app-compat");if("object"==typeof self&&self.self===self&&void 0!==self.firebase){J.warn(`
@@ -430,8 +430,8 @@ function renderAppShell(dynamicContent, title, canvasId_from_ai) {
 /*
 --- Ailey & Bailey Canvas ---
 File: 001_state_globalVars.js
-Version: 1.5 (Background Rendering State)
-Description: Declares all global state variables, including the new activeRenderJobs manager.
+Version: 1.5 (Background Streaming State)
+Description: Declares global state variables for pending AI responses and active streams.
 */
 
 // --- 1. Element Declarations (Global Scope, UNINITIALIZED) ---
@@ -477,7 +477,8 @@ let currentSessionId = null;
 let unsubscribeFromChatSessions = null, unsubscribeFromProjects = null;
 let newlyCreatedProjectId = null;
 const activeTimers = {};
-let activeRenderJobs = {}; // [NEW] Manages background rendering jobs
+let pendingResponses = new Set(); // [NEW] Tracks sessions waiting for an AI response
+let activeStreams = {}; // [NEW] Tracks active streaming sessions { sessionId: { startTime, content, isComplete } }
 
 // -- Prompt Library State --
 let promptTemplatesCollectionRef;
@@ -568,7 +569,6 @@ function rebindDOMElements() {
     saveTemplateBtn = document.getElementById('save-template-btn');
     deleteTemplateBtn = document.getElementById('delete-template-btn');
 }
-
 
 /* --- Source: src\02_utils\010_utils_debounce.js --- */
 /*
@@ -2333,393 +2333,218 @@ function handleDeleteSession(sessionId) {
 
 /* --- Source: src\04_features_chat\210_chat_engine.js --- */
 /*
-
 --- Ailey & Bailey Canvas ---
-
 File: 210_chat_engine.js
-
-Version: 1.4 (Intelligent DOM Reconciliation)
-
-Description: Engine logic adapted for non-destructive rendering.
-
+Version: 1.5 (Background Streaming State Management)
+Description: Manages response state in global objects for background processing.
 */
 
-
-
 async function handleChatSend() {
-
     if (!chatInput || chatInput.disabled) return;
-
     const query = chatInput.value.trim();
-
     if (!query) return;
 
-
-
     chatInput.value = '';
-
     chatInput.style.height = 'auto';
-
     chatInput.disabled = true;
-
     chatInput.placeholder = "AI가 응답하는 중..."
-
     chatSendBtn.disabled = true;
 
-
-
     const userMessage = { role: 'user', content: query, timestamp: new Date() };
-
-    const loadingId = `loading-${Date.now()}`;
-
-    let sessionRef;
-
+    let sessionIdForRequest = currentSessionId;
     let isNewSession = false;
 
-
-
-    if (!currentSessionId) {
-
+    if (!sessionIdForRequest) {
         isNewSession = true;
-
         const activeProject = document.querySelector('.project-header.active-drop-target');
-
         const newSessionProjectId = activeProject ? activeProject.closest('.project-container').dataset.projectId : null;
 
-
+        const tempSessionId = `temp-${Date.now()}`;
+        sessionIdForRequest = tempSessionId;
+        pendingResponses.add(tempSessionId);
 
         if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
-
         if (chatMessages) chatMessages.style.display = 'flex';
-
-        
-
-        // Optimistically render user message and loading animation
-
-        renderNewMessages([userMessage, { role: 'ai', status: 'loading', id: loadingId }]);
-
-        
+        renderNewMessages([userMessage, { role: 'ai', status: 'loading', id: tempSessionId }]);
 
         const newSessionData = {
-
             title: query.substring(0, 40) + (query.length > 40 ? '...' : ''),
-
             messages: [userMessage],
-
             projectId: newSessionProjectId,
-
             isPinned: false,
-
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         };
-
-        sessionRef = await chatSessionsCollectionRef.add(newSessionData);
-
+        const sessionRef = await chatSessionsCollectionRef.add(newSessionData);
         currentSessionId = sessionRef.id;
-
-
-
-    } else {
-
-        sessionRef = chatSessionsCollectionRef.doc(currentSessionId);
-
-        renderNewMessages([userMessage, { role: 'ai', status: 'loading', id: loadingId }]);
-
         
-
-        await sessionRef.update({
-
+        pendingResponses.delete(tempSessionId);
+        sessionIdForRequest = sessionRef.id;
+        pendingResponses.add(sessionRef.id);
+    } else {
+        pendingResponses.add(sessionIdForRequest);
+        renderNewMessages([userMessage, { role: 'ai', status: 'loading', id: sessionIdForRequest }]);
+        await chatSessionsCollectionRef.doc(sessionIdForRequest).update({
             messages: firebase.firestore.FieldValue.arrayUnion(userMessage),
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         });
-
     }
-
-    
 
     const startTime = performance.now();
-
     try {
-
         let aiRes, usageData;
-
-        const historyForApi = isNewSession ? [] : (localChatSessionsCache.find(s => s.id === currentSessionId)?.messages.slice(-20) || []);
-
-
+        const historyForApi = isNewSession ? [] : (localChatSessionsCache.find(s => s.id === sessionIdForRequest)?.messages.slice(-20) || []);
 
         if (activePromptId) {
-
             const template = promptTemplatesCache.find(t => t.id === activePromptId);
-
             if (template && template.promptText) {
-
                 historyForApi.unshift({ role: 'user', content: template.promptText });
-
             }
-
         }
-
         historyForApi.push({ role: 'user', content: query });
 
-
-
         if (userApiSettings.provider && userApiSettings.apiKey && userApiSettings.selectedModel) {
-
             const requestDetails = buildApiRequest(userApiSettings.provider, userApiSettings.selectedModel, historyForApi, userApiSettings.maxOutputTokens);
-
             const res = await fetch(requestDetails.url, requestDetails.options);
-
-            if (!res.ok) { 
-
-                const errorBody = await res.text(); 
-
-                throw new Error(`API Error ${res.status}: ${errorBody}`); 
-
-            } 
-
-            const result = await res.json();
-
-            const parsed = parseApiResponse(userApiSettings.provider, result);
-
-            aiRes = parsed.content;
-
-            usageData = parsed.usage;
-
-            if (usageData) { 
-
-                userApiSettings.tokenUsage.prompt += usageData.prompt; 
-
-                userApiSettings.tokenUsage.completion += usageData.completion; 
-
-                saveApiSettings(false); 
-
-                renderTokenUsage(); 
-
+            if (!res.ok) {
+                const errorBody = await res.text();
+                throw new Error(`API Error ${res.status}: ${errorBody}`);
             }
-
+            const result = await res.json();
+            const parsed = parseApiResponse(userApiSettings.provider, result);
+            aiRes = parsed.content;
+            usageData = parsed.usage;
+            if (usageData) {
+                userApiSettings.tokenUsage.prompt += usageData.prompt;
+                userApiSettings.tokenUsage.completion += usageData.completion;
+                saveApiSettings(false);
+                renderTokenUsage();
+            }
         } else {
-
             let systemInstruction = "You are Ailey. Provide a step-by-step reasoning process if the query is complex. For simple queries, omit the reasoning part. The reasoning, if present, must follow the format: [REASONING_START]SUMMARY:{summary}|||DETAIL:{detail}[REASONING_END]. The final answer should be in a friendly, informal Korean tone.";
 
-            
-
             if (activePromptId) {
-
                 const template = promptTemplatesCache.find(t => t.id === activePromptId);
-
                 if (template && template.promptText) {
-
                     systemInstruction = template.promptText;
-
                 }
-
             }
 
-            
-
             const apiMessages = [
-
                 { role: 'user', parts: [{ text: systemInstruction + "\n\nHere is the user's query:" }] },
-
                 { role: 'model', parts: [{ text: "알겠습니다. 사용자의 질문을 보내주세요." }] },
-
                 { role: 'user', parts: [{ text: query }] }
-
             ];
 
-            
-
             const selectedDefaultModel = localStorage.getItem('selectedAiModel') || defaultModel;
-
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedDefaultModel}:generateContent?key=`, {
-
                 method: 'POST',
-
                 headers: { 'Content-Type': 'application/json' },
-
                 body: JSON.stringify({ contents: apiMessages })
-
             });
-
             if (!res.ok) throw new Error(`Google API Error ${res.status}`);
-
             const result = await res.json();
-
             aiRes = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져올 수 없습니다.";
-
         }
-
-        
 
         const endTime = performance.now();
-
         const duration = ((endTime - startTime) / 1000).toFixed(2);
-
         const aiMessage = { role: 'ai', content: aiRes, timestamp: new Date(), duration: duration };
 
+        pendingResponses.delete(sessionIdForRequest);
+        activeStreams[sessionIdForRequest] = {
+            startTime: Date.now(),
+            content: aiMessage.content,
+            duration: aiMessage.duration,
+            isComplete: false,
+        };
+
+        // Only render immediately if the user is still on the same chat
+        if (currentSessionId === sessionIdForRequest) {
+            renderFinalMessage(aiMessage);
+        }
         
-
-        replaceLoadingWithMessage(loadingId, aiMessage);
-
-
-
-        await sessionRef.update({
-
+        await chatSessionsCollectionRef.doc(sessionIdForRequest).update({
             messages: firebase.firestore.FieldValue.arrayUnion(aiMessage),
-
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-
         });
 
-
-
     } catch (e) {
-
         console.error("Chat send error:", e);
-
+        pendingResponses.delete(sessionIdForRequest);
         const errorMessage = { role: 'ai', content: `API 오류가 발생했습니다: ${e.message}`, timestamp: new Date() };
-
-        replaceLoadingWithMessage(loadingId, errorMessage);
-
-        if (sessionRef) {
-
-           await sessionRef.update({ 
-
-               messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
-
-           });
-
+        if (currentSessionId === sessionIdForRequest) {
+            renderFinalMessage(errorMessage);
         }
-
+        if (chatSessionsCollectionRef && sessionIdForRequest && !sessionIdForRequest.startsWith('temp-')) {
+           await chatSessionsCollectionRef.doc(sessionIdForRequest).update({
+               messages: firebase.firestore.FieldValue.arrayUnion(errorMessage)
+           });
+        }
     } finally {
-
-        chatInput.disabled = false;
-
-        chatInput.placeholder = "Ailey & Bailey에게 질문하기..."
-
-        chatSendBtn.disabled = false;
-
-        chatInput.focus();
-
+        if (currentSessionId === sessionIdForRequest) {
+            chatInput.disabled = false;
+            chatInput.placeholder = "Ailey & Bailey에게 질문하기..."
+            chatSendBtn.disabled = false;
+            chatInput.focus();
+        }
     }
-
 }
-
-
 
 function buildApiRequest(provider, model, messages, maxTokens) {
-
     const history = messages.map(msg => ({
-
         role: msg.role === 'ai' ? 'assistant' : 'user',
-
         content: msg.content
-
     }));
 
-
-
     if (provider === 'openai') {
-
         return {
-
             url: 'https://api.openai.com/v1/chat/completions',
-
             options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userApiSettings.apiKey}` }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
-
         };
-
     } else if (provider === 'anthropic') {
-
          return {
-
             url: 'https://api.anthropic.com/v1/messages',
-
             options: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': userApiSettings.apiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: model, messages: history, max_tokens: Number(maxTokens) || 2048 }) }
-
         };
-
     } else if (provider === 'google_paid') {
-
         const googleHistory = messages.map(msg => ({
-
             role: msg.role === 'ai' ? 'model' : 'user',
-
             parts: [{ text: msg.content }]
-
         }));
-
         return {
-
             url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userApiSettings.apiKey}`,
-
             options: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: googleHistory, generationConfig: { maxOutputTokens: Number(maxTokens) || 2048 } }) }
-
         };
-
     }
-
     throw new Error(`Unsupported provider: ${provider}`);
-
 }
 
-
-
 function parseApiResponse(provider, result) {
-
     try {
-
         if (provider === 'openai') {
-
             return { content: result.choices[0].message.content, usage: { prompt: result.usage.prompt_tokens, completion: result.usage.completion_tokens } };
-
         } else if (provider === 'anthropic') {
-
             return { content: result.content[0].text, usage: { prompt: result.usage.input_tokens, completion: result.usage.output_tokens } };
-
         } else if (provider === 'google_paid') {
-
             return { content: result.candidates[0].content.parts[0].text, usage: null };
-
         }
-
     } catch (error) {
-
         console.error(`Error parsing ${provider} response:`, error, result);
-
         return { content: 'API 응답을 파싱하는 중 오류가 발생했습니다.', usage: null };
-
     }
-
     return { content: '알 수 없는 제공사입니다.', usage: null };
-
 }
 
 /* --- Source: src\04_features_chat\220_chat_ui.js --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: 220_chat_ui.js
-Version: 1.8 (Time-based Background Rendering)
-Description: Implements a time-based rendering job manager for seamless background streaming.
+Version: 1.8 (Background Streaming Renderer)
+Description: Renders messages with time-based offsets for background streaming.
 */
 
-const CHAR_INTERVAL_MS = 20; // Time per character for streaming
-
-// [NEW] Cancels all ongoing rendering animations
-function cancelAllRenderJobs() {
-    for (const msgId in activeRenderJobs) {
-        const job = activeRenderJobs[msgId];
-        if (job.animationFrameId) {
-            cancelAnimationFrame(job.animationFrameId);
-            job.animationFrameId = null;
-        }
-    }
-}
+const CHAR_PER_SECOND = 150; // Average reading/streaming speed for calculation
 
 // Renders the quick-select dropdown for prompt templates inside the popover
 function renderQuickPromptSelect() {
@@ -2775,28 +2600,29 @@ function getMessageId(msg) {
     return `msg-${Math.random()}`;
 }
 
-// Renders past messages statically
+// Renders past messages statically, excluding the last AI message which might be streaming.
 function renderChatMessages(sessionData) {
     if (!chatMessages || !sessionData) return;
     if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
     const messages = sessionData.messages || [];
-    const existingMessageIds = new Set([...chatMessages.querySelectorAll('[data-message-id]')].map(el => el.dataset.messageId));
+    // Don't render the last message if it's an AI one; it will be handled by stream logic.
+    const lastMsg = messages[messages.length - 1];
+    const messagesToRender = (lastMsg?.role === 'ai') ? messages.slice(0, -1) : messages;
+    
     const fragment = document.createDocumentFragment();
-    messages.forEach((msg, index) => {
+    messagesToRender.forEach((msg, index) => {
         const msgId = getMessageId(msg);
-        if (!existingMessageIds.has(msgId)) {
-            let element;
-            if (msg.role === 'user') {
-                element = document.createElement('div');
-                element.className = `chat-message user`;
-                element.textContent = msg.content;
-            } else if (msg.role === 'ai') {
-                element = createAiMessageContainer(msg, msgId, false);
-            }
-            if (element) {
-                element.dataset.messageId = msgId;
-                fragment.appendChild(element);
-            }
+        let element;
+        if (msg.role === 'user') {
+            element = document.createElement('div');
+            element.className = `chat-message user`;
+            element.textContent = msg.content;
+        } else if (msg.role === 'ai') {
+            element = createAiMessageContainer(msg, index, false); // isLive = false for past messages
+        }
+        if (element) {
+            element.dataset.messageId = msgId;
+            fragment.appendChild(element);
         }
     });
     if (fragment.children.length > 0) {
@@ -2805,19 +2631,23 @@ function renderChatMessages(sessionData) {
     }
 }
 
-// Renders only new, optimistic messages without full reconciliation
+// Renders only new, optimistic messages (user message and loading animation)
 function renderNewMessages(messages) {
     if (!chatMessages) return;
     const fragment = document.createDocumentFragment();
-    messages.forEach((msg) => {
+    messages.forEach((msg, index) => {
         const msgId = getMessageId(msg);
+        // Remove existing loading animation for the same session before adding a new one
+        const existingLoading = chatMessages.querySelector(`.ai-response-container[data-message-id="${msgId}"]`);
+        if (existingLoading) existingLoading.remove();
+
         let element;
         if (msg.role === 'user') {
             element = document.createElement('div');
             element.className = `chat-message user`;
             element.textContent = msg.content;
         } else if (msg.role === 'ai' && msg.status === 'loading') {
-            element = createAiMessageContainer(msg, msgId, true);
+            element = createAiMessageContainer(msg, index, true); // Loading is always "live"
         }
         if (element) {
             element.dataset.messageId = msgId;
@@ -2829,36 +2659,53 @@ function renderNewMessages(messages) {
 }
 
 // Accepts `isLive` to choose the correct renderer
-function createAiMessageContainer(msg, msgId, isLive) {
+function createAiMessageContainer(msg, index, isLive) {
     const aiContainer = document.createElement('div');
     aiContainer.className = 'ai-response-container';
     if (msg.status === 'loading') {
-        aiContainer.innerHTML = `<div class="chat-message ai loading-animation"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+        aiContainer.innerHTML = `
+            <div class="chat-message ai loading-animation">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        `;
         return aiContainer;
     }
     const content = msg.content;
-    const reasoningRegex = /^\[REASONING_START\]([\s\S]*?)\[REASONING_END\]/;
+    const reasoningRegex = /^[REASONING_START]([sS]*?)[REASONING_END]/;
     const match = content.match(reasoningRegex);
     if (match) {
+        const reasoningBlockId = `reasoning-${currentSessionId}-${index}`;
         const reasoningRaw = match[1];
         const finalAnswer = content.replace(reasoningRegex, '').trim();
-        const reasoningSteps = reasoningRaw.split('SUMMARY:').filter(s => s.trim() !== '').map(step => {
-            const parts = step.split('|||DETAIL:');
-            return { summary: parts[0]?.trim(), detail: parts[1]?.trim() };
-        });
+        const reasoningSteps = reasoningRaw.split('SUMMARY:')
+            .filter(s => s.trim() !== '')
+            .map(step => {
+                const parts = step.split('|||DETAIL:');
+                return { summary: parts[0]?.trim(), detail: parts[1]?.trim() };
+            });
         const rBlock = document.createElement('div');
         rBlock.className = 'reasoning-block';
+        rBlock.id = reasoningBlockId;
         rBlock.dataset.steps = JSON.stringify(reasoningSteps);
-        rBlock.innerHTML = `<div class="reasoning-header"><span class="toggle-icon">▶</span><span>AI의 추론 과정...</span><span class="reasoning-summary"></span></div><div class="reasoning-content"></div>`;
+        rBlock.innerHTML = `
+            <div class="reasoning-header">
+                <span class="toggle-icon">▶</span>
+                <span>AI의 추론 과정...</span>
+                <span class="reasoning-summary"></span>
+            </div>
+            <div class="reasoning-content"></div>
+        `;
         aiContainer.appendChild(rBlock);
         if (isLive) startSummaryAnimation(rBlock, reasoningSteps);
         if (finalAnswer) {
             const finalAnswerDiv = document.createElement('div');
             finalAnswerDiv.className = 'chat-message ai';
             if (isLive) {
-                renderStreamingMarkdown(finalAnswerDiv, finalAnswer, msgId);
+                renderStreamingMarkdown(finalAnswerDiv, finalAnswer);
             } else {
-                renderStaticMarkdown(finalAnswerDiv, finalAnswer, msgId);
+                renderStaticMarkdown(finalAnswerDiv, finalAnswer);
             }
             aiContainer.appendChild(finalAnswerDiv);
         }
@@ -2866,41 +2713,59 @@ function createAiMessageContainer(msg, msgId, isLive) {
         const d = document.createElement('div');
         d.className = 'chat-message ai';
         if (isLive) {
-            renderStreamingMarkdown(d, content, msgId);
+            renderStreamingMarkdown(d, content);
         } else {
-            renderStaticMarkdown(d, content, msgId);
+            renderStaticMarkdown(d, content);
         }
         aiContainer.appendChild(d);
     }
     if (msg.duration) {
         const metaDiv = document.createElement('div');
         metaDiv.className = 'ai-response-meta';
-        metaDiv.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg><span>응답 생성: ${msg.duration}초</span>`;
+        metaDiv.innerHTML = `
+            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>
+            <span>응답 생성: ${msg.duration}초</span>
+        `;
         aiContainer.appendChild(metaDiv);
     }
     return aiContainer;
 }
 
-function replaceLoadingWithMessage(loadingId, finalMsg) {
-    const loadingContainer = chatMessages.querySelector(`[data-message-id="${loadingId}"]`);
-    if (!loadingContainer) return;
-    const msgId = getMessageId(finalMsg);
-    const newContainer = createAiMessageContainer(finalMsg, msgId, true);
-    newContainer.dataset.messageId = msgId;
-    loadingContainer.replaceWith(newContainer);
+// [NEW] Intelligent final message renderer
+function renderFinalMessage(finalMsg) {
+    if (!chatMessages) return;
+    const loadingId = currentSessionId;
+    const loadingContainer = chatMessages.querySelector(`.ai-response-container[data-message-id="${loadingId}"]`);
+    if (loadingContainer) loadingContainer.remove();
+
+    const streamInfo = activeStreams[currentSessionId];
+    if (!streamInfo) { // Normal message (e.g., error)
+        const newContainer = createAiMessageContainer(finalMsg, -1, true);
+        newContainer.dataset.messageId = getMessageId(finalMsg);
+        chatMessages.appendChild(newContainer);
+    } else {
+        const elapsed = Date.now() - streamInfo.startTime;
+        const charsToShow = Math.floor(elapsed / 1000 * CHAR_PER_SECOND);
+        const totalChars = streamInfo.content.length;
+        const isComplete = charsToShow >= totalChars;
+
+        const newContainer = createAiMessageContainer(finalMsg, -1, !isComplete);
+        newContainer.dataset.messageId = getMessageId(finalMsg);
+        chatMessages.appendChild(newContainer);
+        
+        if (!isComplete) {
+             const targetElement = newContainer.querySelector('.chat-message.ai');
+             if(targetElement) renderStreamingMarkdown(targetElement, streamInfo.content, charsToShow);
+        } else {
+            streamInfo.isComplete = true;
+        }
+    }
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// [MODIFIED] Static renderer now checks for active jobs to resume them
-function renderStaticMarkdown(element, text, msgId) {
+// Static Markdown Renderer for past messages
+function renderStaticMarkdown(element, text) {
     if (!element || typeof text !== 'string') return;
-    const job = activeRenderJobs[msgId];
-    if (job && !job.isFinished) {
-        job.element = element; // Re-bind to the new element
-        element.classList.add('blinking-cursor');
-        tick(msgId); // Resume the animation loop
-        return;
-    }
     if (typeof marked === 'undefined') {
         element.textContent = text;
         return;
@@ -2912,55 +2777,46 @@ function renderStaticMarkdown(element, text, msgId) {
     }
 }
 
-// [MODIFIED] Registers a job and starts the ticker
-function renderStreamingMarkdown(element, text, msgId) {
+// [MODIFIED] Live Markdown Streaming Renderer with offset
+function renderStreamingMarkdown(element, text, offset = 0) {
     if (!element || typeof text !== 'string') return;
-    if (activeRenderJobs[msgId]) {
-        cancelAnimationFrame(activeRenderJobs[msgId].animationFrameId);
-    }
-    activeRenderJobs[msgId] = {
-        startTime: performance.now(),
-        fullText: text,
-        element: element,
-        isFinished: false,
-        animationFrameId: null
-    };
     element.innerHTML = '';
     element.classList.add('blinking-cursor');
-    tick(msgId);
-}
+    
+    const staticPart = text.substring(0, offset);
+    if (staticPart) {
+        renderStaticMarkdown(element, staticPart);
+    }
 
-// [NEW] The core time-based rendering loop
-function tick(msgId) {
-    const job = activeRenderJobs[msgId];
-    if (!job || job.isFinished || !job.element || !document.body.contains(job.element)) {
-        delete activeRenderJobs[msgId];
-        return;
+    let i = offset;
+    let buffer = staticPart;
+    function processChunk() {
+        if (i >= text.length) {
+            element.classList.remove('blinking-cursor');
+            renderMathInElement(element);
+            if (typeof Prism !== 'undefined') Prism.highlightAllUnder(element);
+            if (activeStreams[currentSessionId]) activeStreams[currentSessionId].isComplete = true;
+            return;
+        }
+        const char = text[i];
+        buffer += char;
+        i++;
+        if (typeof marked !== 'undefined') {
+            const katexMarkers = [];
+            let tempBuffer = buffer.replace(/\$\$([\s\S]*?)\$\$|\$(?!\s)([^$]*?)(?!\s)\$/g, (match) => {
+                katexMarkers.push(match);
+                return `__KATEX_PLACEHOLDER_${katexMarkers.length - 1}__`;
+            });
+            let html = marked.parse(tempBuffer, { gfm: true, breaks: true, sanitize: false });
+            html = html.replace(/__KATEX_PLACEHOLDER_(\d+)__/g, (match, index) => {
+                return katexMarkers[parseInt(index, 10)] || '';
+            });
+            element.innerHTML = html;
+        }
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        requestAnimationFrame(processChunk);
     }
-    const elapsedTime = performance.now() - job.startTime;
-    const charsToShow = Math.floor(elapsedTime / CHAR_INTERVAL_MS);
-    const currentText = job.fullText.substring(0, charsToShow);
-    if (typeof marked !== 'undefined') {
-        const katexMarkers = [];
-        let tempBuffer = currentText.replace(/\$\$([\s\S]*?)\$\$|\$(?!\s)([^$]*?)(?!\s)\$/g, (match) => {
-            katexMarkers.push(match);
-            return `__KATEX_PLACEHOLDER_${katexMarkers.length - 1}__`;
-        });
-        let html = marked.parse(tempBuffer, { gfm: true, breaks: true, sanitize: false });
-        html = html.replace(/__KATEX_PLACEHOLDER_(\d+)__/g, (match, index) => {
-            return katexMarkers[parseInt(index, 10)] || '';
-        });
-        job.element.innerHTML = html;
-    }
-    if (currentText.length >= job.fullText.length) {
-        job.isFinished = true;
-        job.element.classList.remove('blinking-cursor');
-        renderStaticMarkdown(job.element, job.fullText, msgId); // Final full render
-        delete activeRenderJobs[msgId];
-    } else {
-        job.animationFrameId = requestAnimationFrame(() => tick(msgId));
-    }
-    if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+    requestAnimationFrame(processChunk);
 }
 
 function renderMathInElement(element) {
@@ -2972,13 +2828,20 @@ function renderMathInElement(element) {
             const formula = (display || inline).replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
             try {
                 return katex.renderToString(formula, { throwOnError: false, displayMode: !!display });
-            } catch (e) { return match; }
+            } catch (e) {
+                console.warn("KaTeX rendering error:", e);
+                return match;
+            }
         });
-        if (newHtml !== text) element.innerHTML = newHtml;
-    } catch (e) { console.error("Error in renderMathInElement:", e); }
+        if (newHtml !== text) {
+            element.innerHTML = newHtml;
+        }
+    } catch (e) {
+        console.error("Error in renderMathInElement:", e);
+    }
 }
 
-// ... (The rest of the file remains unchanged, copy from original) ...
+// ... (The rest of the file remains unchanged) ...
 function startSummaryAnimation(blockElement, reasoningSteps) {
     const blockId = blockElement.id;
     clearTimers(blockId);
@@ -3052,7 +2915,7 @@ function clearTimers(blockId) {
 function renderSidebarContent() {
     if (!sessionListContainer) return;
     const searchTerm = searchSessionsInput.value.toLowerCase();
-    sessionListContainer.innerHTML = ''; 
+    sessionListContainer.innerHTML = '';
     const fragment = document.createDocumentFragment();
     const projectsToDisplay = localProjectsCache
         .filter(p => searchTerm ? p.name?.toLowerCase().includes(searchTerm) || localChatSessionsCache.some(s => s.projectId === p.id && (s.title || '').toLowerCase().includes(searchTerm)) : true)
@@ -3160,7 +3023,7 @@ function showProjectContextMenu(projectId, buttonElement) {
     removeContextMenu();
     const rect = buttonElement.getBoundingClientRect();
     const menu = document.createElement('div');
-    menu.className = 'project-context-menu'; 
+    menu.className = 'project-context-menu';
     menu.style.position = 'absolute';
     menu.style.top = `${rect.bottom + 2}px`;
     menu.style.right = '5px';
@@ -3283,26 +3146,29 @@ function updateSettingsDisplayText() {
     settingsDisplayText.textContent = `${modelText} | ${promptText}`;
 }
 
-
 /* --- Source: src\04_features_chat\230_chat_app.js --- */
 /*
 --- Ailey & Bailey Canvas ---
 File: 230_chat_app.js
-Version: 1.7 (Background Rendering Job Management)
-Description: Manages rendering job lifecycle on session switch.
+Version: 1.7 (Background Streaming UI Activation)
+Description: Controller logic to check session state on switch and render appropriately.
 */
 
 // Handles saving or updating a prompt template
 async function handleSaveTemplate() {
     if (!templateNameInput || !templatePromptTextarea) return;
+
     const name = templateNameInput.value.trim();
     const promptText = templatePromptTextarea.value.trim();
+
     if (!name) {
         alert("템플릿 이름을 입력해주세요.");
         templateNameInput.focus();
         return;
     }
+
     const data = { name, promptText };
+
     if (selectedTemplateId) { // Update existing
         const existingTemplate = promptTemplatesCache.find(t => t.id === selectedTemplateId);
         if (existingTemplate.isDefault) {
@@ -3326,6 +3192,7 @@ function handleDeleteTemplate() {
         alert("기본 템플릿은 삭제할 수 없습니다.");
         return;
     }
+
     showModal(`템플릿 "${template.name}"을(를) 정말 삭제하시겠습니까?`, async () => {
         await deletePromptTemplate(selectedTemplateId);
         selectTemplate(null); // Deselect after deletion
@@ -3391,14 +3258,17 @@ function startProjectRename(projectId) {
     if (!projectContainer) return;
     const titleSpan = projectContainer.querySelector('.project-title');
     if (!titleSpan) return;
+
     const originalTitle = titleSpan.textContent;
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'project-title-input';
     input.value = originalTitle;
+
     titleSpan.replaceWith(input);
     input.focus();
     input.select();
+
     const finishEditing = () => {
         const newName = input.value.trim();
         if (newName && newName !== originalTitle) {
@@ -3407,6 +3277,7 @@ function startProjectRename(projectId) {
              renderSidebarContent();
         }
     };
+
     input.addEventListener('blur', finishEditing);
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -3431,6 +3302,7 @@ function startSessionRename(sessionId) {
     titleSpan.replaceWith(input);
     input.focus();
     input.select();
+
     const finishEditing = () => {
         const newTitle = input.value.trim();
         if (newTitle && newTitle !== originalTitle) {
@@ -3450,41 +3322,48 @@ function startSessionRename(sessionId) {
     });
 }
 
-// [MODIFIED] Manages rendering job lifecycle
+// [MODIFIED] Checks for pending/active streams on session switch.
 function selectSession(sessionId) {
     removeContextMenu();
     if (!sessionId) return;
     const sessionData = localChatSessionsCache.find(s => s.id === sessionId);
     if (!sessionData) return;
 
-    // [MODIFIED] Pause any currently visible animations before switching
-    cancelAllRenderJobs();
     if (chatMessages) chatMessages.innerHTML = '';
+    Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
 
     currentSessionId = sessionId;
-    
     renderSidebarContent();
+
     if (chatWelcomeMessage) chatWelcomeMessage.style.display = 'none';
     if (chatMessages) chatMessages.style.display = 'flex';
-    renderChatMessages(sessionData); // This will now auto-resume jobs
+
+    renderChatMessages(sessionData);
+
+    if (pendingResponses.has(sessionId)) {
+        renderNewMessages([{ role: 'ai', status: 'loading', id: sessionId }]);
+    } else if (activeStreams[sessionId]) {
+        const streamData = activeStreams[sessionId];
+        const lastMessage = { role: 'ai', content: streamData.content, duration: streamData.duration };
+        renderFinalMessage(lastMessage);
+    }
 
     if (chatSessionTitle) chatSessionTitle.textContent = sessionData.title || '대화';
     if (deleteSessionBtn) deleteSessionBtn.style.display = 'inline-block';
+
+    const isBlocked = pendingResponses.has(sessionId) || (activeStreams[sessionId] && !activeStreams[sessionId].isComplete);
     if (chatInput) {
-        chatInput.disabled = false;
-        chatInput.placeholder = "Ailey & Bailey에게 질문하기..."
+        chatInput.disabled = isBlocked;
+        chatInput.placeholder = isBlocked ? "AI가 응답하는 중..." : "Ailey & Bailey에게 질문하기...";
     }
-    if (chatSendBtn) chatSendBtn.disabled = false;
-    chatInput.focus();
+    if (chatSendBtn) chatSendBtn.disabled = isBlocked;
+    if (!isBlocked) chatInput.focus();
 }
 
-// [MODIFIED] Manages rendering job lifecycle
-function handleNewChat() { 
-    currentSessionId = null; 
-    // [MODIFIED] Cancel and clear all rendering jobs
-    cancelAllRenderJobs();
-    activeRenderJobs = {};
-
+function handleNewChat() {
+    currentSessionId = null;
+    Object.values(activeTimers).forEach(timers => timers.forEach(clearInterval));
+    // No need to clear pendingResponses or activeStreams, they are session-specific.
     renderSidebarContent();
 
     if (chatMessages) {
@@ -3497,18 +3376,18 @@ function handleNewChat() {
         const p = chatWelcomeMessage.querySelector('p');
         if (p) p.textContent = "아래 입력창에 질문을 입력하여 대화를 시작해보세요!";
     }
-    
-    if (chatSessionTitle) chatSessionTitle.textContent = 'Ailey & Bailey'; 
-    if (deleteSessionBtn) deleteSessionBtn.style.display = 'none'; 
-    if (chatInput) { 
+
+    if (chatSessionTitle) chatSessionTitle.textContent = 'Ailey & Bailey';
+    if (deleteSessionBtn) deleteSessionBtn.style.display = 'none';
+    if (chatInput) {
         chatInput.disabled = false;
         chatInput.value = '';
         chatInput.placeholder = "Ailey & Bailey에게 질문하기..."
-    } 
-    if (chatSendBtn) chatSendBtn.disabled = false; 
+    }
+    if (chatSendBtn) chatSendBtn.disabled = false;
 }
 
-// Sets up the new unified settings control
+// [NEW] Sets up the new unified settings control
 function setupUnifiedSettingsControl() {
     if (!settingsButton || !settingsPopover) return;
 
@@ -3531,7 +3410,6 @@ function setupUnifiedSettingsControl() {
         settingsPopover.classList.remove('show');
     });
 }
-
 
 /* --- Source: src\05_features_notes\300_notes_data.js --- */
 /*
