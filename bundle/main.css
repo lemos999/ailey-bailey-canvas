@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-10T07:03:44.760Z */
+/* Auto-generated bundle from 2025-08-10T07:36:09.225Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -809,6 +809,13 @@ body.dark-mode .editor-actions .modal-btn.confirm { background-color: var(--h2-c
 
 .session-pin-btn {
     flex-shrink: 0;
+}
+
+/* [NEW] Completed Status Indicator */
+.status-indicator.completed {
+    background-color: #D4B28C; /* Golden color */
+    animation: none; /* No pulse for completed items */
+    box-shadow: 0 0 5px rgba(212, 178, 140, 0.7);
 }
 
 /* --- Source: src_css\006_notes.css --- */
