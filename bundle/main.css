@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-10T18:59:01.350Z */
+/* Auto-generated bundle from 2025-08-10T19:31:17.050Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -370,9 +370,9 @@ body:not(.dark-mode) .panel-header { background-color: #eaddc7; border-bottom: 1
 
 File: style_chat.css
 
-Version: 17.2 (Intelligent DOM Reconciliation)
+Version: 18.0 (Completed State Indicator)
 
-Description: Adds pulsing dot animation styles.
+Description: Added golden pulsing dot animation for completed background responses.
 
 */
 
@@ -789,11 +789,28 @@ body.dark-mode .editor-actions .modal-btn.confirm { background-color: var(--h2-c
     100% { transform: scale(0.8); background-color: #5e97f6; box-shadow: 0 0 0 0 rgba(94, 151, 246, 0); }
 }
 
+/* [NEW] Golden pulse for completed state */
+@keyframes status-pulse-complete {
+    0% { transform: scale(0.8); background-color: #D4B28C; box-shadow: 0 0 0 0 rgba(212, 178, 140, 0.7); }
+    70% { transform: scale(1); background-color: #EADCB5; box-shadow: 0 0 0 10px rgba(212, 178, 140, 0); }
+    100% { transform: scale(0.8); background-color: #D4B28C; box-shadow: 0 0 0 0 rgba(212, 178, 140, 0); }
+}
+
 .status-indicator {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     animation: status-pulse 2s infinite;
+    margin-left: auto;
+    margin-right: 5px;
+    flex-shrink: 0;
+}
+
+.status-indicator-complete {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: status-pulse-complete 2.5s infinite;
     margin-left: auto;
     margin-right: 5px;
     flex-shrink: 0;
