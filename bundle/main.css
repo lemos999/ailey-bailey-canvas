@@ -1,4 +1,4 @@
-/* Auto-generated bundle from 2025-08-09T21:56:34.120Z */
+/* Auto-generated bundle from 2025-08-10T07:03:44.760Z */
 
 /* --- Source: src_css\001_base.css --- */
 /*
@@ -252,6 +252,64 @@ body:not(:dark-mode) #quiz-submit-btn { background-color: var(--h2-color-light);
 /* Prompt Modal */
 #prompt-modal-overlay textarea { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color-dark); background: var(--bg-color-dark); color: var(--text-color-dark); }
 body:not(.dark-mode) #prompt-modal-overlay textarea { border-color: var(--border-color-light); background: var(--bg-color-light); color: var(--text-color-light); }
+
+/* [NEW] Toast Notification Styles */
+@keyframes toast-in { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes toast-out { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 250px;
+    max-width: 350px;
+    border-radius: 8px;
+    padding: 15px 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    animation: toast-in 0.5s forwards;
+}
+
+.toast-notification.exiting {
+    animation: toast-out 0.5s forwards;
+}
+
+body.dark-mode .toast-notification {
+    background-color: var(--container-bg-dark);
+    color: var(--text-color-dark);
+    border: 1px solid var(--border-color-dark);
+}
+
+body:not(.dark-mode) .toast-notification {
+    background-color: var(--container-bg-light);
+    color: var(--text-color-light);
+    border: 1px solid var(--border-color-light);
+}
+
+.toast-icon {
+    font-size: 1.5em;
+    line-height: 0;
+}
+
+.toast-content p {
+    margin: 0;
+    font-weight: bold;
+    font-size: 0.95em;
+}
+
+.toast-content small {
+    margin-top: 4px;
+    display: block;
+    opacity: 0.7;
+    font-size: 0.85em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 /* --- Source: src_css\003_navigation.css --- */
 /*
@@ -723,6 +781,35 @@ body.dark-mode .editor-actions .modal-btn.confirm { background-color: var(--h2-c
 .editor-actions .modal-btn.cancel { background-color: #d9534f; color: white; }
 
 .editor-actions .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* [NEW] Session Status Indicator Styles */
+@keyframes status-pulse {
+    0% { transform: scale(0.8); background-color: #5e97f6; box-shadow: 0 0 0 0 rgba(94, 151, 246, 0.7); }
+    70% { transform: scale(1); background-color: #8bb6f8; box-shadow: 0 0 0 10px rgba(94, 151, 246, 0); }
+    100% { transform: scale(0.8); background-color: #5e97f6; box-shadow: 0 0 0 0 rgba(94, 151, 246, 0); }
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: status-pulse 2s infinite;
+    margin-left: auto;
+    margin-right: 5px;
+    flex-shrink: 0;
+}
+
+.session-item-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    margin-right: 5px;
+}
+
+.session-pin-btn {
+    flex-shrink: 0;
+}
 
 /* --- Source: src_css\006_notes.css --- */
 /*
