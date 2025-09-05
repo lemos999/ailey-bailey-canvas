@@ -1,4 +1,4 @@
-# Ailey & Bailey Canvas - 아키텍처 설계 문서
+# Ailey & Bailey Canvas 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ---
 ## 🇰🇷 한글
