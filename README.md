@@ -47,7 +47,7 @@ Ailey & Bailey Canvas의 초기 아키텍처는 AI가 매번 완전한 HTML, CSS
 ```
 ### 7. 사용법 (Usage)
 이 프로젝트는 Google Gemini와 Canvas 툴을 통해 실행됩니다.
-1.  프롬프트 로드: `prompt.txt` 파일의 내용 전체를 복사합니다.
+1.  프롬프트 로드: `prompt.txt(Ailey & Bailey X_xxxxxx(Stable).txt)` 파일의 내용 전체를 복사합니다.
 2.  Gemini 활성화: [Google Gemini](https://gemini.google.com/)에서 새 채팅을 시작하고, 복사한 프롬프트를 붙여넣습니다. 이는 AI를 'Ailey & Bailey' 모드로 설정합니다.
 3.  Canvas에서 실행: Gemini 인터페이스에서 Google Canvas 툴을 활성화하고, `.cc`와 같은 명령어를 통해 애플리케이션과 상호작용합니다.
 ### 8. 라이선스 (License)
