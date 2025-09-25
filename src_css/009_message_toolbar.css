@@ -1,0 +1,58 @@
+/* --- Ailey & Bailey Canvas --- */
+/* File: 009_message_toolbar.css */
+/* Version: 1.0 (Initial Implementation) */
+/* Description: Styles for the floating action toolbar on chat messages. */
+
+.message-toolbar {
+    position: absolute;
+    top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 10;
+    padding: 6px;
+    border-radius: 8px;
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+body:not(.dark-mode) .message-toolbar { background-color: rgba(247, 243, 233, 0.8); backdrop-filter: blur(4px); border: 1px solid var(--border-color-light); }
+body.dark-mode .message-toolbar { background-color: rgba(30, 30, 30, 0.8); backdrop-filter: blur(4px); border: 1px solid var(--border-color-dark); }
+
+.message-toolbar.user-toolbar { left: -52px; }
+.message-toolbar.ai-toolbar { right: -52px; }
+
+.toolbar-button {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+body:not(.dark-mode) .toolbar-button { background-color: var(--quote-bg-light); color: var(--text-color-light); }
+body.dark-mode .toolbar-button { background-color: var(--quote-bg-dark); color: var(--text-color-dark); }
+
+body:not(.dark-mode) .toolbar-button:hover { background-color: #e6e0d4; }
+body.dark-mode .toolbar-button:hover { background-color: #444; }
+
+.toolbar-button:active { transform: scale(0.9); }
+
+.toolbar-button svg { fill: currentColor; width: 20px; height: 20px; }
+
+/* Parent container needs relative positioning when hovered */
+.ai-response-container.toolbar-active, .chat-message.user.toolbar-active {
+    position: relative;
+}
+
+.ai-response-container.toolbar-active .message-toolbar, .chat-message.user.toolbar-active .message-toolbar {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}

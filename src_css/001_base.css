@@ -1,0 +1,185 @@
+/* --- Ailey & Bailey Canvas --- */
+/* File: 001_base.css */
+/* Version: 12.5 (Header Toggle Support) */
+/* Description: Added styles for smooth content transition when header is toggled. */
+
+:root {
+    --bg-color-light: #FDF8F0; --text-color-light: #4B4237; --container-bg-light: #F7F3E9; --border-color-light: #EAE0D3; --header-color-light: #6D5D4B; --h2-color-light: #8C6D46; --h2-border-light: #B99C7A; --sub-text-color-light: #8C7B6A; --quote-bg-light: #F2EEE5; --strong-bg-light: #EADCB5; --highlight-color: #ffe875; --chat-ai-bg-light: #E9E4DB; --pin-color: #e58a8a; --correct-color: #3e8e41; --incorrect-color: #d9534f;
+    --bg-color-dark: #121212; --text-color-dark: #E0E0E0; --container-bg-dark: #1E1E1E; --border-color-dark: #333333; --header-color-dark: #D4B28C; --h2-color-dark: #B99C7A; --h2-border-dark: #8C6D46; --sub-text-color-dark: #9E9E9E; --quote-bg-dark: #2A2A2A; --strong-bg-dark: #5a4a3a; --chat-ai-bg-dark: #2C2C2C; --correct-color-dark: #66bb6a; --incorrect-color-dark: #ef5350;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: 'Gowun Batang', serif; line-height: 1.8; margin: 0; padding: 20px; box-sizing: border-box; transition: background-color 0.3s, color 0.3s; padding-top: 80px; /* Make space for header */ }
+body.dark-mode { background-color: var(--bg-color-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) { background-color: var(--bg-color-light); color: var(--text-color-light); }
+
+/* --- Immersive Header --- */
+#immersive-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    backdrop-filter: blur(8px);
+    transform: translateY(-100%);
+    transition: transform 0.4s ease-in-out, background-color 0.3s;
+}
+body.header-visible #immersive-header { transform: translateY(0); }
+body.dark-mode #immersive-header { background-color: rgba(18, 18, 18, 0.7); border-bottom: 1px solid var(--border-color-dark); }
+body:not(.dark-mode) #immersive-header { background-color: rgba(253, 248, 240, 0.7); border-bottom: 1px solid var(--border-color-light); }
+.header-group { display: flex; align-items: center; gap: 20px; }
+.header-group.left { flex: 1 1 0; justify-content: flex-start; }
+.header-group.center { flex: 2 1 0; justify-content: center; }
+.header-group.right { flex: 1 1 0; justify-content: flex-end; }
+
+/* [MODIFIED] Brand Logo Styles */
+.brand-logo {
+    font-family: 'Nanum Pen Script', cursive;
+    font-size: 1.7em;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    user-select: none;
+    visibility: hidden; /* FOUT Prevention */
+    opacity: 0; /* FOUT Prevention */
+    transition: opacity 0.5s ease-in-out; /* FOUT Prevention */
+}
+body:not(.dark-mode) .brand-logo { color: var(--header-color-light); }
+body.dark-mode .brand-logo { color: var(--header-color-dark); }
+.brand-logo small {
+    font-size: 0.6em;
+    font-weight: normal;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+body:not(.dark-mode) .brand-logo small { color: var(--sub-text-color-light); }
+body.dark-mode .brand-logo small { color: var(--sub-text-color-dark); }
+
+/* --- Universal Minimalist Scrollbar --- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+body.dark-mode ::-webkit-scrollbar-thumb { background-color: var(--border-color-dark); border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+body.dark-mode ::-webkit-scrollbar-thumb:hover { background-color: var(--sub-text-color-dark); }
+body:not(.dark-mode) ::-webkit-scrollbar-thumb { background-color: var(--sub-text-color-light); border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+body:not(.dark-mode) ::-webkit-scrollbar-thumb:hover { background-color: var(--header-color-light); }
+
+.wrapper { display: flex; justify-content: center; max-width: 1100px; margin: 20px auto; gap: 20px; }
+.container { max-width: 800px; flex-grow: 1; padding: 30px 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.07); }
+.header { text-align: center; padding-bottom: 20px; margin-bottom: 30px; }
+body.dark-mode .header { border-bottom: 2px solid var(--border-color-dark); }
+body:not(.dark-mode) .header { border-bottom: 2px solid var(--border-color-light); }
+.header h1 { font-family: 'Noto Serif KR', serif; font-size: 2.8em; font-weight: 600; margin: 0; }
+body.dark-mode .header h1 { color: var(--header-color-dark); }
+body:not(.dark-mode) .header h1 { color: var(--header-color-light); }
+.header .subtitle { font-size: 1.1em; }
+body.dark-mode .header .subtitle { color: var(--sub-text-color-dark); }
+body:not(.dark-mode) .header .subtitle { color: var(--sub-text-color-light); }
+.content-section { margin-bottom: 35px; padding-top: 20px; }
+.content-section h2 { font-family: 'Noto Serif KR', serif; font-size: 1.8em; padding-left: 15px; margin-bottom: 20px; }
+body.dark-mode .content-section h2 { color: var(--h2-color-dark); border-left: 4px solid var(--h2-border-dark); }
+body:not(.dark-mode) .content-section h2 { color: var(--h2-color-light); border-left: 4px solid var(--h2-border-light); }
+.content-section p { font-size: 1.1em; text-align: justify; margin-bottom: 15px; }
+.content-section ul { list-style-position: inside; padding-left: 5px; }
+.content-section li { margin-bottom: 8px; }
+.content-section p strong { padding: 0px 6px; border-radius: 4px; font-weight: 700; }
+body.dark-mode .content-section p strong { background-color: var(--strong-bg-dark); color: var(--text-color-dark); }
+body:not(.dark-mode) .content-section p strong { background-color: var(--strong-bg-light); color: var(--header-color-light); }
+blockquote { margin: 25px 0; padding: 15px 25px; font-style: italic; }
+body.dark-mode blockquote { background-color: var(--quote-bg-dark); border-left: 3px solid var(--border-color-dark); color: var(--sub-text-color-dark); }
+body:not(.dark-mode) blockquote { background-color: var(--quote-bg-light); border-left: 3px solid var(--border-color-light); color: var(--sub-text-color-light); }
+.keyword-list { padding: 20px; margin: 10px 0; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+body.dark-mode .keyword-list { background-color: var(--quote-bg-dark); }
+body:not(.dark-mode) .keyword-list { background-color: var(--quote-bg-light); }
+.keyword-chip { background-color: #B97F74; color: #FAF7F2; padding: 5px 13px; border-radius: 15px; font-weight: 700; font-size: 1.0em; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+/* [MODIFIED] Highlighted Text Style */
+mark, .text-highlight {
+    background-color: var(--highlight-color);
+    color: #1a1a1a; /* Dark text for better contrast on yellow */
+    padding: 2px 4px;
+    border-radius: 3px;
+    cursor: pointer; /* Indicate it's clickable */
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+mark:hover, .text-highlight:hover {
+    background-color: #ffd900; /* Slightly darker yellow on hover */
+    box-shadow: 0 0 5px rgba(255, 217, 0, 0.7); /* Add a subtle glow */
+}
+
+/* [DEBUGGER] Live Debugger Panel Styles */
+#live-debugger-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 450px;
+    height: 300px;
+    background-color: rgba(0, 0, 0, 0.85);
+    border: 1px solid #555;
+    color: #f0f0f0;
+    border-radius: 10px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    font-family: "D2Coding", "Consolas", monospace;
+    font-size: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+    backdrop-filter: blur(5px);
+}
+#live-debugger-header {
+    padding: 8px 12px;
+    background-color: #333;
+    border-bottom: 1px solid #555;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#live-debugger-header span { color: #ff6b6b; }
+#live-debugger-header button {
+    background: #555;
+    border: 1px solid #777;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+}
+#live-debugger-header button:hover { background: #666; }
+#live-debugger-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
+    line-height: 1.6;
+}
+.trace-log-entry {
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px dotted #444;
+}
+.trace-log-entry:last-child { border-bottom: none; }
+.trace-timestamp { color: #888; margin-right: 8px; }
+.trace-source { font-weight: bold; margin-right: 5px; }
+.trace-source-UI { color: #74b9ff; }
+.trace-source-Firestore { color: #fdcb6e; }
+.trace-source-API { color: #a29bfe; }
+.trace-source-System { color: #55efc4; }
+.trace-eventName { color: #dfe6e9; }
+.trace-context { color: #fab1a0; margin: 0 5px; font-style: italic; }
+.trace-details { color: #b2bec3; }
+.trace-snapshot { background-color: rgba(255, 255, 255, 0.05); padding: 5px; margin-top: 5px; border-radius: 4px; }
+.trace-snapshot-key { color: #00b894; font-weight: bold; }
+.trace-snapshot-value { color: #e17055; }
+.trace-level-WARN { border-left: 2px solid #fdcb6e; padding-left: 8px;}
+.trace-level-ERROR { border-left: 2px solid #d63031; padding-left: 8px; background-color: rgba(214, 48, 49, 0.1); }
+
+/* --- [PATCH] Header Toggle Styles --- */
+body {
+    transition: padding-top 0.4s ease-in-out; /* Smooth transition for content shift */
+}
+body.header-toggled-off {
+    padding-top: 20px !important; /* Override default padding when header is off */
+}
