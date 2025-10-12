@@ -1,201 +1,186 @@
-                                 Apache License
-                           Version 2.0, January 2004
-                        http://www.apache.org/licenses/
+================================================================================
+          포괄적 맞춤형 소프트웨어 라이선스 (Comprehensive Custom Software License)
+================================================================================
 
-   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+저작권 (c) 2025 fewweekslater(Ray You). All rights reserved.
 
-   1. Definitions.
+본 라이선스 계약(이하 "본 계약")은 아래에 정의된 "소프트웨어"의 사용, 복제, 수정, 배포에 관한 법적 권리와 의무를 규정합니다. 귀하가 본 소프트웨어에 접근하거나 이를 사용하는 경우, 본 계약의 모든 조건에 동의하는 것으로 간주됩니다. 만약 본 계약의 조건에 동의하지 않는다면, 귀하는 소프트웨어를 사용할 어떠한 권리도 부여받지 못합니다.
 
-      "License" shall mean the terms and conditions for use, reproduction,
-      and distribution as defined by Sections 1 through 9 of this document.
+---
 
-      "Licensor" shall mean the copyright owner or entity authorized by
-      the copyright owner that is granting the License.
+제 1 장: 총칙
 
-      "Legal Entity" shall mean the union of the acting entity and all
-      other entities that control, are controlled by, or are under common
-      control with that entity. For the purposes of this definition,
-      "control" means (i) the power, direct or indirect, to cause the
-      direction or management of such entity, whether by contract or
-      otherwise, or (ii) ownership of fifty percent (50%) or more of the
-      outstanding shares, or (iii) beneficial ownership of such entity.
+제 1 조 (목적)
+본 계약은 "라이선스 제공자"가 창작한 "소프트웨어"에 대한 지적 재산권을 보호하는 동시에, 공익과 학술 발전을 위한 "비상업적 이용"을 장려하고, "상업적 이용"에 대해서는 명확한 규제와 절차를 확립하는 것을 목적으로 합니다.
 
-      "You" (or "Your") shall mean an individual or Legal Entity
-      exercising permissions granted by this License.
+제 2 조 (용어의 정의)
+본 계약에서 사용되는 용어의 정의는 다음과 같습니다.
+1.  "본 계약": 본 라이선스 문서를 의미합니다.
+2.  "라이선스 제공자": 저작권 소유자인 'fewweekslater(Ray You)'를 지칭합니다.
+3.  "귀하": 본 계약에 따라 권리를 행사하고 의무를 부담하는 개인 또는 법인 실체를 의미합니다.
+4.  "소프트웨어": 본 계약 하에 배포되는 모든 컴퓨터 코드(소스 코드 및 목적 코드 포함), 알고리즘, 데이터 구조, 관련 문서, 그래픽, 이미지, 아이콘, 오디오/비디오 파일 및 기타 모든 저작물을 총칭합니다.
+5.  "소스 코드": 사람이 이해하고 수정할 수 있는 형태의 컴퓨터 프로그램 코드를 의미하며, 관련된 모든 모듈 정의, 인터페이스 정의, 스크립트 등을 포함합니다.
+6.  "파생물": 소프트웨어 또는 그 일부를 기반으로 한 모든 창작물로서, 번역, 수정, 각색, 편곡, 변형 또는 기타 방식으로 원본을 변형하여 새로운 저작물이 식별되는 경우를 의미합니다. 단, 소프트웨어와 단순히 링크되거나 결합된 독립적인 저작물은 파생물로 간주되지 않습니다.
+7.  "기여": 라이선스 제공자에게 의도적으로 제출되어 소프트웨어에 통합된 모든 독창적인 저작물을 의미하며, 코드, 문서, 번역, 버그 수정 등을 포함합니다.
+8.  "기여자": 라이선스 제공자에게 "기여"를 제공한 개인 또는 법인 실체를 의미합니다.
+9.  "비상업적 이용": 주된 목적이 금전적 보상, 상업적 이익 또는 사업적 우위를 목적으로 하지 않는 모든 형태의 이용을 의미합니다. 다음은 비상업적 이용의 명시적 예시입니다.
+    a) 개인적인 학습, 실험 또는 연구
+    b) 학위 과정의 일부로 수행되는 학술 연구 및 교육 활동
+    c) 법적으로 비영리 단체로 등록된 기관의 내부적 또는 공익적 활동
+    d) 금전적 보상을 받지 않는 개인 블로그나 웹사이트에서의 교육적 목적의 사용
+    e) 오픈소스 프로젝트(해당 프로젝트 자체가 상업적 제품이 아닌 경우) 내에서의 사용
+10. "상업적 이용": 소프트웨어의 일부 또는 전부를 사용하여 직간접적으로 금전적 이익이나 상업적 가치를 창출하려는 모든 행위를 의미합니다. 다음은 상업적 이용의 명시적 예시이며, 이에 국한되지 않습니다.
+    a) 소프트웨어를 유료 제품이나 서비스에 포함하여 판매 또는 라이선스하는 행위
+    b) 소프트웨어를 핵심 기능으로 사용하는 서비스를 통해 구독료, 사용료를 부과하는 행위
+    c) 소프트웨어가 실행되는 웹사이트나 애플리케이션에 광고를 게재하여 수익을 창출하는 행위
+    d) 기업의 내부 업무 프로세스, 데이터 분석, 품질 관리 등 영업 활동에 사용하는 행위
+    e) 소프트웨어를 사용하여 컨설팅, 기술 지원 등 유료 서비스를 제공하는 행위
 
-      "Source" form shall mean the preferred form for making modifications,
-      including but not limited to software source code, documentation
-      source, and configuration files.
+---
 
-      "Object" form shall mean any form resulting from mechanical
-      transformation or translation of a Source form, including but
-      not limited to compiled object code, generated documentation,
-      and conversions to other media types.
+제 2 장: 라이선스 허가 및 조건
 
-      "Work" shall mean the work of authorship, whether in Source or
-      Object form, made available under the License, as indicated by a
-      copyright notice that is included in or attached to the work
-      (an example is provided in the Appendix below).
+제 3 조 (비상업적 이용 허가)
+라이선스 제공자는, 귀하가 본 계약 제4조의 모든 조건을 준수하는 것을 전제로, 비상업적 이용에 한하여 다음과 같은 권리를 전 세계적이고, 로열티가 없으며, 비독점적이고, 취소 불가능하게(제7조에 따른 종료 제외) 허가합니다.
+1.  소프트웨어를 어떠한 매체로든 복제할 권리.
+2.  소프트웨어를 수정하고 파생물을 생성할 권리.
+3.  소프트웨어 또는 그 파생물을 공개적으로 전시, 공연 및 배포할 권리.
 
-      "Derivative Works" shall mean any work, whether in Source or Object
-      form, that is based on (or derived from) the Work and for which the
-      editorial revisions, annotations, elaborations, or other modifications
-      represent, as a whole, an original work of authorship. For the purposes
-      of this License, Derivative Works shall not include works that remain
-      separable from, or merely link (or bind by name) to the interfaces of,
-      the Work and Derivative Works thereof.
+제 4 조 (비상업적 이용의 필수 조건)
+귀하는 제3조에 따라 부여된 권리를 행사하기 위해 다음 조건을 반드시 준수해야 합니다.
+1.  저작권 표시 (Attribution): 소프트웨어 또는 그 파생물의 모든 사본에는 다음의 저작권 고지, 본 계약의 전문 또는 이에 대한 하이퍼링크, 그리고 보증 부인 조항을 눈에 띄게 포함해야 합니다: `Copyright (c) 2025 fewweekslater(Ray You)`.
+2.  변경 사항 명시 (Notice of Changes): 귀하가 소프트웨어를 수정한 경우, 수정된 파일 내에 귀하가 변경했다는 사실과 변경 날짜를 명시하는 합리적인 고지를 포함해야 합니다.
+3.  동일 조건 변경 허락 (Share-Alike): 귀하가 소프트웨어의 파생물을 배포하는 경우, 해당 파생물은 반드시 본 계약과 동일하거나 실질적으로 유사한 조건 하에 배포되어야 합니다. 이는 귀하의 파생물이 제5조에 따른 상업적 이용 제한을 포함해야 함을 의미합니다.
 
-      "Contribution" shall mean any work of authorship, including
-      the original version of the Work and any modifications or additions
-      to that Work or Derivative Works thereof, that is intentionally
-      submitted to Licensor for inclusion in the Work by the copyright owner
-      or by an individual or Legal Entity authorized to submit on behalf of
-      the copyright owner. For the purposes of this definition, "submitted"
-      means any form of electronic, verbal, or written communication sent
-      to the Licensor or its representatives, including but not limited to
-      communication on electronic mailing lists, source code control systems,
-      and issue tracking systems that are managed by, or on behalf of, the
-      Licensor for the purpose of discussing and improving the Work, but
-      excluding communication that is conspicuously marked or otherwise
-      designated in writing by the copyright owner as "Not a Contribution."
+---
 
-      "Contributor" shall mean Licensor and any individual or Legal Entity
-      on behalf of whom a Contribution has been received by Licensor and
-      subsequently incorporated within the Work.
+제 3 장: 제한 및 금지 사항
 
-   2. Grant of Copyright License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      copyright license to reproduce, prepare Derivative Works of,
-      publicly display, publicly perform, sublicense, and distribute the
-      Work and such Derivative Works in Source or Object form.
+제 5 조 (상업적 이용의 엄격한 금지)
+본 계약은 어떠한 형태의 상업적 이용 권리도 부여하지 않습니다. 라이선스 제공자의 명시적인 사전 서면 동의 없이는 소프트웨어의 일부 또는 전체를 상업적 목적으로 이용하는 것은 엄격히 금지됩니다.
 
-   3. Grant of Patent License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      (except as stated in this section) patent license to make, have made,
-      use, offer to sell, sell, import, and otherwise transfer the Work,
-      where such license applies only to those patent claims licensable
-      by such Contributor that are necessarily infringed by their
-      Contribution(s) alone or by combination of their Contribution(s)
-      with the Work to which such Contribution(s) was submitted. If You
-      institute patent litigation against any entity (including a
-      cross-claim or counterclaim in a lawsuit) alleging that the Work
-      or a Contribution incorporated within the Work constitutes direct
-      or contributory patent infringement, then any patent licenses
-      granted to You under this License for that Work shall terminate
-      as of the date such litigation is filed.
+제 6 조 (상업적 라이선스 취득)
+소프트웨어를 상업적 목적으로 이용하고자 하는 개인 또는 법인은 반드시 라이선스 제공자와 별도의 상업적 라이선스 계약을 체결해야 합니다. 상업적 라이선스에 대한 문의는 아래 연락처로 해야 합니다.
+- 이메일: lemoaxtoria@gmail.com
+- GitHub: https://github.com/lemos999
 
-   4. Redistribution. You may reproduce and distribute copies of the
-      Work or Derivative Works thereof in any medium, with or without
-      modifications, and in Source or Object form, provided that You
-      meet the following conditions:
+---
 
-      (a) You must give any other recipients of the Work or
-          Derivative Works a copy of this License; and
+제 4 장: 기타 조항
 
-      (b) You must cause any modified files to carry prominent notices
-          stating that You changed the files; and
+제 7 조 (계약의 종료)
+1.  귀하가 본 계약의 조항 중 하나라도 위반하는 경우, 본 계약에 의해 부여된 모든 권리는 추가 통지 없이 즉시 자동으로 종료됩니다.
+2.  계약이 종료된 후에도 제8조(보증의 부인), 제9조(책임의 제한), 제11조(준거법 및 관할)의 효력은 영구히 유지됩니다.
 
-      (c) You must retain, in the Source form of any Derivative Works
-          that You distribute, all copyright, patent, trademark, and
-          attribution notices from the Source form of the Work,
-          excluding those notices that do not pertain to any part of
-          the Derivative Works; and
+제 8 조 (보증의 부인)
+소프트웨어는 "있는 그대로(AS IS)"의 상태로 제공됩니다. 관련 법률이 허용하는 최대 한도 내에서, 라이선스 제공자는 상품성, 특정 목적에의 적합성, 비침해성에 대한 묵시적 보증을 포함하되 이에 국한되지 않는 모든 종류의 명시적 또는 묵시적 보증을 부인합니다. 라이선스 제공자는 소프트웨어에 오류가 없거나, 중단 없이 작동하거나, 귀하의 요구 사항을 충족할 것이라고 보증하지 않습니다.
 
-      (d) If the Work includes a "NOTICE" text file as part of its
-          distribution, then any Derivative Works that You distribute must
-          include a readable copy of the attribution notices contained
-          within such NOTICE file, excluding those notices that do not
-          pertain to any part of the Derivative Works, in at least one
-          of the following places: within a NOTICE text file distributed
-          as part of the Derivative Works; within the Source form or
-          documentation, if provided along with the Derivative Works; or,
-          within a display generated by the Derivative Works, if and
-          wherever such third-party notices normally appear. The contents
-          of the NOTICE file are for informational purposes only and
-          do not modify the License. You may add Your own attribution
-          notices within Derivative Works that You distribute, alongside
-          or as an addendum to the NOTICE text from the Work, provided
-          that such additional attribution notices cannot be construed
-          as modifying the License.
+제 9 조 (책임의 제한)
+어떠한 경우에도, 그리고 어떠한 법률 이론(계약, 불법 행위, 과실 등)에 근거해서도, 라이선스 제공자 또는 기여자는 소프트웨어 또는 그 사용으로 인해 발생하는 모든 종류의 직접적, 간접적, 부수적, 특별, 징벌적 또는 결과적 손해에 대해 책임을 지지 않습니다. 이는 이익 손실, 영업권 손실, 업무 중단, 컴퓨터 고장 또는 오작동, 또는 기타 모든 상업적 손해나 손실을 포함하며, 라이선스 제공자가 그러한 손해의 가능성을 사전에 통보받은 경우에도 마찬가지입니다.
 
-      You may add Your own copyright statement to Your modifications and
-      may provide additional or different license terms and conditions
-      for use, reproduction, or distribution of Your modifications, or
-      for any such Derivative Works as a whole, provided Your use,
-      reproduction, and distribution of the Work otherwise complies with
-      the conditions stated in this License.
+제 10 조 (기여)
+귀하가 라이선스 제공자에게 의도적으로 "기여"를 제출하는 경우, 해당 기여는 본 계약의 조건 하에 추가적인 조건 없이 라이선스됩니다. 단, 귀하는 제출하는 기여가 귀하의 독창적인 창작물이며 제3자의 권리를 침해하지 않음을 보증해야 합니다.
 
-   5. Submission of Contributions. Unless You explicitly state otherwise,
-      any Contribution intentionally submitted for inclusion in the Work
-      by You to the Licensor shall be under the terms and conditions of
-      this License, without any additional terms or conditions.
-      Notwithstanding the above, nothing herein shall supersede or modify
-      the terms of any separate license agreement you may have executed
-      with Licensor regarding such Contributions.
+제 11 조 (준거법 및 관할)
+본 계약은 대한민국 법률에 따라 규율되고 해석됩니다. 본 계약과 관련하여 발생하는 모든 분쟁은 대한민국 서울중앙지방법원을 제1심 전속 관할 법원으로 합니다.
 
-   6. Trademarks. This License does not grant permission to use the trade
-      names, trademarks, service marks, or product names of the Licensor,
-      except as required for reasonable and customary use in describing the
-      origin of the Work and reproducing the content of the NOTICE file.
+제 12 조 (분리 가능성)
+만약 관할 법원이 본 계약의 특정 조항이 무효이거나 시행 불가능하다고 판단하더라도, 나머지 조항들은 완전한 효력을 유지합니다.
 
-   7. Disclaimer of Warranty. Unless required by applicable law or
-      agreed to in writing, Licensor provides the Work (and each
-      Contributor provides its Contributions) on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-      implied, including, without limitation, any warranties or conditions
-      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
-      PARTICULAR PURPOSE. You are solely responsible for determining the
-      appropriateness of using or redistributing the Work and assume any
-      risks associated with Your exercise of permissions under this License.
+제 13 조 (완전 합의)
+본 계약은 소프트웨어의 사용에 관한 라이선스 제공자와 귀하 간의 완전하고 유일한 합의를 구성하며, 이전의 모든 구두 또는 서면 합의, 의사소통을 대체합니다.
 
-   8. Limitation of Liability. In no event and under no legal theory,
-      whether in tort (including negligence), contract, or otherwise,
-      unless required by applicable law (such as deliberate and grossly
-      negligent acts) or agreed to in writing, shall any Contributor be
-      liable to You for damages, including any direct, indirect, special,
-      incidental, or consequential damages of any character arising as a
-      result of this License or out of the use or inability to use the
-      Work (including but not limited to damages for loss of goodwill,
-      work stoppage, computer failure or malfunction, or any and all
-      other commercial damages or losses), even if such Contributor
-      has been advised of the possibility of such damages.
+================================================================================
+          Comprehensive Custom Software License Agreement
+================================================================================
 
-   9. Accepting Warranty or Additional Liability. While redistributing
-      the Work or Derivative Works thereof, You may choose to offer,
-      and charge a fee for, acceptance of support, warranty, indemnity,
-      or other liability obligations and/or rights consistent with this
-      License. However, in accepting such obligations, You may act only
-      on Your own behalf and on Your sole responsibility, not on behalf
-      of any other Contributor, and only if You agree to indemnify,
-      defend, and hold each Contributor harmless for any liability
-      incurred by, or claims asserted against, such Contributor by reason
-      of your accepting any such warranty or additional liability.
+Copyright (c) 2025 fewweekslater(Ray You). All rights reserved.
 
-   END OF TERMS AND CONDITIONS
+This Comprehensive Custom Software License Agreement (the "Agreement") governs the use, reproduction, modification, and distribution of the software defined herein (the "Software"). By accessing, installing, or using the Software, you ("You") agree to be bound by all terms and conditions of this Agreement. If You do not agree to these terms, You are not granted any rights to use the Software.
 
-   APPENDIX: How to apply the Apache License to your work.
+---
 
-      To apply the Apache License to your work, attach the following
-      boilerplate notice, with the fields enclosed by brackets "[]"
-      replaced with your own identifying information. (Don't include
-      the brackets!)  The text should be enclosed in the appropriate
-      comment syntax for the file format. We also recommend that a
-      file or class name and description of purpose be included on the
-      same "printed page" as the copyright notice for easier
-      identification within third-party archives.
+Article 1: General Provisions
 
-   Copyright [2025] [fewweekslater(lemos999) of copyright owner]
+Section 1.1 (Purpose)
+The purpose of this Agreement is to protect the intellectual property rights of the Licensor in the Software, while simultaneously encouraging its use for non-commercial purposes that benefit the public good and academic advancement, and to establish clear regulations and procedures for any Commercial Use.
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+Section 1.2 (Definitions)
+For the purposes of this Agreement, the following terms shall have the meanings set forth below:
+1.  "Agreement": Refers to this license document.
+2.  "Licensor": Refers to the copyright holder, 'fewweekslater(Ray You)'.
+3.  "You" (or "Your"): Refers to an individual or a legal entity exercising permissions granted by and complying with all the terms of this Agreement.
+4.  "Software": Refers to all computer code (including source code and object code), algorithms, data structures, associated documentation, graphics, images, icons, audio/visual files, and any other copyrightable material distributed under this Agreement.
+5.  "Source Code": Refers to the human-readable form of the computer program code, including all module definitions, interface definitions, and scripts used to control compilation and installation.
+6.  "Derivative Work": Refers to any work based upon the Software or any part thereof, such as a translation, modification, adaptation, arrangement, or any other form in which the Software may be recast, transformed, or adapted, and which constitutes a new original work.
+7.  "Contribution": Refers to any original work of authorship, including any modifications or additions to the Software, that is intentionally submitted to the Licensor for inclusion in the Software by the copyright owner or by an individual or legal entity authorized to submit on behalf of the copyright owner.
+8.  "Contributor": Refers to any individual or legal entity that provides a Contribution to the Licensor.
+9.  "Non-Commercial Use": Means any use that is not primarily intended for or directed toward commercial advantage or monetary compensation. Explicit examples of Non-Commercial Use include:
+    a) Personal learning, experimentation, or research.
+    b) Academic research and educational activities as part of a degree-granting program.
+    c) Internal or public-benefit activities of a legally registered non-profit organization.
+    d) Use on a personal blog or website for educational purposes without receiving monetary compensation.
+    e) Use within an open-source project, provided the project itself is not a commercial product.
+10. "Commercial Use": Means any use of the Software, in whole or in part, intended to directly or indirectly generate monetary gain or commercial value. Explicit examples of Commercial Use include, but are not limited to:
+    a) Incorporating the Software into a product or service that is sold, licensed, or rented for a fee.
+    b) Charging subscription or usage fees for a service that relies on the Software as a core component.
+    c) Generating revenue through advertising on a website or application where the Software is executed.
+    d) Using the Software for internal business operations, data analysis, or quality control within a for-profit corporation.
+    e) Providing paid services, such as consulting or technical support, that leverage the Software.
 
-       http://www.apache.org/licenses/LICENSE-2.0
+---
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+Article 2: License Grant and Conditions
+
+Section 2.1 (Grant of Non-Commercial License)
+Subject to Your strict compliance with the conditions set forth in Section 2.2 of this Agreement, the Licensor hereby grants You a worldwide, royalty-free, non-exclusive, perpetual, and irrevocable (except as provided in Article 4) license for Non-Commercial Use to:
+1.  Reproduce the Software in any medium.
+2.  Modify the Software and create Derivative Works.
+3.  Publicly display, perform, and distribute the Software and any Derivative Works thereof.
+
+Section 2.2 (Mandatory Conditions for Non-Commercial Use)
+The exercise of the rights granted in Section 2.1 is expressly subject to the following conditions:
+1.  Attribution: You must conspicuously include the following copyright notice, a copy of (or hyperlink to) this Agreement, and the disclaimer of warranties in all copies or substantial portions of the Software or Derivative Works: `Copyright (c) 2025 fewweekslater(Ray You)`.
+2.  Notice of Changes: If You modify the Software, You must include a reasonable notice in the modified files stating that You have changed the files and the date of any change.
+3.  Share-Alike: If You distribute a Derivative Work of the Software, You must license the entire Derivative Work under the same or a substantially similar set of terms and conditions as this Agreement. This explicitly means that Your Derivative Work must also be restricted from Commercial Use as defined in Section 1.2(10).
+
+---
+
+Article 3: Restrictions and Prohibitions
+
+Section 3.1 (Strict Prohibition of Commercial Use)
+This Agreement does not grant any right for Commercial Use. Any Commercial Use of the Software, in whole or in part, is strictly prohibited without the express prior written consent of the Licensor.
+
+Section 3.2 (Obtaining a Commercial License)
+Any individual or entity wishing to use the Software for Commercial Use must negotiate and execute a separate commercial license agreement with the Licensor. Inquiries regarding a commercial license should be directed to:
+- Email: lemoaxtoria@gmail.com
+- GitHub: https://github.com/lemos999
+
+---
+
+Article 4: Miscellaneous Provisions
+
+Section 4.1 (Termination)
+1.  Your rights under this Agreement shall terminate automatically and without notice if You breach any of its terms.
+2.  The provisions of Articles 4.2 (Disclaimer of Warranty), 4.3 (Limitation of Liability), and 4.5 (Governing Law and Jurisdiction) shall survive the termination of this Agreement for any reason.
+
+Section 4.2 (Disclaimer of Warranty)
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE, THAT ITS OPERATION WILL BE UNINTERRUPTED, OR THAT IT WILL MEET YOUR REQUIREMENTS. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH YOU.
+
+Section 4.3 (Limitation of Liability)
+IN NO EVENT AND UNDER NO LEGAL THEORY, WHETHER IN TORT (INCLUDING NEGLIGENCE), CONTRACT, OR OTHERWISE, UNLESS REQUIRED BY APPLICABLE LAW, SHALL THE LICENSOR OR ANY CONTRIBUTOR BE LIABLE TO YOU FOR DAMAGES OF ANY KIND, INCLUDING ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES, ARISING OUT OF THE USE OR INABILITY TO USE THE SOFTWARE. THIS INCLUDES, WITHOUT LIMITATION, DAMAGES FOR LOST PROFITS, LOSS OF GOODWILL, WORK STOPPAGE, COMPUTER FAILURE OR MALFUNCTION, OR ANY AND ALL OTHER COMMERCIAL DAMAGES OR LOSSES, EVEN IF SUCH PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+Section 4.4 (Contributions)
+If You intentionally submit a Contribution for inclusion in the Software, it shall be licensed under the terms of this Agreement without any additional terms or conditions. You hereby represent and warrant that You have the legal right to grant this license for Your Contribution.
+
+Section 4.5 (Governing Law and Jurisdiction)
+This Agreement shall be governed by and construed in accordance with the laws of the Republic of Korea, without regard to its conflict of law principles. Any dispute, controversy, or claim arising out of or relating to this Agreement shall be subject to the exclusive jurisdiction of the Seoul Central District Court in the Republic of Korea.
+
+Section 4.6 (Severability)
+If any provision of this Agreement is held to be invalid or unenforceable by a court of competent jurisdiction, the remaining provisions shall remain in full force and effect.
+
+Section 4.7 (Entire Agreement)
+This Agreement constitutes the entire and sole agreement between the Licensor and You with respect to the Software and supersedes all prior or contemporaneous understandings, communications, or agreements, whether oral or written.
+
+---
+[End of Document]
