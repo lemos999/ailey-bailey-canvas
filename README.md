@@ -1,5 +1,4 @@
 ### 1. Abstract
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 This document records the architectural design process for the Ailey & Bailey Canvas system, where a Gemini language model dynamically generates web applications within the Google Canvas environment. To resolve response delays found in the initial version, we adopted a "Dependency Internalization and Dynamic Injection" architecture. This approach removes all external CDN dependencies, bundling required libraries into a single JavaScript file. This was a structural solution to secure stable performance within the unique constraints of the Google Canvas environment, such as its security policies (CSP) and network limitations. This document aims to record the design background and technical decision-making process behind this architecture.
 
@@ -48,7 +47,6 @@ The "Dependency Internalization and Dynamic Injection" architecture established 
 
 
 # Ailey & Bailey Canvas 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ---
 ## 🇰🇷 한글
 ### 1. 개요 (Abstract)
@@ -100,7 +98,7 @@ Ailey & Bailey Canvas의 초기 아키텍처는 AI가 매번 완전한 HTML, CSS
 2.  Gemini 활성화: [Google Gemini](https://gemini.google.com/)에서 새 채팅을 시작하고, 복사한 프롬프트를 붙여넣습니다. 이는 AI를 'Ailey & Bailey' 모드로 설정합니다.
 3.  Canvas에서 실행: Gemini 인터페이스에서 Google Canvas 툴을 활성화하고, `.cc`와 같은 명령어를 통해 애플리케이션과 상호작용합니다.
 ### 8. 라이선스 (License)
-이 프로젝트는 Apache License 2.0에 따라 라이선스가 부여됩니다. 자세한 내용은 `LICENSE` 파일을 참고하십시오.
+자세한 내용은 `LICENSE` 파일을 참고하십시오.
 
 ---
 
