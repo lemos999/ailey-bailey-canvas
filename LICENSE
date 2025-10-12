@@ -1,185 +1,243 @@
-================================================================================
-         소프트웨어 라이선스 (Software License Agreement)
-================================================================================
-
-저작권 (c) 2025 fewweekslater(Ray You). All rights reserved.
-
-본 라이선스 계약(이하 "본 계약")은 아래에 정의된 "소프트웨어"의 사용, 복제, 수정, 배포에 관한 법적 권리와 의무를 규정합니다. 귀하가 본 소프트웨어에 접근하거나 이를 사용하는 경우, 본 계약의 모든 조건에 동의하는 것으로 간주됩니다. 만약 본 계약의 조건에 동의하지 않는다면, 귀하는 소프트웨어를 사용할 어떠한 권리도 부여받지 못합니다.
-
----
-
-제 1 장: 총칙
-
-제 1 조 (목적)
-본 계약은 "라이선스 제공자"가 창작한 "소프트웨어"에 대한 지적 재산권을 보호하는 동시에, 공익과 학술 발전을 위한 "비상업적 이용"을 장려하고, "상업적 이용"에 대해서는 명확한 규제와 절차를 확립하는 것을 목적으로 합니다.
-
-제 2 조 (용어의 정의)
-본 계약에서 사용되는 용어의 정의는 다음과 같습니다.
-1.  "본 계약": 본 라이선스 문서를 의미합니다.
-2.  "라이선스 제공자": 저작권 소유자인 'fewweekslater(Ray You)'를 지칭합니다.
-3.  "귀하": 본 계약에 따라 권리를 행사하고 의무를 부담하는 개인 또는 법인 실체를 의미합니다.
-4.  "소프트웨어": 본 계약 하에 배포되는 모든 컴퓨터 코드(소스 코드 및 목적 코드 포함), 알고리즘, 데이터 구조, 관련 문서, 그래픽, 이미지, 아이콘, 오디오/비디오 파일 및 기타 모든 저작물을 총칭합니다.
-5.  "소스 코드": 사람이 이해하고 수정할 수 있는 형태의 컴퓨터 프로그램 코드를 의미하며, 관련된 모든 모듈 정의, 인터페이스 정의, 스크립트 등을 포함합니다.
-6.  "파생물": 소프트웨어 또는 그 일부를 기반으로 한 모든 창작물로서, 번역, 수정, 각색, 편곡, 변형 또는 기타 방식으로 원본을 변형하여 새로운 저작물이 식별되는 경우를 의미합니다. 단, 소프트웨어와 단순히 링크되거나 결합된 독립적인 저작물은 파생물로 간주되지 않습니다.
-7.  "기여": 라이선스 제공자에게 의도적으로 제출되어 소프트웨어에 통합된 모든 독창적인 저작물을 의미하며, 코드, 문서, 번역, 버그 수정 등을 포함합니다.
-8.  "기여자": 라이선스 제공자에게 "기여"를 제공한 개인 또는 법인 실체를 의미합니다.
-9.  "비상업적 이용": 주된 목적이 금전적 보상, 상업적 이익 또는 사업적 우위를 목적으로 하지 않는 모든 형태의 이용을 의미합니다. 다음은 비상업적 이용의 명시적 예시입니다.
-    a) 개인적인 학습, 실험 또는 연구
-    b) 학위 과정의 일부로 수행되는 학술 연구 및 교육 활동
-    c) 법적으로 비영리 단체로 등록된 기관의 내부적 또는 공익적 활동
-    d) 금전적 보상을 받지 않는 개인 블로그나 웹사이트에서의 교육적 목적의 사용
-    e) 오픈소스 프로젝트(해당 프로젝트 자체가 상업적 제품이 아닌 경우) 내에서의 사용
-10. "상업적 이용": 소프트웨어의 일부 또는 전부를 사용하여 직간접적으로 금전적 이익이나 상업적 가치를 창출하려는 모든 행위를 의미합니다. 다음은 상업적 이용의 명시적 예시이며, 이에 국한되지 않습니다.
-    a) 소프트웨어를 유료 제품이나 서비스에 포함하여 판매 또는 라이선스하는 행위
-    b) 소프트웨어를 핵심 기능으로 사용하는 서비스를 통해 구독료, 사용료를 부과하는 행위
-    c) 소프트웨어가 실행되는 웹사이트나 애플리케이션에 광고를 게재하여 수익을 창출하는 행위
-    d) 기업의 내부 업무 프로세스, 데이터 분석, 품질 관리 등 영업 활동에 사용하는 행위
-    e) 소프트웨어를 사용하여 컨설팅, 기술 지원 등 유료 서비스를 제공하는 행위
-
----
-
-제 2 장: 라이선스 허가 및 조건
-
-제 3 조 (비상업적 이용 허가)
-라이선스 제공자는, 귀하가 본 계약 제4조의 모든 조건을 준수하는 것을 전제로, 비상업적 이용에 한하여 다음과 같은 권리를 전 세계적이고, 로열티가 없으며, 비독점적이고, 취소 불가능하게(제7조에 따른 종료 제외) 허가합니다.
-1.  소프트웨어를 어떠한 매체로든 복제할 권리.
-2.  소프트웨어를 수정하고 파생물을 생성할 권리.
-3.  소프트웨어 또는 그 파생물을 공개적으로 전시, 공연 및 배포할 권리.
-
-제 4 조 (비상업적 이용의 필수 조건)
-귀하는 제3조에 따라 부여된 권리를 행사하기 위해 다음 조건을 반드시 준수해야 합니다.
-1.  저작권 표시 (Attribution): 소프트웨어 또는 그 파생물의 모든 사본에는 다음의 저작권 고지, 본 계약의 전문 또는 이에 대한 하이퍼링크, 그리고 보증 부인 조항을 눈에 띄게 포함해야 합니다: `Copyright (c) 2025 fewweekslater(Ray You)`.
-2.  변경 사항 명시 (Notice of Changes): 귀하가 소프트웨어를 수정한 경우, 수정된 파일 내에 귀하가 변경했다는 사실과 변경 날짜를 명시하는 합리적인 고지를 포함해야 합니다.
-3.  동일 조건 변경 허락 (Share-Alike): 귀하가 소프트웨어의 파생물을 배포하는 경우, 해당 파생물은 반드시 본 계약과 동일하거나 실질적으로 유사한 조건 하에 배포되어야 합니다. 이는 귀하의 파생물이 제5조에 따른 상업적 이용 제한을 포함해야 함을 의미합니다.
-
----
-
-제 3 장: 제한 및 금지 사항
-
-제 5 조 (상업적 이용의 엄격한 금지)
-본 계약은 어떠한 형태의 상업적 이용 권리도 부여하지 않습니다. 라이선스 제공자의 명시적인 사전 서면 동의 없이는 소프트웨어의 일부 또는 전체를 상업적 목적으로 이용하는 것은 엄격히 금지됩니다.
-
-제 6 조 (상업적 라이선스 취득)
-소프트웨어를 상업적 목적으로 이용하고자 하는 개인 또는 법인은 반드시 라이선스 제공자와 별도의 상업적 라이선스 계약을 체결해야 합니다. 상업적 라이선스에 대한 문의는 아래 연락처로 해야 합니다.
-- 이메일: lemoaxtoria@gmail.com
-- GitHub: https://github.com/lemos999
-
----
-
-제 4 장: 기타 조항
-
-제 7 조 (계약의 종료)
-1.  귀하가 본 계약의 조항 중 하나라도 위반하는 경우, 본 계약에 의해 부여된 모든 권리는 추가 통지 없이 즉시 자동으로 종료됩니다.
-2.  계약이 종료된 후에도 제8조(보증의 부인), 제9조(책임의 제한), 제11조(준거법 및 관할)의 효력은 영구히 유지됩니다.
-
-제 8 조 (보증의 부인)
-소프트웨어는 "있는 그대로(AS IS)"의 상태로 제공됩니다. 관련 법률이 허용하는 최대 한도 내에서, 라이선스 제공자는 상품성, 특정 목적에의 적합성, 비침해성에 대한 묵시적 보증을 포함하되 이에 국한되지 않는 모든 종류의 명시적 또는 묵시적 보증을 부인합니다. 라이선스 제공자는 소프트웨어에 오류가 없거나, 중단 없이 작동하거나, 귀하의 요구 사항을 충족할 것이라고 보증하지 않습니다.
-
-제 9 조 (책임의 제한)
-어떠한 경우에도, 그리고 어떠한 법률 이론(계약, 불법 행위, 과실 등)에 근거해서도, 라이선스 제공자 또는 기여자는 소프트웨어 또는 그 사용으로 인해 발생하는 모든 종류의 직접적, 간접적, 부수적, 특별, 징벌적 또는 결과적 손해에 대해 책임을 지지 않습니다. 이는 이익 손실, 영업권 손실, 업무 중단, 컴퓨터 고장 또는 오작동, 또는 기타 모든 상업적 손해나 손실을 포함하며, 라이선스 제공자가 그러한 손해의 가능성을 사전에 통보받은 경우에도 마찬가지입니다.
-
-제 10 조 (기여)
-귀하가 라이선스 제공자에게 의도적으로 "기여"를 제출하는 경우, 해당 기여는 본 계약의 조건 하에 추가적인 조건 없이 라이선스됩니다. 단, 귀하는 제출하는 기여가 귀하의 독창적인 창작물이며 제3자의 권리를 침해하지 않음을 보증해야 합니다.
-
-제 11 조 (준거법 및 관할)
-본 계약은 대한민국 법률에 따라 규율되고 해석됩니다. 본 계약과 관련하여 발생하는 모든 분쟁은 대한민국 서울중앙지방법원을 제1심 전속 관할 법원으로 합니다.
-
-제 12 조 (분리 가능성)
-만약 관할 법원이 본 계약의 특정 조항이 무효이거나 시행 불가능하다고 판단하더라도, 나머지 조항들은 완전한 효력을 유지합니다.
-
-제 13 조 (완전 합의)
-본 계약은 소프트웨어의 사용에 관한 라이선스 제공자와 귀하 간의 완전하고 유일한 합의를 구성하며, 이전의 모든 구두 또는 서면 합의, 의사소통을 대체합니다.
-
-================================================================================
-          Comprehensive Custom Software License Agreement
-================================================================================
-
+저작권 및 라이선스 고지 (Copyright and License Notice)
 Copyright (c) 2025 fewweekslater(Ray You). All rights reserved.
 
-This Comprehensive Custom Software License Agreement (the "Agreement") governs the use, reproduction, modification, and distribution of the software defined herein (the "Software"). By accessing, installing, or using the Software, you ("You") agree to be bound by all terms and conditions of this Agreement. If You do not agree to these terms, You are not granted any rights to use the Software.
+This work (including the software and associated files) is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).
 
----
+The full legal code of the license is available below. A human-readable summary is available at Creative Commons.
 
-Article 1: General Provisions
+For commercial use, a separate license agreement is required. Please contact the author for inquiries:
 
-Section 1.1 (Purpose)
-The purpose of this Agreement is to protect the intellectual property rights of the Licensor in the Software, while simultaneously encouraging its use for non-commercial purposes that benefit the public good and academic advancement, and to establish clear regulations and procedures for any Commercial Use.
+GitHub: https://github.com/lemos999
 
-Section 1.2 (Definitions)
-For the purposes of this Agreement, the following terms shall have the meanings set forth below:
-1.  "Agreement": Refers to this license document.
-2.  "Licensor": Refers to the copyright holder, 'fewweekslater(Ray You)'.
-3.  "You" (or "Your"): Refers to an individual or a legal entity exercising permissions granted by and complying with all the terms of this Agreement.
-4.  "Software": Refers to all computer code (including source code and object code), algorithms, data structures, associated documentation, graphics, images, icons, audio/visual files, and any other copyrightable material distributed under this Agreement.
-5.  "Source Code": Refers to the human-readable form of the computer program code, including all module definitions, interface definitions, and scripts used to control compilation and installation.
-6.  "Derivative Work": Refers to any work based upon the Software or any part thereof, such as a translation, modification, adaptation, arrangement, or any other form in which the Software may be recast, transformed, or adapted, and which constitutes a new original work.
-7.  "Contribution": Refers to any original work of authorship, including any modifications or additions to the Software, that is intentionally submitted to the Licensor for inclusion in the Software by the copyright owner or by an individual or legal entity authorized to submit on behalf of the copyright owner.
-8.  "Contributor": Refers to any individual or legal entity that provides a Contribution to the Licensor.
-9.  "Non-Commercial Use": Means any use that is not primarily intended for or directed toward commercial advantage or monetary compensation. Explicit examples of Non-Commercial Use include:
-    a) Personal learning, experimentation, or research.
-    b) Academic research and educational activities as part of a degree-granting program.
-    c) Internal or public-benefit activities of a legally registered non-profit organization.
-    d) Use on a personal blog or website for educational purposes without receiving monetary compensation.
-    e) Use within an open-source project, provided the project itself is not a commercial product.
-10. "Commercial Use": Means any use of the Software, in whole or in part, intended to directly or indirectly generate monetary gain or commercial value. Explicit examples of Commercial Use include, but are not limited to:
-    a) Incorporating the Software into a product or service that is sold, licensed, or rented for a fee.
-    b) Charging subscription or usage fees for a service that relies on the Software as a core component.
-    c) Generating revenue through advertising on a website or application where the Software is executed.
-    d) Using the Software for internal business operations, data analysis, or quality control within a for-profit corporation.
-    e) Providing paid services, such as consulting or technical support, that leverage the Software.
+Email: lemoaxtoria@gmail.com
 
----
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License
+By exercising the Licensed Rights (defined below), You accept and agree to be bound by the terms and conditions of this Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License ("Public License"). To the extent this Public License may be interpreted as a contract, You are granted the Licensed Rights in consideration of Your acceptance of these terms and conditions, and the Licensor grants You such rights in consideration of benefits the Licensor receives from making the Licensed Material available under these terms and conditions.
 
-Article 2: License Grant and Conditions
+Section 1 – Definitions.
 
-Section 2.1 (Grant of Non-Commercial License)
-Subject to Your strict compliance with the conditions set forth in Section 2.2 of this Agreement, the Licensor hereby grants You a worldwide, royalty-free, non-exclusive, perpetual, and irrevocable (except as provided in Article 4) license for Non-Commercial Use to:
-1.  Reproduce the Software in any medium.
-2.  Modify the Software and create Derivative Works.
-3.  Publicly display, perform, and distribute the Software and any Derivative Works thereof.
+a. Adapted Material means material subject to Copyright and Similar Rights that is derived from or based upon the Licensed Material and in which the Licensed Material is translated, altered, arranged, transformed, or otherwise modified in a manner requiring permission under the Copyright and Similar Rights held by the Licensor. For purposes of this Public License, where the Licensed Material is a musical work, performance, or sound recording, Adapted Material is always produced where the Licensed Material is synched in timed relation with a moving image.
 
-Section 2.2 (Mandatory Conditions for Non-Commercial Use)
-The exercise of the rights granted in Section 2.1 is expressly subject to the following conditions:
-1.  Attribution: You must conspicuously include the following copyright notice, a copy of (or hyperlink to) this Agreement, and the disclaimer of warranties in all copies or substantial portions of the Software or Derivative Works: `Copyright (c) 2025 fewweekslater(Ray You)`.
-2.  Notice of Changes: If You modify the Software, You must include a reasonable notice in the modified files stating that You have changed the files and the date of any change.
-3.  Share-Alike: If You distribute a Derivative Work of the Software, You must license the entire Derivative Work under the same or a substantially similar set of terms and conditions as this Agreement. This explicitly means that Your Derivative Work must also be restricted from Commercial Use as defined in Section 1.2(10).
+b. Adapter's License means the license You apply to Your Copyright and Similar Rights in Your contributions to Adapted Material in accordance with the terms and conditions of this Public License.
 
----
+c. BY-NC-SA Compatible License means a license listed at creativecommons.org/compatiblelicenses, approved by Creative Commons as essentially equivalent to this Public License.
 
-Article 3: Restrictions and Prohibitions
+d. Copyright and Similar Rights means copyright and/or similar rights closely related to copyright including, without limitation, performance, broadcast, sound recording, and Sui Generis Database Rights, without regard to how the rights are labeled or categorized. For purposes of this Public License, the rights specified in Section 2(b)(1)-(2) are not Copyright and Similar Rights.
 
-Section 3.1 (Strict Prohibition of Commercial Use)
-This Agreement does not grant any right for Commercial Use. Any Commercial Use of the Software, in whole or in part, is strictly prohibited without the express prior written consent of the Licensor.
+e. Effective Technological Measures means those measures that, in the absence of proper authority, may not be circumvented under laws fulfilling obligations under Article 11 of the WIPO Copyright Treaty adopted on December 20, 1996, and/or similar international agreements.
 
-Section 3.2 (Obtaining a Commercial License)
-Any individual or entity wishing to use the Software for Commercial Use must negotiate and execute a separate commercial license agreement with the Licensor. Inquiries regarding a commercial license should be directed to:
-- Email: lemoaxtoria@gmail.com
-- GitHub: https://github.com/lemos999
+f. Exceptions and Limitations means fair use, fair dealing, and/or any other exception or limitation to Copyright and Similar Rights that applies to Your use of the Licensed Material.
 
----
+g. Licensed Material means the artistic or literary work, database, or other material to which the Licensor applied this Public License.
 
-Article 4: Miscellaneous Provisions
+h. Licensed Rights means the rights granted to You subject to the terms and conditions of this Public License, which are limited to all Copyright and Similar Rights that apply to Your use of the Licensed Material and that the Licensor has authority to license.
 
-Section 4.1 (Termination)
-1.  Your rights under this Agreement shall terminate automatically and without notice if You breach any of its terms.
-2.  The provisions of Articles 4.2 (Disclaimer of Warranty), 4.3 (Limitation of Liability), and 4.5 (Governing Law and Jurisdiction) shall survive the termination of this Agreement for any reason.
+i. Licensor means the individual(s) or entity(ies) granting rights under this Public License.
 
-Section 4.2 (Disclaimer of Warranty)
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE, THAT ITS OPERATION WILL BE UNINTERRUPTED, OR THAT IT WILL MEET YOUR REQUIREMENTS. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH YOU.
+j. NonCommercial means not primarily intended for or directed towards commercial advantage or monetary compensation. For purposes of this Public License, the exchange of the Licensed Material for other material subject to Copyright and Similar Rights by digital file-sharing or similar means is NonCommercial provided there is no payment of monetary compensation in connection with the exchange.
 
-Section 4.3 (Limitation of Liability)
-IN NO EVENT AND UNDER NO LEGAL THEORY, WHETHER IN TORT (INCLUDING NEGLIGENCE), CONTRACT, OR OTHERWISE, UNLESS REQUIRED BY APPLICABLE LAW, SHALL THE LICENSOR OR ANY CONTRIBUTOR BE LIABLE TO YOU FOR DAMAGES OF ANY KIND, INCLUDING ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES, ARISING OUT OF THE USE OR INABILITY TO USE THE SOFTWARE. THIS INCLUDES, WITHOUT LIMITATION, DAMAGES FOR LOST PROFITS, LOSS OF GOODWILL, WORK STOPPAGE, COMPUTER FAILURE OR MALFUNCTION, OR ANY AND ALL OTHER COMMERCIAL DAMAGES OR LOSSES, EVEN IF SUCH PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+k. Share means to provide material to the public by any means or process that requires permission under the Licensed Rights, such as reproduction, public display, public performance, distribution, dissemination, communication, or importation, and to make material available to the public including in ways that members of the public may access the material from a place and at a time individually chosen by them.
 
-Section 4.4 (Contributions)
-If You intentionally submit a Contribution for inclusion in the Software, it shall be licensed under the terms of this Agreement without any additional terms or conditions. You hereby represent and warrant that You have the legal right to grant this license for Your Contribution.
+l. Sui Generis Database Rights means rights other than copyright resulting from Directive 96/9/EC of the European Parliament and of the Council of 11 March 1996 on the legal protection of databases, as amended and/or succeeded, as well as other essentially equivalent rights anywhere in the world.
 
-Section 4.5 (Governing Law and Jurisdiction)
-This Agreement shall be governed by and construed in accordance with the laws of the Republic of Korea, without regard to its conflict of law principles. Any dispute, controversy, or claim arising out of or relating to this Agreement shall be subject to the exclusive jurisdiction of the Seoul Central District Court in the Republic of Korea.
+m. You means the individual or entity exercising the Licensed Rights under this Public License. Your has a corresponding meaning.
 
-Section 4.6 (Severability)
-If any provision of this Agreement is held to be invalid or unenforceable by a court of competent jurisdiction, the remaining provisions shall remain in full force and effect.
+Section 2 – Scope.
 
-Section 4.7 (Entire Agreement)
-This Agreement constitutes the entire and sole agreement between the Licensor and You with respect to the Software and supersedes all prior or contemporaneous understandings, communications, or agreements, whether oral or written.
+a. License grant.
 
+Subject to the terms and conditions of this Public License, the Licensor hereby grants You a worldwide, royalty-free, non-sublicensable, non-exclusive, irrevocable license to exercise the Licensed Rights in the Licensed Material to:
+A. reproduce and Share the Licensed Material, in whole or in part, for NonCommercial purposes only; and
+B. produce, reproduce, and Share Adapted Material for NonCommercial purposes only.
 
+Exceptions and Limitations. For the avoidance of doubt, where Exceptions and Limitations apply to Your use, this Public License does not apply, and You do not need to comply with its terms and conditions.
+
+Term. The term of this Public License is specified in Section 6(a).
+
+Media and formats; technical modifications allowed. The Licensor authorizes You to exercise the Licensed Rights in all media and formats whether now known or hereafter created, and to make technical modifications necessary to do so. The Licensor waives and/or agrees not to assert any right or authority to forbid You from making technical modifications necessary to exercise the Licensed Rights, including technical modifications necessary to circumvent Effective Technological Measures.
+
+Downstream recipients.
+A. Offer from the Licensor – Licensed Material. Every recipient of the Licensed Material automatically receives an offer from the Licensor to exercise the Licensed Rights under the terms and conditions of this Public License.
+B. Additional offer from the Licensor – Adapted Material. Every recipient of Adapted Material from You automatically receives an offer from the Licensor to exercise the Licensed Rights in the Adapted Material under the conditions of the Adapter’s License You apply.
+
+No endorsement. Nothing in this Public License constitutes or may be construed as permission to assert or imply that You are, or that Your use of the Licensed Material is, connected with, or sponsored, endorsed, or granted official status by, the Licensor or others designated to receive attribution as provided in Section 3(a)(1)(A)(i).
+
+b. Other rights.
+
+Moral rights, such as the right of integrity, are not licensed under this Public License, nor are publicity, privacy, and/or other similar personality rights; however, to the extent possible, the Licensor waives and/or agrees not to assert any such rights held by the Licensor to the limited extent necessary to allow You to exercise the Licensed Rights, but not otherwise.
+
+Patent and trademark rights are not licensed under this Public License.
+
+To the extent possible, the Licensor waives any right to collect royalties from You for the exercise of the Licensed Rights, whether directly or through a collecting society under any voluntary or waivable statutory or compulsory licensing scheme. In all other cases the Licensor expressly reserves any right to collect such royalties, including when the Licensed Material is used other than for NonCommercial purposes.
+
+Section 3 – License Conditions.
+
+Your exercise of the Licensed Rights is expressly made subject to the following conditions.
+
+a. Attribution.
+
+If You Share the Licensed Material (including in modified form), You must:
+A. retain the following if it is supplied by the Licensor with the Licensed Material:
+i. identification of the creator(s) of the Licensed Material and any others designated to receive attribution, in any reasonable manner requested by the Licensor (including by pseudonym if designated);
+ii. a copyright notice;
+iii. a notice that refers to this Public License;
+iv. a notice that refers to the disclaimer of warranties;
+v. a URI or hyperlink to the Licensed Material to the extent reasonably practicable;
+B. indicate if You modified the Licensed Material and retain an indication of any previous modifications; and
+C. indicate the Licensed Material is licensed under this Public License, and include the text of, or the URI or hyperlink to, this Public License.
+
+You may satisfy the conditions in Section 3(a)(1) in any reasonable manner based on the medium, means, and context in which You Share the Licensed Material. For example, it may be reasonable to satisfy the conditions by providing a URI or hyperlink to a resource that includes the required information.
+
+If requested by the Licensor, You must remove any of the information required by Section 3(a)(1)(A) to the extent reasonably practicable.
+
+b. ShareAlike.
+In addition to the conditions in Section 3(a), if You Share Adapted Material You produce, the following conditions also apply.
+
+The Adapter’s License You apply must be a Creative Commons license with the same License Elements, this version or later, or a BY-NC-SA Compatible License.
+
+You must include the text of, or the URI or hyperlink to, the Adapter's License You apply. You may satisfy this condition in any reasonable manner based on the medium, means, and context in which You Share Adapted Material.
+
+You may not offer or impose any additional or different terms or conditions on, or apply any Effective Technological Measures to, Adapted Material that restrict exercise of the rights granted under the Adapter's License You apply.
+
+Section 4 – Sui Generis Database Rights.
+
+Where the Licensed Rights include Sui Generis Database Rights that apply to Your use of the Licensed Material:
+a. for the avoidance of doubt, Section 2(a)(1) grants You the right to extract, reuse, reproduce, and Share all or a substantial portion of the contents of the database for NonCommercial purposes only;
+b. if You include all or a substantial portion of the database contents in a database in which You have Sui Generis Database Rights, then the database in which You have Sui Generis Database Rights (but not its individual contents) is Adapted Material, including for purposes of Section 3(b); and
+c. You must comply with the conditions in Section 3(a) if You Share all or a substantial portion of the contents of the database.
+For the avoidance of doubt, this Section 4 supplements and does not replace Your obligations under this Public License where the Licensed Rights include other Copyright and Similar Rights.
+
+Section 5 – Disclaimer of Warranties and Limitation of Liability.
+
+a. Unless otherwise separately undertaken by the Licensor, to the extent possible, the Licensor offers the Licensed Material as-is and as-available, and makes no representations or warranties of any kind concerning the Licensed Material, whether express, implied, statutory, or other. This includes, without limitation, warranties of title, merchantability, fitness for a particular purpose, non-infringement, absence of latent or other defects, accuracy, or the presence or absence of errors, whether or not known or discoverable. Where disclaimers of warranties are not allowed in full or in part, this disclaimer may not apply to You.
+
+b. To the extent possible, in no event will the Licensor be liable to You on any legal theory (including, without limitation, negligence) or otherwise for any direct, special, indirect, incidental, consequential, punitive, exemplary, or other losses, costs, expenses, or damages arising out of this Public License or use of the Licensed Material, even if the Licensor has been advised of the possibility of such losses, costs, expenses, or damages. Where a limitation of liability is not allowed in full or in part, this limitation may not apply to You.
+
+c. The disclaimer of warranties and limitation of liability provided above shall be interpreted in a manner that, to the extent possible, most closely approximates an absolute disclaimer and waiver of all liability.
+
+Section 6 – Term and Termination.
+
+a. This Public License applies for the term of the Copyright and Similar Rights licensed here. However, if You fail to comply with this Public License, then Your rights under this Public License terminate automatically.
+
+b. Where Your right to use the Licensed Material has terminated under Section 6(a), it reinstates:
+
+automatically as of the date the violation is cured, provided it is cured within 30 days of Your discovery of the violation; or
+
+upon express reinstatement by the Licensor.
+For the avoidance of doubt, this Section 6(b) does not affect any right the Licensor may have to seek remedies for Your violations of this Public License.
+
+c. For the avoidance of doubt, the Licensor may also offer the Licensed Material under separate terms or conditions or stop distributing the Licensed Material at any time; however, doing so will not terminate this Public License.
+
+d. Sections 1, 5, 6, 7, and 8 survive termination of this Public License.
+
+Section 7 – Other Terms and Conditions.
+
+a. The Licensor shall not be bound by any additional or different terms or conditions communicated by You unless expressly agreed.
+
+b. Any arrangements, understandings, or agreements regarding the Licensed Material not stated herein are separate from and independent of the terms and conditions of this Public License.
+
+Section 8 – Interpretation.
+
+a. For the avoidance of doubt, this Public License does not, and shall not be interpreted to, reduce, limit, restrict, or impose conditions on any use of the Licensed Material that could lawfully be made without permission under this Public License.
+
+b. To the extent possible, if any provision of this Public License is deemed unenforceable, it shall be automatically reformed to the minimum extent necessary to make it enforceable. If the provision cannot be reformed, it shall be severed from this Public License without affecting the enforceability of the remaining terms and conditions.
+
+c. No term or condition of this Public License will be waived and no failure to comply consented to unless expressly agreed to by the Licensor.
+
+d. Nothing in this Public License constitutes or may be interpreted as a limitation upon, or waiver of, any privileges and immunities that apply to the Licensor or You, including from the legal processes of any jurisdiction or authority.
+
+크리에이티브 커먼즈 저작자표시-비영리-동일조건변경허락 4.0 국제 공중 라이선스
+본 저작물(이하 “라이선스 저작물”)에 대하여 본 공중 라이선스(이하 “공중 라이선스”)에 명시된 조건에 따라 라이선스 저작물에 대한 저작권 및 이와 유사한 권리(이하 “라이선스 권리”)를 행사하면, 귀하는 본 공중 라이선스의 조건에 구속받는 것에 동의하는 것으로 간주됩니다.
+
+제1조 – 정의.
+
+a. 각색물 이란 저작권 및 이와 유사한 권리의 대상이 되는 저작물로서, 라이선스 저작물을 번역, 변경, 편곡, 변형, 또는 그 밖의 방법으로 개작하여 만들어진 것을 의미합니다. 본 공중 라이선스에서 라이선스 저작물이 음악 작품, 실연 또는 음반인 경우, 라이선스 저작물을 영상과 동기화하는 것은 항상 각색물에 해당합니다.
+
+b. 각색자 라이선스 란 귀하가 각색물에 대하여 갖는 저작권 및 이와 유사한 권리에 적용하기 위하여, 본 공중 라이선스의 조건에 따라 귀하가 부여하는 라이선스를 의미합니다.
+
+c. BY-NC-SA 양립 가능 라이선스 란 creativecommons.org/compatiblelicenses 에 명시된 라이선스로서, 크리에이티브 커먼즈가 본 공중 라이선스와 실질적으로 동일하다고 인정한 라이선스를 의미합니다.
+
+d. 저작권 및 이와 유사한 권리 란 저작권 및 저작인접권과 같이 저작권과 유사한 권리를 의미하며, 이는 해당 권리가 어떻게 표시되거나 분류되는지에 관계없습니다. 데이터베이스권(다른 권리로부터 파생되었는지 여부와 관계없음), 컴퓨터 프로그램에 대한 권리, 그리고 반도체 집적회로의 배치설계에 대한 권리 등이 포함됩니다.
+
+e. 유효 기술조치 란 관련 법률에 따라 허락 없이 회피되어서는 안 되는 기술적 조치를 의미합니다.
+
+f. 예외 및 제한 이란 저작권 및 이와 유사한 권리에 대한 공정이용, 공정취급 또는 기타 예외나 제한을 의미합니다.
+
+g. 라이선스 자료 란 본 공중 라이선스에 따라 라이선스가 부여되는 예술, 문학, 또는 과학 저작물을 의미합니다.
+
+h. 라이선스 권리 란 본 공중 라이선스의 조건에 따라 부여되는 권리를 의미하며, 이는 라이선스 저작물에 대한 모든 저작권 및 이와 유사한 권리 중 라이선스 제공자가 통제할 수 있는 권리를 포함합니다.
+
+i. 라이선스 제공자 란 본 공중 라이선스에 따라 권리를 부여하는 개인 또는 단체를 의미합니다.
+
+j. 비상업적 이란 상업적 이익이나 금전적 보상을 주된 목적으로 하거나 이를 지향하지 않는 것을 의미합니다. 본 공중 라이선스에서 라이선스 저작물을 금전적 보상을 수반하는 거래(예: 파일 공유)를 통해 교환하는 것은, 해당 거래가 저작권 및 이와 유사한 권리와 관련이 있는 활동에 의해 이루어지지 않는 한, 비상업적인 것으로 간주됩니다.
+
+k. 공유 란 복제, 공개 전시, 공개 실연, 배포, 전파, 전달 또는 기타 방법으로 일반 대중에게 자료를 제공하거나, 일반 대중이 개별적으로 자료에 접근할 수 있도록 하는 행위를 의미합니다.
+
+l. 귀하 란 본 공중 라이선스에 따라 라이선스 권리를 행사하는 개인 또는 단체를 의미합니다.
+
+제2조 – 라이선스 허여.
+
+a. 라이선스 허여.
+
+귀하가 본 공중 라이선스의 조건을 준수하는 것을 전제로, 라이선스 제공자는 귀하에게 라이선스 저작물을 다음과 같이 이용할 수 있는 전 세계적이고, 무상이며, 재라이선스가 불가능하고, 비독점적이며, 취소 불가능한 라이선스를 부여합니다:
+A. 라이선스 저작물 전체 또는 일부를 비상업적 목적으로만 공유하고 복제할 권리; 그리고
+B. 비상업적 목적으로만 각색물을 제작, 복제 및 공유할 권리.
+
+예외 및 제한. 의심의 여지를 없애기 위해, 귀하의 이용에 예외 및 제한이 적용되는 경우, 본 공중 라이선스는 적용되지 않으며 귀하는 그 조건을 준수할 필요가 없습니다.
+
+기간. 본 공중 라이선스의 기간은 제6조 (a)항에 명시되어 있습니다.
+
+매체 및 형식; 기술적 수정 허용. 라이선스 제공자는 귀하가 모든 매체와 형식(현재 알려져 있거나 향후 개발될 모든 것을 포함)으로 라이선스 권리를 행사하는 것을 허락하며, 이를 위해 필요한 기술적 수정을 할 수 있는 권리를 부여합니다.
+
+후속 이용자.
+A. 라이선스 제공자로부터의 제공. 라이선스 저작물을 받는 모든 후속 이용자는 귀하와 동일한 조건으로 본 공중 라이선스에 따라 라이선스 저작물을 이용할 수 있습니다.
+B. 각색물로부터의 추가 제공. 귀하가 만든 각색물을 받는 모든 후속 이용자는 귀하가 적용하는 각색자 라이선스에 따라 권리를 이용할 수 있습니다.
+
+제3조 – 라이선스 조건.
+
+귀하의 라이선스 권리 행사는 다음 조건들을 명시적으로 따릅니다.
+
+a. 저작자표시.
+
+귀하가 라이선스 저작물(수정된 형태 포함)을 공유하는 경우, 다음 사항을 모두 제공해야 합니다:
+A. 라이선스 제공자가 라이선스 저작물과 함께 제공한 이름(또는 필명), 저작권 고지, 라이선스 고지, 보증 부인 고지, 그리고 라이선스 저작물에 대한 링크;
+B. 귀하가 저작물을 수정했다는 표시와 이전 수정 사항에 대한 기록;
+C. 라이선스 저작물이 본 공중 라이선스에 따라 라이선스된다는 표시, 그리고 라이선스 전문에 대한 링크.
+
+귀하가 라이선스 제공자의 요청에 따라, 합리적으로 실행 가능한 범위 내에서 제3조 (a)(1)항에 명시된 정보를 제거해야 합니다.
+
+b. 동일조건변경허락.
+본 절은 귀하가 공유하는 각색물에 적용됩니다.
+
+귀하가 적용하는 각색자 라이선스는 CC BY-NC-SA 4.0 또는 그 이후 버전이거나, BY-NC-SA 양립 가능 라이선스여야 합니다.
+
+귀하는 귀하가 만든 각색물에 본 공중 라이선스의 조건을 포함하거나 이에 대한 링크를 제공해야 합니다.
+
+귀하는 각색물에 본 공중 라이선스와 충돌하는 추가적인 또는 다른 조건을 적용할 수 없습니다.
+
+제4조 – 데이터베이스권.
+
+라이선스 권리에 데이터베이스권이 포함되는 경우:
+a. 귀하는 데이터베이스 내용물의 상당 부분을 비상업적 목적으로만 추출, 재사용, 복제 또는 공유할 수 있습니다.
+b. 귀하가 데이터베이스 내용물의 전부 또는 상당 부분을 공유하는 경우, 제3조 (a)항의 조건을 준수해야 합니다.
+
+제5조 – 보증의 부인 및 책임의 제한.
+
+a. 달리 명시되지 않는 한, 라이선스 제공자는 라이선스 저작물을 "있는 그대로" 제공하며, 상품성, 특정 목적에의 적합성, 비침해성, 권리의 존재 여부, 또는 잠재적 또는 기타 결함의 부존재에 대한 명시적 또는 묵시적 보증을 포함하여 어떠한 종류의 보증도 하지 않습니다.
+b. 법률에 의해 요구되지 않는 한, 라이선스 제공자는 계약, 불법 행위 또는 기타 법률 이론에 근거하여 발생하는 직접적, 간접적, 부수적, 특별, 징벌적 또는 결과적 손해에 대해 책임을 지지 않습니다.
+
+제6조 – 기간 및 종료.
+
+a. 본 공중 라이선스는 라이선스 저작물에 대한 저작권 또는 이와 유사한 권리의 존속 기간 동안 유효합니다.
+b. 귀하가 본 공중 라이선스를 위반하는 경우, 귀하에게 부여된 권리는 자동으로 종료됩니다.
+
+제7조 – 기타 조건.
+
+a. 라이선스 제공자는 귀하가 전달한 추가적인 또는 다른 조건에 구속되지 않습니다.
+b. 본 라이선스에 명시되지 않은 라이선스 저작물에 대한 모든 약정, 양해 또는 합의는 본 공중 라이선스의 조건과 별개이며 독립적입니다.
+
+제8조 – 해석.
+
+a. 본 공중 라이선스는 관련 법률에 따라 허가 없이 합법적으로 이루어질 수 있는 라이선스 저작물의 이용을 축소, 제한, 또는 조건화하는 것으로 해석되지 않습니다.
+b. 본 공중 라이선스의 어떠한 조항이 시행 불가능하다고 판단되는 경우, 해당 조항은 시행 가능하도록 최소한의 범위 내에서 자동으로 수정됩니다.
+c. 본 공중 라이선스의 어떠한 조건도 라이선스 제공자의 명시적인 동의 없이는 포기되거나 위반이 승인된 것으로 간주되지 않습니다.
