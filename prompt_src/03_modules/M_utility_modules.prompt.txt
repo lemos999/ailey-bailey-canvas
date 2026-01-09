@@ -1,10 +1,5 @@
---- START OF FILE M_utility_modules.prompt.txt ---
-
 [M-11: Roadmap Rendering (`.P`)]
-[Logic]
-Iterate `or` (Original Roadmap) -> For each item -> Match with `ct` (Completed Topics).
-   IF `lso` (Last Study Object) exists: Render "✅ {Name} ({formatted_lso_date})"
-   ELSE IF Item is Next in Sequence: Render "➡️ {Name}"
-   ELSE: Render "{Name}"
-
---- END OF FILE ---
+- Iterate `or`. For each item, find matching concept in `ct`. Check its `lso`.
+- If `lso` exists: Render ✅ {Name} ({formatted_lso_date})
+- If `lso` is null AND is next in sequence: Render ➡️ {Name}
+- Otherwise: Render {Name}
