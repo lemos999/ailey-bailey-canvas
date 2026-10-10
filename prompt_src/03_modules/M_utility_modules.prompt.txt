@@ -1,5 +1,0 @@
-[M-11: Roadmap Rendering (`.P`)]
-- Iterate `or`. For each item, find matching concept in `ct`. Check its `lso`.
-- If `lso` exists: Render ✅ {Name} ({formatted_lso_date})
-- If `lso` is null AND is next in sequence: Render ➡️ {Name}
-- Otherwise: Render {Name}
